@@ -1,0 +1,156 @@
+#' Turn implicit missing values into explicit missing values
+#'
+#' @param .data A data frame.
+#' @param ... A set of name-value pairs. The values will replace existing explicit
+#' missing values by variable, otherwise `NA`. The replacement values must be of
+#' the same type as the original one. If using a function to fill the `NA`,
+#' please make sure that `na.rm = TRUE` is switched on.
+#'
+#' @seealso [case_na], [tidyr::fill], [tidyr::replace_na]
+#' @rdname fill-na
+#' @export
+#'
+#' @examples
+#' harvest <- tsibble(
+#'   year = c(2010, 2011, 2013, 2011, 2012, 2014),
+#'   fruit = rep(c("kiwi", "cherry"), each = 3),
+#'   kilo = sample(1:10, size = 6),
+#'   key = id(fruit), index = year
+#' )
+#'
+#' # leave NA as is
+#' fill_na(harvest)
+#'
+#' # replace NA with a specific value
+#' harvest %>%
+#'   fill_na(kilo = 0L)
+#'
+#' # replace NA using a function by variable
+#' # enable `na.rm = TRUE` when necessary
+#' harvest %>%
+#'   fill_na(kilo = sum(kilo, na.rm = TRUE))
+#'
+#' # replace NA using a function for each group
+#' harvest %>%
+#'   group_by(fruit) %>%
+#'   fill_na(kilo = sum(kilo, na.rm = TRUE))
+#'
+#' # replace NA
+#' pedestrian %>%
+#'   group_by(Sensor) %>%
+#'   fill_na(
+#'     Date = lubridate::as_date(Date_Time),
+#'     Time = lubridate::hour(Date_Time),
+#'     Count = as.integer(median(Count, na.rm = TRUE))
+#'   )
+fill_na <- function(.data, ...) {
+  UseMethod("fill_na")
+}
+
+#' @export
+fill_na.data.frame <- function(.data, ...) {
+  abort("Please use tidyr::complete() for a tbl_df/data.frame.")
+}
+
+#' @export
+fill_na.tbl_ts <- function(.data, ...) {
+  if (!is_regular(.data)) {
+    abort("Don't know how to handle irregular time series data.")
+  }
+  idx <- index(.data)
+  full_data <- .data %>%
+    tidyr::complete(
+      !! quo_text2(idx) := seq(
+        from = min0(!! idx), to = max0(!! idx),
+        by = time_unit(!! idx)
+      ),
+      tidyr::nesting(!!! flatten(key(.data)))
+    )
+
+  full_data <- full_data %>%
+    modify_na(!!! quos(...))
+  full_data <- full_data %>%
+    select(!!! syms(colnames(.data))) # keep the original order
+  as_tsibble(full_data, key = key(.data), index = !! idx, validate = FALSE)
+}
+
+modify_na <- function(.data, ...) {
+  lst_quos <- quos(..., .named = TRUE)
+  if (is_empty(lst_quos)) {
+    return(.data)
+  }
+  lhs <- names(lst_quos)
+  check_names <- lhs %in% colnames(.data)
+  if (is_false(all(check_names))) {
+    bad_names <- paste(lhs[which(!check_names)], collapse = ", ")
+    abort(paste("Unexpected LHS names:", bad_names))
+  }
+
+  rhs <- purrr::map(lst_quos, f_rhs)
+  if (is_grouped_ts(.data)) {
+    lst_data <- split(.data, group_indices(.data))
+    lst_lang <- purrr::map(lst_data, function(dat) purrr::map2(
+      syms(lhs), rhs, ~ new_formula(.x, .y, env = env(!!! dat))
+    ))
+    mod_quos <- purrr::map(seq_along(lst_lang),
+      ~ purrr::map(lst_lang[[.]], ~ lang("case_na", .))
+    )
+    mod_quos <- purrr::map(mod_quos, ~ `names<-`(., lhs))
+    mut_data <- purrr::map2(lst_data, mod_quos, ~ mutate(.x, !!! .y))
+    bind_data <- dplyr::bind_rows(mut_data)
+    tsbl <- as_tsibble(
+      bind_data, key = key(.data), index = !! index(.data),
+      validate = FALSE, regular = is_regular(.data)
+    )
+    grped_tsbl <- tsbl %>%
+      group_by(!!! groups(.data))
+    return(grped_tsbl)
+  } else {
+    lst_lang <- purrr::map2(
+      syms(lhs), rhs, ~ new_formula(.x, .y, env = env(!!! .data))
+    )
+    mod_quos <- purrr::map(lst_lang, ~ lang("case_na", .))
+    names(mod_quos) <- lhs
+    .data %>%
+      mutate(!!! mod_quos)
+  }
+}
+
+#' A thin wrapper of `dplyr::case_when()` if there are `NA`s
+#'
+#' @param formula A two-sided formula. The LHS expects a vector containing `NA`,
+#' and the RHS gives the replacement value.
+#'
+#' @export
+#' @seealso [dplyr::case_when]
+#' @examples
+#' x <- rnorm(10)
+#' x[c(3, 7)] <- NA_real_
+#' case_na(x ~ 10)
+#' case_na(x ~ mean(x, na.rm = TRUE))
+case_na <- function(formula) {
+  env_f <- f_env(formula)
+  lhs <- eval_bare(f_lhs(formula), env = env_f)
+  rhs <- eval_bare(f_rhs(formula), env = env_f)
+  dplyr::case_when(is.na(lhs) ~ rhs, TRUE ~ lhs)
+}
+
+complete.tbl_ts <- function(data, ..., fill = list()) {
+  grps <- groups(data)
+  comp_data <- NextMethod()
+  if (is_grouped_ts(data)) {
+    comp_data <- dplyr::grouped_df(comp_data, vars = flatten_key(grps))
+  }
+  tsbl <- as_tsibble(
+    comp_data, key = key(data), index = !! index(data), groups = grps,
+    validate = FALSE, regular = is_regular(data)
+  )
+  restore_index_class(data, tsbl)
+}
+
+restore_index_class <- function(data, newdata) {
+  old_idx <- quo_text2(index(data))
+  new_idx <- quo_text2(index(newdata))
+  class(newdata[[new_idx]]) <- class(data[[old_idx]])
+  newdata
+}
