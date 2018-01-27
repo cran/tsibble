@@ -1,3 +1,5 @@
+globalVariables(".")
+
 #' Turn implicit missing values into explicit missing values
 #'
 #' @param .data A data frame.
@@ -18,24 +20,30 @@
 #'   key = id(fruit), index = year
 #' )
 #'
-#' # leave NA as is
-#' fill_na(harvest)
+#' # leave NA as is ----
+#' full_harvest <- fill_na(harvest)
+#' full_harvest
 #'
-#' # replace NA with a specific value
+#' # use fill() to fill `NA` by previous/next entry
+#' full_harvest %>% 
+#'   group_by(fruit) %>% 
+#'   fill(kilo, .direction = "down")
+#'
+#' # replace NA with a specific value ----
 #' harvest %>%
 #'   fill_na(kilo = 0L)
 #'
-#' # replace NA using a function by variable
-#' # enable `na.rm = TRUE` when necessary
+#' # replace NA using a function by variable ----
+#' # enable `na.rm = TRUE` when necessary ----
 #' harvest %>%
 #'   fill_na(kilo = sum(kilo, na.rm = TRUE))
 #'
-#' # replace NA using a function for each group
+#' # replace NA using a function for each group ----
 #' harvest %>%
 #'   group_by(fruit) %>%
 #'   fill_na(kilo = sum(kilo, na.rm = TRUE))
 #'
-#' # replace NA
+#' # replace NA ----
 #' pedestrian %>%
 #'   group_by(Sensor) %>%
 #'   fill_na(
@@ -49,29 +57,35 @@ fill_na <- function(.data, ...) {
 
 #' @export
 fill_na.data.frame <- function(.data, ...) {
-  abort("Please use tidyr::complete() for a tbl_df/data.frame.")
+  abort("Do you need `tidyr::complete()` for a `tbl_df`/`data.frame`?")
 }
 
 #' @export
 fill_na.tbl_ts <- function(.data, ...) {
   if (!is_regular(.data)) {
-    abort("Don't know how to handle irregular time series data.")
+    abort("`fill_na()` can't handle `tbl_ts` of irregular interval.")
   }
   idx <- index(.data)
+  key <- key(.data)
   full_data <- .data %>%
     tidyr::complete(
       !! quo_text2(idx) := seq(
         from = min0(!! idx), to = max0(!! idx),
         by = time_unit(!! idx)
       ),
-      tidyr::nesting(!!! flatten(key(.data)))
+      tidyr::nesting(!!! flatten(key))
     )
 
-  full_data <- full_data %>%
-    modify_na(!!! quos(...))
+  if (is_grouped_ts(.data)) {
+    full_data <- do(full_data, modify_na(., !!! quos(...)))
+  } else {
+    full_data <- full_data %>%
+      modify_na(!!! quos(...))
+  }
   full_data <- full_data %>%
     select(!!! syms(colnames(.data))) # keep the original order
-  as_tsibble(full_data, key = key(.data), index = !! idx, validate = FALSE)
+  tsbl <- as_tsibble(full_data, key = key, index = !! idx, validate = FALSE)
+  restore_index_class(.data, tsbl)
 }
 
 modify_na <- function(.data, ...) {
@@ -82,38 +96,27 @@ modify_na <- function(.data, ...) {
   lhs <- names(lst_quos)
   check_names <- lhs %in% colnames(.data)
   if (is_false(all(check_names))) {
-    bad_names <- paste(lhs[which(!check_names)], collapse = ", ")
-    abort(paste("Unexpected LHS names:", bad_names))
+    bad_names <- paste_comma(lhs[which(!check_names)])
+    abort(sprintf("Can't find column %s in `.data`.", surround(bad_names, "`")))
   }
 
   rhs <- purrr::map(lst_quos, f_rhs)
-  if (is_grouped_ts(.data)) {
-    lst_data <- split(.data, group_indices(.data))
-    lst_lang <- purrr::map(lst_data, function(dat) purrr::map2(
-      syms(lhs), rhs, ~ new_formula(.x, .y, env = env(!!! dat))
-    ))
-    mod_quos <- purrr::map(seq_along(lst_lang),
-      ~ purrr::map(lst_lang[[.]], ~ lang("case_na", .))
-    )
-    mod_quos <- purrr::map(mod_quos, ~ `names<-`(., lhs))
-    mut_data <- purrr::map2(lst_data, mod_quos, ~ mutate(.x, !!! .y))
-    bind_data <- dplyr::bind_rows(mut_data)
-    tsbl <- as_tsibble(
-      bind_data, key = key(.data), index = !! index(.data),
-      validate = FALSE, regular = is_regular(.data)
-    )
-    grped_tsbl <- tsbl %>%
-      group_by(!!! groups(.data))
-    return(grped_tsbl)
-  } else {
-    lst_lang <- purrr::map2(
-      syms(lhs), rhs, ~ new_formula(.x, .y, env = env(!!! .data))
-    )
-    mod_quos <- purrr::map(lst_lang, ~ lang("case_na", .))
-    names(mod_quos) <- lhs
-    .data %>%
-      mutate(!!! mod_quos)
-  }
+  lst_lang <- purrr::map2(
+    syms(lhs), rhs, ~ new_formula(.x, .y, env = env(!!! .data))
+  )
+  mod_quos <- purrr::map(lst_lang, ~ lang("case_na", .))
+  names(mod_quos) <- lhs
+  modify_na_handler(.data, mod_quos)
+}
+
+modify_na_handler <- function(.data, quos) {
+  tryCatch(
+    mutate(.data, !!! quos),
+    error = function(e) {
+      e$call <- "fill_na(.data, ...)"
+      stop(e)
+    }
+  )
 }
 
 #' A thin wrapper of `dplyr::case_when()` if there are `NA`s
@@ -133,19 +136,6 @@ case_na <- function(formula) {
   lhs <- eval_bare(f_lhs(formula), env = env_f)
   rhs <- eval_bare(f_rhs(formula), env = env_f)
   dplyr::case_when(is.na(lhs) ~ rhs, TRUE ~ lhs)
-}
-
-complete.tbl_ts <- function(data, ..., fill = list()) {
-  grps <- groups(data)
-  comp_data <- NextMethod()
-  if (is_grouped_ts(data)) {
-    comp_data <- dplyr::grouped_df(comp_data, vars = flatten_key(grps))
-  }
-  tsbl <- as_tsibble(
-    comp_data, key = key(data), index = !! index(data), groups = grps,
-    validate = FALSE, regular = is_regular(data)
-  )
-  restore_index_class(data, tsbl)
 }
 
 restore_index_class <- function(data, newdata) {

@@ -1,8 +1,8 @@
 Package: tsibble
 Type: Package
 Title: Tidy Temporal Data Frames and Tools
-Version: 0.1.0
-Date: 2018-01-09
+Version: 0.1.2
+Date: 2018-01-27
 Authors@R: c(
     person("Earo", "Wang", email = "earo.wang@gmail.com", role = c("aut", "cre")),
     person("Di", "Cook", role = c("aut", "ths")),
@@ -28,10 +28,10 @@ Encoding: UTF-8
 LazyData: true
 RoxygenNote: 6.0.1
 NeedsCompilation: yes
-Packaged: 2018-01-09 11:00:12 UTC; earo
+Packaged: 2018-01-27 06:06:23 UTC; earo
 Author: Earo Wang [aut, cre],
   Di Cook [aut, ths],
   Rob Hyndman [aut, ths]
 Maintainer: Earo Wang <earo.wang@gmail.com>
 Repository: CRAN
-Date/Publication: 2018-01-09 14:19:16 UTC
+Date/Publication: 2018-01-27 06:13:49 UTC

@@ -10,6 +10,11 @@ dat_x <- tibble(
   value = rnorm(5)
 )
 
+test_that("A tsibble cannot be empty", {
+  expect_error(tsibble())
+  expect_error(as_tsibble())
+})
+
 test_that("A tibble is not tsibble", {
   expect_false(is_tsibble(dat_x))
   expect_error(key(dat_x))
@@ -18,16 +23,27 @@ test_that("A tibble is not tsibble", {
   expect_error(is_regular(dat_x))
 })
 
+test_that("Coerce to tbl_df and data.frame", {
+  tsbl <- as_tsibble(dat_x, index = date_time)
+  expect_identical(as_tibble(tsbl), dat_x)
+  expect_identical(as.data.frame(tsbl), as.data.frame(dat_x))
+})
+
 test_that("POSIXt with 1 second interval", {
   expect_identical(index_sum(dat_x$date_time), "dttm")
   expect_message(tsbl <- as_tsibble(dat_x))
+  expect_error(as_tsibble(dat_x, key = id(date_time)))
   expect_is(tsbl, "tbl_ts")
   expect_is(index(tsbl), "quosure")
   expect_identical(quo_text(index(tsbl)), "date_time")
+  expect_identical(time_unit(tsbl$date_time), 1)
   expect_identical(format(key(tsbl)), "NULL")
   expect_identical(format(groups(tsbl)), "NULL")
   expect_identical(format(interval(tsbl)), "1SECOND")
   expect_true(is_regular(tsbl))
+  expect_equal(key_size(tsbl), 5)
+  expect_equal(n_keys(tsbl), 1)
+  expect_equal(group_size(tsbl), 5)
 })
 
 test_that("Space in index variable", {
@@ -40,6 +56,9 @@ test_that("Space in index variable", {
 test_that("Duplicated time index", {
   dat_y <- dat_x[c(1, 1, 3:5), ]
   expect_error(as_tsibble(dat_y, index = date_time))
+
+  y <- c(FALSE, TRUE, rep(FALSE, 3))
+  expect_identical(inform_duplicates(dat_y, index = date_time), y)
 })
 
 test_that("POSIXt with an unrecognisable interval", {
@@ -69,6 +88,7 @@ dat_x <- tibble(
 test_that("POSIXt with 2 minutes interval", {
   tsbl <- as_tsibble(dat_x)
   expect_identical(format(interval(tsbl)), "2MINUTE")
+  expect_identical(time_unit(tsbl$date_time), 120)
 })
 
 idx_hour <- seq.POSIXt(
@@ -83,6 +103,7 @@ dat_x <- tibble(
 test_that("POSIXt with 3 hours interval", {
   tsbl <- as_tsibble(dat_x)
   expect_identical(format(interval(tsbl)), "3HOUR")
+  expect_identical(time_unit(tsbl$date_time), 3 * 60 * 60)
 })
 
 idx_day <- seq.Date(ymd("2017-01-01"), ymd("2017-01-20"), by = 4)
@@ -97,6 +118,7 @@ test_that("Date with 4 days interval", {
   expect_message(tsbl <- as_tsibble(dat_x))
   expect_is(tsbl, "tbl_ts")
   expect_identical(format(interval(tsbl)), "4DAY")
+  expect_identical(time_unit(tsbl$date), 4)
 })
 
 idx_month <- seq(
@@ -112,6 +134,7 @@ test_that("Year month with 1 month interval", {
   expect_message(tsbl <- as_tsibble(dat_x))
   expect_is(tsbl, "tbl_ts")
   expect_identical(format(interval(tsbl)), "1MONTH")
+  expect_identical(time_unit(tsbl$yrmth), 1)
 })
 
 idx_qtr <- seq(
@@ -127,6 +150,7 @@ test_that("Year quarter with 1 quarter interval", {
   expect_message(tsbl <- as_tsibble(dat_x))
   expect_is(tsbl, "tbl_ts")
   expect_identical(format(interval(tsbl)), "1QUARTER")
+  expect_identical(time_unit(tsbl$yrqtr), 1)
 })
 
 idx_year <- seq.int(1970, 2010, by = 10)
@@ -141,6 +165,7 @@ test_that("Year with 10 years interval", {
   tsbl <- as_tsibble(dat_x, index = year)
   expect_is(tsbl, "tbl_ts")
   expect_identical(format(interval(tsbl)), "10YEAR")
+  expect_identical(time_unit(tsbl$year), 10)
 })
 
 library(hms)
@@ -169,6 +194,8 @@ test_that("A single key", {
   expect_is(key(tsbl), "key")
   expect_identical(format(key(tsbl))[[1]], "group")
   expect_identical(format(groups(tsbl)), "NULL")
+  expect_equal(key_size(tsbl), c(5, 5))
+  expect_equal(n_keys(tsbl), 2)
 })
 
 test_that("Duplicated identifier: index", {

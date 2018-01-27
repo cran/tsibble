@@ -58,9 +58,49 @@ dplyr::summarise
 #' @export
 dplyr::summarize
 
+#' @importFrom dplyr do
+#' @export
+dplyr::do
+
+#' @importFrom dplyr transmute
+#' @export
+dplyr::transmute
+
+#' @importFrom dplyr distinct
+#' @export
+dplyr::distinct
+
+#' @importFrom dplyr full_join
+#' @export
+dplyr::full_join
+
+#' @importFrom dplyr inner_join
+#' @export
+dplyr::inner_join
+
+#' @importFrom dplyr left_join
+#' @export
+dplyr::left_join
+
+#' @importFrom dplyr right_join
+#' @export
+dplyr::right_join
+
+#' @importFrom dplyr semi_join
+#' @export
+dplyr::semi_join
+
+#' @importFrom dplyr anti_join
+#' @export
+dplyr::anti_join
+
 #' @importFrom dplyr %>%
 #' @export
 dplyr::`%>%`
+
+#' @importFrom tidyr fill
+#' @export
+tidyr::fill
 
 #' @importFrom tibble glimpse
 #' @export

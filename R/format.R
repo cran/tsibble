@@ -20,7 +20,7 @@ glimpse.tbl_ts <- function(x, width = NULL, ...) {
 
 #' @export
 print.key <- function(x, ...) {
-  cat_line(paste(format(x, ...), collapse = ", "))
+  cat_line(paste_comma(format(x, ...)))
   invisible(x)
 }
 
@@ -51,21 +51,24 @@ print.vars <- print.key
 format.vars <- format.key
 
 #' @export
-print.interval <- function(x, ...) {
-  cat_line(format(x, ...))
+print.interval <- function(x, digits = NULL, ...) {
+  cat_line(format(x, digits = digits, ...))
   invisible(x)
 }
 
 #' @export
-format.interval <- function(x, ...) {
+format.interval <- function(x, digits = NULL, ...) {
   if (is_empty(x)) {
     return("!")
+  }
+  if (is.null(digits)) {
+    digits <- 3
   }
   not_zero <- !purrr::map_lgl(x, function(x) x == 0)
   # if output is empty, it means that duplicated time entries
   # if output is NA, it means that only one time entry
   output <- x[not_zero]
-  vec_x <- rlang::flatten_dbl(output)
+  vec_x <- round(rlang::flatten_dbl(output), digits = digits)
   if (is_empty(output) || is_empty(vec_x)) {
     return("?")
   }

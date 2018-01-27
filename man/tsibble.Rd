@@ -52,7 +52,7 @@ uses the \code{id(Sensor)} column as the key.
 \item Nested variables: a nesting of one variable under another. For example,
 \code{data(tourism)} contains two geographical locations: \code{Region} and \code{State}.
 \code{Region} is the lower level than \code{State} in Australia; in other words, \code{Region}
-is nested into \code{State}, which naturally forms a hierarchy. A vertical bars (\code{|})
+is nested into \code{State}, which naturally forms a hierarchy. A vertical bar (\code{|})
 is used to describe this nesting relationship, and thus \code{Region} | \code{State}.
 In theory, nesting can involve infinite levels, so is \code{tsibble}.
 \item Crossed variables: a crossing of one variable with another. For example,
@@ -86,13 +86,15 @@ tbl1 <- tsibble(
   value = rnorm(10),
   key = id(), index = date
 )
+tbl1
 
 # create a tsibble with one key ----
 tbl2 <- tsibble(
-  qtr = rep(yearquarter(seq(2010, 2012.25, by = 1/ 4)), 3),
+  qtr = rep(yearquarter(seq(2010, 2012.25, by = 1 / 4)), 3),
   group = rep(c("x", "y", "z"), each = 10),
   value = rnorm(30),
   key = id(group), index = qtr
 )
+tbl2
 
 }

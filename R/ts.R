@@ -22,45 +22,11 @@
 as.ts.tbl_ts <- function(x, value, frequency = NULL, fill = NA, ...) {
   value <- enquo(value)
   key_vars <- key(x)
-  if (any(is_nest(key_vars))) {
-    # abort("Please use as.hts() instead.")
-    abort("Don't know how to deal with nested keys.")
-  }
-  if (length(key_vars) > 1) {
-    # abort("Please use as.gts() instead.")
-    abort("Don't know how to deal with crossed keys.")
+  if (any(is_nest(key_vars)) || length(key_vars) > 1) {
+    abort("`as.ts()` can't deal with nested or crossed keys.")
   }
   mat_ts <- spread_tsbl(x, value = value, fill = fill)
   finalise_ts(mat_ts, index = index(x), frequency = frequency)
-}
-
-spread_tsbl <- function(data, value, fill = NA, sep = "") {
-  spread_val <- measured_vars(data)
-  str_val <- paste(spread_val, collapse = ",")
-  msg <- paste0("Please specify one of the variables for 'value': ", str_val)
-  if (quo_is_missing(value)) {
-    if (is_false(has_length(spread_val, 1))) {
-      abort(msg)
-    }
-  } else {
-    val <- quo_text(value)
-    if (is_false(val %in% spread_val)) {
-      abort(msg)
-    }
-    spread_val <- val
-  }
-  # ToDo: only works with a single key rather than the nested and grouped keys
-  spread_key <- key(data)
-  if (is_empty(spread_key)) {
-    return(as_tibble(data))
-  }
-  idx_var <- index(data)
-  compact_tsbl <- data %>%
-    mutate(key = paste(!!! spread_key, sep = sep)) %>%
-    select(!! idx_var, key, spread_val, drop = TRUE)
-  compact_tsbl %>%
-    tidyr::spread(key = key, value = spread_val, fill = fill) %>%
-    arrange(!! idx_var)
 }
 
 finalise_ts <- function(data, index, frequency = NULL) {
@@ -76,9 +42,7 @@ finalise_ts <- function(data, index, frequency = NULL) {
   stats::ts(out, stats::start(idx_time), frequency = frequency)
 }
 
-#' @importFrom stats as.ts
-#' @importFrom stats time
-#' @importFrom stats tsp<- time
+#' @importFrom stats as.ts tsp<- time
 #' @export
 time.yearmonth <- function(x, ...) {
   freq <- guess_frequency(x)
@@ -168,6 +132,6 @@ guess_frequency.POSIXt <- function(x) {
   } else if (number > 1 / 3600 && number <= 1 / 60) {
     return(3600 * number)
   } else {
-    return(3600 * 60 * number)
+    3600 * 60 * number
   }
 }

@@ -14,6 +14,9 @@
 #' * [lubridate::ceiling_date] or [lubridate::round_date]: sub-daily aggregation
 #' * other index functions from other packages
 #'
+#' @details
+#' One grouping level will be dropped.
+#'
 #' @rdname tsummarise
 #' @export
 #' @examples
@@ -45,10 +48,11 @@ tsummarise.tbl_ts <- function(.data, ...) {
   grps <- groups(.data)
 
   # check if the index variable is present in the function call
-  vec_vars <- as.character(purrr::map(lst_quos, ~ lang_args(.)[[1]]))
+  first_arg <- first_arg(lst_quos)
+  vec_vars <- as.character(first_arg)
   idx_var <- quo_text2(index)
   if (is_false(has_index_var(j = vec_vars, x = .data))) {
-    abort(paste("Missing index variable:", idx_var))
+    abort(sprintf("Can't find the `index` (%s) in the function call.", surround(idx_var, "`")))
   }
   idx_pos <- match(idx_var, vec_vars)
   idx_name <- names(lst_quos)[[idx_pos]]
@@ -60,11 +64,11 @@ tsummarise.tbl_ts <- function(.data, ...) {
     ungroup() %>% 
     mutate(!! idx_sym := !! lst_quos[[idx_pos]], drop = TRUE)
   result <- pre_data %>% 
-    dplyr::grouped_df(vars = chr_grps) %>% 
-    dplyr::summarise(!!! lst_quos[-idx_pos])
+    grouped_df(vars = chr_grps) %>% 
+    summarise(!!! lst_quos[-idx_pos])
 
   as_tsibble(
-    result, key = grps, index = !! idx_sym, groups = grps, 
+    result, key = grps, index = !! idx_sym, groups = drop_group(grps), 
     validate = FALSE
   )
 }

@@ -5,6 +5,7 @@ knitr::opts_chunk$set(
   comment = "#>"
 )
 options(tibble.print_min = 5)
+Sys.setenv(TZ = "")
 
 ## ----weather-------------------------------------------------------------
 library(tsibble)
@@ -45,7 +46,7 @@ flights <- nycflights13::flights %>%
 ## ----flights-ts----------------------------------------------------------
 flights_tsbl <- flights %>%
   as_tsibble(
-    key = id(flight, origin, dest), 
+    key = id(flight:dest), 
     index = sched_date_time, 
     regular = FALSE
   )

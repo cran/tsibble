@@ -19,17 +19,17 @@ tbl_sum.tbl_ts <- function(x) {
   first <- c("A tsibble" = paste(dim_tbl_ts(x), surround(format(int_x), "[")))
   if (is_empty(key(x))) {
     return(first)
-  } else {
-    c(
-      first,
-      "Keys" = paste(paste_comma(key_vars(x)), surround(n_keys(x), "["))
-    )
   }
+  n_keys <- big_mark(n_keys(x))
+  c(
+    first,
+    "Keys" = paste(paste_comma(key_vars(x)), surround(n_keys, "["))
+  )
 }
 
 #' @export
 tbl_sum.grouped_ts <- function(x) {
-  n_grps <- n_groups(x)
+  n_grps <- big_mark(n_groups(x))
   c(NextMethod(),
     "Groups" = paste(paste_comma(group_vars(x)), surround(n_grps, "["))
   )
