@@ -1,5 +1,6 @@
 #' @export
 print.tbl_ts <- function(x, ..., n = NULL, width = NULL, n_extra = NULL) {
+  has_index(x)
   cat_line(format(x, ..., n = n, width = width, n_extra = n_extra))
   invisible(x)
 }
@@ -12,7 +13,7 @@ format.tbl_ts <- function(x, ..., n = NULL, width = NULL, n_extra = NULL) {
 #' @export
 glimpse.tbl_ts <- function(x, width = NULL, ...) {
   as_tsibble(
-    NextMethod(), !!! key(x), index = !! index(x),
+    NextMethod(), id = key(x), index = !! index(x),
     validate = FALSE, regular = is_regular(x)
   )
   invisible(x)
@@ -32,8 +33,8 @@ format.key <- function(x, ...) {
   nest_lgl <- is_nest(x)
   comb_keys <- purrr::map(x[!nest_lgl], as.character)
   if (any(nest_lgl)) {
-    nest_keys <- as.character(flatten(x[nest_lgl]))
-    cond_keys <- paste(nest_keys, collapse = " | ")
+    nest_keys <- purrr::map(x[nest_lgl], as.character)
+    cond_keys <- paste_comma(purrr::map(nest_keys, paste, collapse = " | "))
     comb_keys <- if (is_true(nest_lgl)) {
       cond_keys
     } else {

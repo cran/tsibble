@@ -16,6 +16,10 @@ test_that("From seconds to higher date", {
     date_min = ceiling_date(date_time, unit = "min"),
     value = sum(value)
   )
+  expect_error(tsummarise(tsbl1,
+    value = sum(value),
+    date_min = ceiling_date(date_time, unit = "min")
+  ), "Can't find `index`")
   expect_equal(
     as_tibble(res1),
     tibble(date_min = ymd_hm("2017-01-01 00:01"), value = 5)
@@ -77,14 +81,70 @@ tsbl3 <- as_tsibble(dat_x, key = id(group), index = date)
 test_that("tsummarise for grouped_ts", {
   res1 <- tsbl3 %>%
     group_by(group) %>%
-    tsummarise(value = sum(value), yrmth = yearmonth(date))
+    tsummarise(yrmth = yearmonth(date), value = sum(value))
   expect_is(res1, "tbl_ts")
   expect_equal(
     as_tibble(res1),
     tibble(
-      group = c("a", "b"),
       yrmth = yearmonth(ymd("2017-01-01")),
+      group = c("a", "b"),
       value = c(5L, 10L)
     )
   )
+})
+
+tsbl4 <- tsibble(
+  date = rep(idx_day, 2),
+  group = rep(letters[1:2], each = 5),
+  value1 = rep(1:2, each = 5),
+  value2 = rnorm(10),
+  value3 = rnorm(10),
+  key = id(group), index = date
+)
+
+test_that("scoped variants", {
+  ts_all <- tsbl4 %>% 
+    tsummarise_all(yearmonth(date), .funs = "mean")
+  expect_named(ts_all, c("date", "value1", "value2", "value3"))
+  expect_equal(nrow(ts_all), 1)
+  ts_all <- tsbl4 %>% 
+    tsummarise_all(yrmth = yearmonth(date), .funs = "mean")
+  expect_named(ts_all, c("yrmth", "value1", "value2", "value3"))
+  expect_warning(
+    tsbl4 %>% 
+      tsummarise_all(yrmth = yearmonth(date), na.rm = TRUE, .funs = "mean"),
+    "The arguments are ignored"
+  )
+  ts_if <- tsbl4 %>% 
+    tsummarise_if(yearmonth(date), .predicate = is.numeric, .funs = mean)
+  expect_named(ts_if, c("date", "value1", "value2", "value3"))
+  expect_equal(nrow(ts_if), 1)
+  ts_at <- tsbl4 %>% 
+    tsummarise_at(yearmonth(date), .vars = c("value1", "value3"), .funs = mean)
+  expect_named(ts_at, c("date", "value1", "value3"))
+  expect_equal(nrow(ts_at), 1)
+})
+
+test_that("scoped variants with group_by()", {
+  ts_all <- tsbl4 %>% 
+    group_by(group) %>% 
+    tsummarise_all(yearmonth(date), .funs = "mean")
+  expect_named(ts_all, c("group", "date", "value1", "value2", "value3"))
+  expect_equal(nrow(ts_all), 2)
+  ts_if <- tsbl4 %>% 
+    group_by(group) %>% 
+    tsummarise_if(yearmonth(date), .predicate = is.numeric, .funs = mean)
+  expect_named(ts_if, c("group", "date", "value1", "value2", "value3"))
+  expect_equal(nrow(ts_if), 2)
+  ts_at <- tsbl4 %>% 
+    group_by(group) %>% 
+    tsummarise_at(yearmonth(date), .vars = c("value1", "value3"), .funs = mean)
+  expect_named(ts_at, c("group", "date", "value1", "value3"))
+  expect_equal(nrow(ts_at), 2)
+  tbl <- tourism %>% 
+    group_by(Region | State) %>% 
+    tsummarise_if(
+      Year = year(Quarter), .predicate = is.numeric, .funs = mean
+    )
+  expect_named(tbl, c("Region", "State", "Year", "Trips"))
 })

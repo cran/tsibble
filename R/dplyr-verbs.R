@@ -43,6 +43,7 @@ slice.tbl_ts <- function(.data, ...) {
 #' Column-wise verbs
 #'
 #' `select()` selects columns by variables; `mutate()` adds new variables;
+#' `transmute()` keeps the newly created variables along with index and keys;
 #' `summarise()` collapses the rows by variables.
 #'
 #' @param .data A tsibble.
@@ -69,8 +70,8 @@ select.tbl_ts <- function(.data, ..., drop = FALSE) {
   val_idx <- has_index_var(j = val_vars, x = .data)
   if (is_false(val_idx)) {
     abort(sprintf(
-      "The `index` (%s) must not be dropped. Do you need `drop = TRUE` to drop `tbl_ts`?", 
-      surround(quo_text2(index(.data)), "`")
+      "The `index` (`%s`) must not be dropped. Do you need `drop = TRUE` to drop `tbl_ts`?", 
+      quo_text2(index(.data))
     ))
   }
   lhs <- names(val_vars)
@@ -128,6 +129,20 @@ mutate.tbl_ts <- function(.data, ..., drop = FALSE) {
 }
 
 #' @rdname col-verb
+#' @seealso [dplyr::transmute]
+#' @export
+transmute.tbl_ts <- function(.data, ..., drop = FALSE) {
+  if (drop) {
+    return(transmute(as_tibble(.data), ...))
+  }
+  lst_quos <- quos(..., .named = TRUE)
+  mut_data <- mutate(.data, !!! lst_quos)
+  idx_key <- c(quo_text2(index(.data)), flatten_key(key(.data)))
+  vec_names <- union(idx_key, names(lst_quos))
+  select(mut_data, tidyselect::one_of(vec_names))
+}
+
+#' @rdname col-verb
 #' @seealso [dplyr::summarise]
 #' @export
 summarise.tbl_ts <- function(.data, ..., drop = FALSE) {
@@ -140,8 +155,8 @@ summarise.tbl_ts <- function(.data, ..., drop = FALSE) {
   idx <- index(.data)
   if (has_index_var(j = vec_vars, x = .data)) {
     abort(sprintf(
-      "The `index` (%s) must not be dropped. Do you need `drop = TRUE` to drop `tbl_ts`?", 
-      surround(quo_text2(idx), "`")
+      "The `index` (`%s`) must not be dropped. Do you need `drop = TRUE` to drop `tbl_ts`?", 
+      quo_text2(index(.data))
     ))
   }
 
@@ -189,8 +204,8 @@ group_by.tbl_ts <- function(.data, ..., add = FALSE) {
   grped_chr <- flatten_key(final_grps)
   if (idx_var %in% grped_chr) {
     abort(sprintf(
-      "The `index` (%s) must not be grouped. Do you need `as_tibble()` to coerce to `tbl_df`?", 
-      surround(idx_var, "`")
+      "The `index` (`%s`) must not be grouped. Do you need `as_tibble()` to coerce to `tbl_df`?", 
+      idx_var
     ))
   }
 
@@ -229,11 +244,6 @@ prepare_groups <- function(data, group, add = FALSE) {
 
 do.tbl_ts <- function(.data, ...) {
   dplyr::do(as_tibble(.data), ...)
-}
-
-#' @export
-transmute.tbl_ts <- function(.data, ...) {
-  abort("'tbl_ts' has no support for transmute(). Please coerce to 'tbl_df' first and then transmute().")
 }
 
 #' @export

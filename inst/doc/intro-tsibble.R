@@ -37,17 +37,16 @@ tourism %>%
 
 ## ----flights-------------------------------------------------------------
 flights <- nycflights13::flights %>%
-  mutate(sched_date_time = time_hour + minutes(minute)) %>%
-  select(
-    flight, origin, dest, sched_date_time, 
-    dep_delay, arr_delay, air_time, distance
+  mutate(
+    sched_dep_datetime = make_datetime(year, month, day, hour, minute, 0),
+    flight_num = paste0(carrier, flight)
   )
 
 ## ----flights-ts----------------------------------------------------------
 flights_tsbl <- flights %>%
   as_tsibble(
-    key = id(flight:dest), 
-    index = sched_date_time, 
+    key = id(flight_num), 
+    index = sched_dep_datetime, 
     regular = FALSE
   )
 flights_tsbl

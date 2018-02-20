@@ -41,7 +41,7 @@ devtools::install_github("earowang/tsibble", build_vignettes = TRUE)
 The `weather` data included in the package `nycflights13` is used as an
 example to illustrate. The “index” variable is the `time_hour`
 containing the date-times, and the “key” is the `origin` as weather
-stations created via the `id()`. **The key(s) together with the index
+stations created via `id()`. **The key(s) together with the index
 uniquely identifies each observation**, which gives a valid *tsibble*.
 Other columns can be considered as measured variables.
 
@@ -104,13 +104,14 @@ preserves time zones for date-times.
 
 ### `tsummarise()` to summarise over calendar periods
 
-`tsummarise()` is introduced to aggregate interested variables over
-calendar periods. The `tsummarise` goes hand in hand with the index
-functions including `as.Date()`, `yearmonth()`, and `yearquarter()`, as
-well as other friends from *lubridate*, such as `year()` and
-`ceiling_date()`. For example, it would be of interest in computing
-average temperature and total precipitation per month, by applying the
-`yearmonth()` to the hourly time index.
+`tsummarise()` and its scoped variants (including `_all()`, `_at()`,
+`_if()`) are introduced to aggregate interested variables over calendar
+periods. `tsummarise()` goes hand in hand with the index functions
+including `as.Date()`, `yearmonth()`, and `yearquarter()`, as well as
+other friends from *lubridate*, such as `year()`, `ceiling_date()`,
+`floor_date()` and `round_date()`. For example, it would be of interest
+in computing average temperature and total precipitation per month, by
+applying `yearmonth()` to the hourly time index.
 
 ``` r
 full_weather %>%
@@ -132,8 +133,8 @@ full_weather %>%
 #> # ... with 31 more rows
 ```
 
-The `tsummarise()` can also help with regularising a tsibble of
-irregular time space.
+`tsummarise()` can also help with regularising a tsibble of irregular
+time space.
 
 ### A family of window functions: `slide()`, `tile()`, `stretch()`
 
@@ -143,7 +144,7 @@ windows using purrr-like syntax:
 
   - `slide()`: sliding window with overlapping observations.
   - `tile()`: tiling window without overlapping observations.
-  - `stretch()`: fixing an initial window and expanding more
+  - `stretch()`: fixing an initial window and expanding to include more
     observations.
 
 For example, a moving average of window size 3 is carried out on hourly
@@ -166,19 +167,20 @@ full_weather %>%
 #> # ... with 2.62e+04 more rows
 ```
 
-### Reexported functions from the tidyverse
+## Reexported functions from the tidyverse
 
 It can be noticed that the tsibble seamlessly works with *dplyr* verbs.
+Use `?tsibble::reexports` for a full list of re-exported functions.
 
   - **dplyr:**
       - `arrange()`, `filter()`, `slice()`
-      - `mutate()`, `select()`, `summarise()`/`summarize()` with an
-        additional argument `drop = FALSE` to drop `tbl_ts` and coerce
-        to `tbl_df`
+      - `mutate()`/`transmute()`, `select()`,
+        `summarise()`/`summarize()` with an additional argument `drop =
+        FALSE` to drop `tbl_ts` and coerce to `tbl_df`
       - `rename()`
       - `*_join()`
       - `group_by()`, `ungroup()`
-      - 🚫 `transmute()`, `disintct()`
+      - 🚫 `distinct()`
   - **tidyr:** `fill()`
   - **tibble:** `glimpse()`, `as_tibble()`/`as.tibble()`
   - **rlang:** `!!`, `!!!`

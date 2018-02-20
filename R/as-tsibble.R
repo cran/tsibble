@@ -24,21 +24,21 @@ globalVariables(c("key", "value", "zzz"))
 #'
 #' @examples
 #' # create a tsibble w/o a key ----
-#' tbl1 <- tsibble(
+#' tsbl1 <- tsibble(
 #'   date = seq(as.Date("2017-01-01"), as.Date("2017-01-10"), by = 1),
 #'   value = rnorm(10),
 #'   key = id(), index = date
 #' )
-#' tbl1
+#' tsbl1
 #'
 #' # create a tsibble with one key ----
-#' tbl2 <- tsibble(
+#' tsbl2 <- tsibble(
 #'   qtr = rep(yearquarter(seq(2010, 2012.25, by = 1 / 4)), 3),
 #'   group = rep(c("x", "y", "z"), each = 10),
 #'   value = rnorm(30),
 #'   key = id(group), index = qtr
 #' )
-#' tbl2
+#' tsbl2
 #'
 #' @export
 tsibble <- function(..., key = id(), index, regular = TRUE) {
@@ -208,6 +208,11 @@ as_tsibble.NULL <- function(x, ...) {
 #' @export
 key <- function(x) {
   UseMethod("key")
+}
+
+#' @export
+key.default <- function(x) {
+  abort(sprintf("Can't find the `key` in `%s`", class(x)[1]))
 }
 
 #' @export
@@ -422,7 +427,7 @@ tsibble_tbl <- function(x, key, index, regular = TRUE, validate = TRUE) {
   is_index_in_keys <- intersect(idx_chr, flat_keys)
   if (is_false(is_empty(is_index_in_keys))) {
     msg <- sprintf(
-      "%s can't be both `key` and `index`.", surround(idx_chr, "`")
+      "`%s` can't be both `key` and `index`.", idx_chr
     )
     abort(msg)
   }
@@ -484,9 +489,9 @@ extract_index_var <- function(data, index) {
     idx_na <- idx_type[quo_text2(index)]
     if (is.na(idx_na)) {
       cls_idx <- purrr::map_chr(data, ~ class(.)[1])
+      name_idx <- names(idx_na)
       abort(sprintf(
-        "Unsupported index type: %s",
-        cls_idx[colnames(data) %in% names(idx_na)])
+        "Unsupported index type: `%s`", cls_idx[colnames(data) %in% name_idx])
       )
     }
   }
@@ -508,7 +513,9 @@ validate_nested <- function(data, key) {
     n_lgl <- purrr::map_lgl(n_dist, is_descending)
     if (is_false(all(n_lgl))) {
       which_bad <- key_nest[!n_lgl]
-      wrong_nested <- purrr::map(which_bad, ~ paste(., collapse = " | "))
+      wrong_nested <- purrr::map(which_bad, 
+        ~ paste(surround(., "`"), collapse = " | ")
+      )
       wrong_nested <- paste_comma(wrong_nested)
       wrong_dim <- purrr::map_chr(n_dist, ~ paste(., collapse = " | "))
       abort(sprintf(
@@ -533,10 +540,12 @@ validate_tbl_ts <- function(data, key, index) {
   tbl_dup <- grouped_df(data, vars = flatten_key(key)) %>%
     summarise(zzz = anyDuplicated.default(!! index))
   if (any_not_equal_to_c(tbl_dup$zzz, 0)) {
-    msg <- sprintf("Invalid tsibble: identical data entries from %s", idx)
+    msg <- sprintf("Invalid tsibble: identical data entries from `%s`", idx)
     if (!is_empty(key)) {
       class(key) <- "key"
       msg <- sprintf("%s and %s.", msg, paste_comma(format(key)))
+    } else {
+      msg <- paste0(msg, ".")
     }
     msg <- paste(msg, "Use `inform_duplicates()` to check the duplicated rows.")
     abort(msg)
