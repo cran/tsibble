@@ -3,8 +3,7 @@
 #' Rolling window with overlapping observations:
 #' * `slide()` always returns a vector of numerics
 #' * `slide_lst()` returns a list
-#' * `slide_dfr()` and `slide_dfc()` return data frame using row-binding and
-#' column-binding
+#' * `slide_dfr()` return data frame using row-binding
 #' * `slider()` splits the input `x` to a list according to the window size.
 #'
 #' @param x A vector of numerics, or data frame. If a data frame, row-wise rolling
@@ -42,19 +41,22 @@
 #' # sliding a 2-day window for a data frame ----
 #' jan <- pedestrian %>% 
 #'   filter(Date <= as.Date("2015-01-31")) %>% 
-#'   split(.$Sensor)
-#' # directly return a data frame of fitted values and residuals
+#'   split_by(Sensor)
+#' # returns a data frame of fitted values and residuals for each sensor,
+#' # and then combines
 #' diag_jan <- jan %>%
-#'   purrr::map_dfr(~ slide_dfr(., function(x) {
-#'     fit <- lm(Count ~ Time, data = x)
-#'     data.frame(fitted = fitted(fit), resid = residuals(fit))
-#'   }, size = 48))
+#'   purrr::map_dfr(
+#'     ~ slide_dfr(., function(x) {
+#'       fit <- lm(Count ~ Time, data = x)
+#'       data.frame(fitted = fitted(fit), resid = residuals(fit))
+#'     }, size = 48)
+#'   )
 #' diag_jan[48:57, ]
 #' # save lm models as additional columns
 #' lm_jan <- jan %>% 
-#'   purrr::map(~ mutate(., 
-#'     lm = slide_lst(., ~ lm(Count ~ Time, data = .), size = 48)
-#' ))
+#'   purrr::map(
+#'     ~ mutate(., lm = slide_lst(., ~ lm(Count ~ Time, data = .), size = 48)
+#'   ))
 #' lm_jan[[1]][48:57, ]
 #' }
 #' @export
@@ -78,21 +80,17 @@ slide_lst <- function(x, .f, ..., size = 1, fill = NA) {
 #' @export
 slide_dfr <- function(x, .f, ..., size = 1, fill = NA, .id = NULL) {
   out <- slide_lst(x, .f = .f, ..., size = size, fill = fill)
-  if (is.null(names(out))) {
-    return(as_tibble(do.call(rbind, out)))
-  }
-  dplyr::bind_rows(out, .id = .id)
+  out_named <- purrr::map(out, `names<-`, names(out[[size]]))
+  dplyr::bind_rows(!!! out_named, .id = .id)
 }
 
-#' @rdname slide
-#' @export
-slide_dfc <- function(x, .f, ..., size = 1, fill = NA) {
-  out <- slide_lst(x, .f = .f, ..., size = size, fill = fill)
-  if (is.null(names(out))) {
-    return(as_tibble(do.call(cbind, out)))
-  }
-  dplyr::bind_cols(out)
-}
+# #' @rdname slide
+# #' @export
+# slide_dfc <- function(x, .f, ..., size = 1, fill = NA) {
+#   out <- slide_lst(x, .f = .f, ..., size = size, fill = fill)
+#   out_named <- purrr::map(out, `names<-`, names(out[[size]]))
+#   dplyr::bind_cols(!!! out_named)
+# }
 
 #' @rdname slide
 #' @export
@@ -111,8 +109,7 @@ slider <- function(x, size = 1) {
 #' Tiling window without overlapping observations:
 #' * `tile()` always returns a vector of numerics
 #' * `tile_lst()` returns a list
-#' * `tile_dfr()` and `tile_dfc()` return data frame using row-binding and
-#' column-binding
+#' * `tile_dfr()` return data frame using row-binding
 #' * `tiler()` splits the input `x` to a list according to the window size.
 #'
 #' @inheritParams slide
@@ -132,7 +129,7 @@ slider <- function(x, size = 1) {
 #' # tiling over a 2-day window for hourly data ----
 #' \dontrun{
 #' pedestrian %>% 
-#'   split(.$Sensor) %>% 
+#'   split_by(Sensor) %>% 
 #'   purrr::map_dfr(~ tile_dfr(., ~ quantile(.$Count), size = 48))
 #' }
 tile <- function(x, .f, ..., size = 1) {
@@ -151,21 +148,15 @@ tile_lst <- function(x, .f, ..., size = 1) {
 #' @export
 tile_dfr <- function(x, .f, ..., size = 1, .id = NULL) {
   out <- tile_lst(x = x, .f = .f, ..., size = size)
-  if (is.null(names(out))) {
-    return(as_tibble(do.call(rbind, out)))
-  }
-  dplyr::bind_rows(out, .id = .id)
+  dplyr::bind_rows(!!! out, .id = .id)
 }
 
-#' @rdname tile
-#' @export
-tile_dfc <- function(x, .f, ..., size = 1) {
-  out <- tile_lst(x = x, .f = .f, ..., size = size)
-  if (is.null(names(out))) {
-    return(as_tibble(do.call(cbind, out)))
-  }
-  dplyr::bind_cols(out)
-}
+# #' @rdname tile
+# #' @export
+# tile_dfc <- function(x, .f, ..., size = 1) {
+#   out <- tile_lst(x = x, .f = .f, ..., size = size)
+#   dplyr::bind_cols(!!! out)
+# }
 
 #' @rdname tile
 #' @export
@@ -175,7 +166,7 @@ tiler <- function(x, size = 1) {
   seq_x <- seq_len(len_x)
   denom <- len_x + 1
   frac <- ceiling((seq_x %% denom) / size)
-  unname(split(x, frac))
+  unname(split(x, frac, drop = TRUE))
 }
 
 #' Stretching window calculation
@@ -183,8 +174,7 @@ tiler <- function(x, size = 1) {
 #' Fixing an initial window and expanding more observations:
 #' * `stretch()` always returns a vector of numerics
 #' * `stretch_lst()` returns a list
-#' * `stretch_dfr()` and `stretch_dfc()` return data frame using row-binding and
-#' column-binding
+#' * `stretch_dfr()` return data frame using row-binding
 #' * `stretcher()` splits the input `x` to a list according to the window size.
 #'
 #' @inheritParams slide
@@ -222,21 +212,15 @@ stretch_lst <- function(x, .f, ..., size = 1, init = 1) {
 #' @export
 stretch_dfr <- function(x, .f, ..., size = 1, init = 1, .id = NULL) {
   out <- stretch_lst(x, .f = .f, ..., size = size, init = init)
-  if (is.null(names(out))) {
-    return(as_tibble(do.call(rbind, out)))
-  }
-  dplyr::bind_rows(out, .id = .id)
+  dplyr::bind_rows(!!! out, .id = .id)
 }
 
-#' @rdname stretch
-#' @export
-stretch_dfc <- function(x, .f, ..., size = 1, init = 1) {
-  out <- stretch_lst(x, .f = .f, ..., size = size, init = init)
-  if (is.null(names(out))) {
-    return(as_tibble(do.call(cbind, out)))
-  }
-  dplyr::bind_cols(out)
-}
+# #' @rdname stretch
+# #' @export
+# stretch_dfc <- function(x, .f, ..., size = 1, init = 1) {
+#   out <- stretch_lst(x, .f = .f, ..., size = size, init = init)
+#   dplyr::bind_cols(!!! out)
+# }
 
 #' @rdname stretch
 #' @export

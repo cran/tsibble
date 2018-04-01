@@ -1,3 +1,32 @@
+# tsibble 0.1.5
+
+This release introduces major changes into the underlying `tbl_ts` object:
+
+* Dropped the attribute "key_indices" from a `tbl_ts` class to reduce the object size, and computed on the fly when printing.
+* Gained a new attribute "ordered" to identify if it is arranged by key and index in ascending order. If not, broadcast a warning. The warning likely occurs to `arrange()` and `slice()` functions.
+* The "index" attribute in a `tbl_ts` object is a symbol now instead of a quosure.
+* The "key" attribute in a `tbl_ts` object is an unnamed list of symbols.
+
+## New functions
+
+* "key" helpers:
+  * `key_update()` to change/update the keys for a given tsibble.
+  + `unkey()` as an S3 method for a tsibble of key size < 2.
+  + `key_indices()` as an S3 method to extract key indices.
+* `split_by()` to split a tsibble into a list of data by unquoted variables.
+* `build_tsibble()` allows users to gain more control over a tsibble construction.
+* Added `as_tsibble.msts()` for multiple seasonality time series defined in the forecast package.
+
+## Bug fixes
+
+* Fixed `as_tsibble.ts()` for daily time series (when frequency = 7).
+* `group_by.tbl_ts()` does not accept named expressions.
+
+## Internal changes
+
+* No longer throw an error when grouping the index.
+* An interval of regularly spaced tsibble is (re)computed when creating the tsibble and performing the row-wise operations (like `filter()` and `slice()`). This avoids unnecessary re-computation for many function calls.
+
 # tsibble 0.1.3
 
 ## New functions

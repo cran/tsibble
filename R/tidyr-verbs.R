@@ -8,7 +8,7 @@ fill.grouped_ts <- function(data, ..., .direction = c("down", "up")) {
 complete.tbl_ts <- function(data, ..., fill = list()) {
   comp_data <- NextMethod()
   if (is_grouped_ts(data)) {
-    comp_data <- grouped_df(comp_data, vars = flatten_key(groups(data)))
+    comp_data <- grouped_df(comp_data, vars = key_flatten(groups(data)))
   }
   update_tsibble(comp_data, data)
 }
@@ -30,10 +30,10 @@ spread_tsbl <- function(data, value, fill = NA, sep = "") {
   }
   # ToDo: only works with a single key rather than the nested and grouped keys
   spread_key <- key(data)
-  if (is_empty(spread_key)) {
-    return(as_tibble(data))
-  }
   idx_var <- index(data)
+  if (is_empty(spread_key)) {
+    return(as_tibble(data %>% arrange(!! idx_var)))
+  }
   compact_tsbl <- data %>%
     mutate(key = paste(!!! spread_key, sep = sep)) %>%
     select(!! idx_var, key, spread_val, drop = TRUE)

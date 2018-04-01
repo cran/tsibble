@@ -29,7 +29,7 @@ paste_comma <- function(...) {
 }
 
 first_arg <- function(x) {
-  purrr::compact(purrr::map(x, ~ dplyr::first(lang_args(.))))
+  purrr::compact(purrr::map(x, ~ dplyr::first(call_args(.))))
 }
 
 # regular time interval is obtained from the minimal time distance.
@@ -57,7 +57,7 @@ surround <- function(x, bracket = "(") {
   } else if (bracket == "[") {
     return(paste0("[", x, "]"))
   } else if (bracket == "<") {
-    paste0("<", x, ">")
+    return(paste0("<", x, ">"))
   } else {
     paste0("`", x, "`")
   }
@@ -73,4 +73,9 @@ min0 <- function(x) {
 
 max0 <- function(x) {
   max(x, na.rm = TRUE)
+}
+
+is_named <- function(quos) {
+  named_quos <- names(quos)
+  is_false(all(named_quos == ""))
 }

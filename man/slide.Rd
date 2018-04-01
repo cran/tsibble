@@ -4,7 +4,6 @@
 \alias{slide}
 \alias{slide_lst}
 \alias{slide_dfr}
-\alias{slide_dfc}
 \alias{slider}
 \title{Sliding window calculation}
 \usage{
@@ -13,8 +12,6 @@ slide(x, .f, ..., size = 1, fill = NA_real_)
 slide_lst(x, .f, ..., size = 1, fill = NA)
 
 slide_dfr(x, .f, ..., size = 1, fill = NA, .id = NULL)
-
-slide_dfc(x, .f, ..., size = 1, fill = NA)
 
 slider(x, size = 1)
 }
@@ -40,8 +37,7 @@ Rolling window with overlapping observations:
 \itemize{
 \item \code{slide()} always returns a vector of numerics
 \item \code{slide_lst()} returns a list
-\item \code{slide_dfr()} and \code{slide_dfc()} return data frame using row-binding and
-column-binding
+\item \code{slide_dfr()} return data frame using row-binding
 \item \code{slider()} splits the input \code{x} to a list according to the window size.
 }
 }
@@ -66,19 +62,22 @@ slider(x, size = 3)
 # sliding a 2-day window for a data frame ----
 jan <- pedestrian \%>\% 
   filter(Date <= as.Date("2015-01-31")) \%>\% 
-  split(.$Sensor)
-# directly return a data frame of fitted values and residuals
+  split_by(Sensor)
+# returns a data frame of fitted values and residuals for each sensor,
+# and then combines
 diag_jan <- jan \%>\%
-  purrr::map_dfr(~ slide_dfr(., function(x) {
-    fit <- lm(Count ~ Time, data = x)
-    data.frame(fitted = fitted(fit), resid = residuals(fit))
-  }, size = 48))
+  purrr::map_dfr(
+    ~ slide_dfr(., function(x) {
+      fit <- lm(Count ~ Time, data = x)
+      data.frame(fitted = fitted(fit), resid = residuals(fit))
+    }, size = 48)
+  )
 diag_jan[48:57, ]
 # save lm models as additional columns
 lm_jan <- jan \%>\% 
-  purrr::map(~ mutate(., 
-    lm = slide_lst(., ~ lm(Count ~ Time, data = .), size = 48)
-))
+  purrr::map(
+    ~ mutate(., lm = slide_lst(., ~ lm(Count ~ Time, data = .), size = 48)
+  ))
 lm_jan[[1]][48:57, ]
 }
 }

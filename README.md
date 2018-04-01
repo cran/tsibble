@@ -6,11 +6,11 @@
 */ˈt͡sɪbəl/*
 
 [![Travis-CI Build
-Status](https://travis-ci.org/earowang/tsibble.svg?branch=master)](https://travis-ci.org/earowang/tsibble)
+Status](https://travis-ci.org/tidyverts/tsibble.svg?branch=master)](https://travis-ci.org/tidyverts/tsibble)
 [![AppVeyor Build
-Status](https://ci.appveyor.com/api/projects/status/github/earowang/tsibble?branch=master&svg=true)](https://ci.appveyor.com/project/earowang/tsibble)
+Status](https://ci.appveyor.com/api/projects/status/github/tidyverts/tsibble?branch=master&svg=true)](https://ci.appveyor.com/project/tidyverts/tsibble)
 [![Coverage
-Status](https://img.shields.io/codecov/c/github/earowang/tsibble/master.svg)](https://codecov.io/github/earowang/tsibble?branch=master)
+Status](https://img.shields.io/codecov/c/github/tidyverts/tsibble/master.svg)](https://codecov.io/github/tidyverts/tsibble?branch=master)
 [![CRAN\_Status\_Badge](http://www.r-pkg.org/badges/version/tsibble)](https://cran.r-project.org/package=tsibble)
 [![Downloads](http://cranlogs.r-pkg.org/badges/tsibble?color=brightgreen)](https://cran.r-project.org/package=tsibble)
 
@@ -31,7 +31,7 @@ You could install the development version from Github using
 
 ``` r
 # install.packages("devtools")
-devtools::install_github("earowang/tsibble", build_vignettes = TRUE)
+devtools::install_github("tidyverts/tsibble", build_vignettes = TRUE)
 ```
 
 ## Get started
@@ -55,11 +55,11 @@ weather_tsbl
 #> # Keys:      origin [3]
 #>   origin time_hour            temp humid precip
 #>   <chr>  <dttm>              <dbl> <dbl>  <dbl>
-#> 1 EWR    2013-01-01 00:00:00  37.0  54.0      0
-#> 2 EWR    2013-01-01 01:00:00  37.0  54.0      0
-#> 3 EWR    2013-01-01 02:00:00  37.9  52.1      0
-#> 4 EWR    2013-01-01 03:00:00  37.9  54.5      0
-#> 5 EWR    2013-01-01 04:00:00  37.9  57.0      0
+#> 1 EWR    2013-01-01 00:00:00  37.0  54.0     0.
+#> 2 EWR    2013-01-01 01:00:00  37.0  54.0     0.
+#> 3 EWR    2013-01-01 02:00:00  37.9  52.1     0.
+#> 4 EWR    2013-01-01 03:00:00  37.9  54.5     0.
+#> 5 EWR    2013-01-01 04:00:00  37.9  57.0     0.
 #> # ... with 2.612e+04 more rows
 ```
 
@@ -91,11 +91,11 @@ full_weather
 #> # Groups:    origin [3]
 #>   origin time_hour            temp humid precip
 #>   <chr>  <dttm>              <dbl> <dbl>  <dbl>
-#> 1 EWR    2013-01-01 00:00:00  37.0  54.0      0
-#> 2 EWR    2013-01-01 01:00:00  37.0  54.0      0
-#> 3 EWR    2013-01-01 02:00:00  37.9  52.1      0
-#> 4 EWR    2013-01-01 03:00:00  37.9  54.5      0
-#> 5 EWR    2013-01-01 04:00:00  37.9  57.0      0
+#> 1 EWR    2013-01-01 00:00:00  37.0  54.0     0.
+#> 2 EWR    2013-01-01 01:00:00  37.0  54.0     0.
+#> 3 EWR    2013-01-01 02:00:00  37.9  52.1     0.
+#> 4 EWR    2013-01-01 03:00:00  37.9  54.5     0.
+#> 5 EWR    2013-01-01 04:00:00  37.9  57.0     0.
 #> # ... with 2.62e+04 more rows
 ```
 
@@ -159,11 +159,11 @@ full_weather %>%
 #> # Groups:    origin [3]
 #>   origin time_hour            temp humid precip temp_ma
 #>   <chr>  <dttm>              <dbl> <dbl>  <dbl>   <dbl>
-#> 1 EWR    2013-01-01 00:00:00  37.0  54.0      0    NA  
-#> 2 EWR    2013-01-01 01:00:00  37.0  54.0      0    NA  
-#> 3 EWR    2013-01-01 02:00:00  37.9  52.1      0    37.3
-#> 4 EWR    2013-01-01 03:00:00  37.9  54.5      0    37.6
-#> 5 EWR    2013-01-01 04:00:00  37.9  57.0      0    37.9
+#> 1 EWR    2013-01-01 00:00:00  37.0  54.0     0.    NA  
+#> 2 EWR    2013-01-01 01:00:00  37.0  54.0     0.    NA  
+#> 3 EWR    2013-01-01 02:00:00  37.9  52.1     0.    37.3
+#> 4 EWR    2013-01-01 03:00:00  37.9  54.5     0.    37.6
+#> 5 EWR    2013-01-01 04:00:00  37.9  57.0     0.    37.9
 #> # ... with 2.62e+04 more rows
 ```
 

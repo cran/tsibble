@@ -1,37 +1,82 @@
 library(lubridate)
+library(dplyr)
 context("dplyr verbs for tsibble")
 
 test_that("group_by()", {
   expect_error(group_by(tourism, State | Region), "Incorrect nesting")
   expect_error(group_by(tourism, State | Region, Purpose, "Invalid tsibble"))
-  expect_error(group_by(tourism, Quarter), "must not be grouped")
-  expect_error(group_by(pedestrian, Date_Time, Sensor), "must not be grouped")
-  grped_df <- pedestrian %>% 
-    group_by(Date) %>% 
+  grped_df <- pedestrian %>%
+    group_by(Date) %>%
     group_by(Sensor, add = TRUE)
   expect_length(group_vars(grped_df), 2)
-  grped_df <- pedestrian %>% 
+  grped_df <- pedestrian %>%
     group_by(Sensor)
   expect_equal(n_groups(grped_df), 4)
   expect_length(group_size(grped_df), 4)
+  expect_length(group_indices(grped_df), 4)
+  expect_equal(
+    vapply(group_indices(grped_df), length, integer(1)),
+    key_size(grped_df)
+  )
+  expect_error(pedestrian %>% group_by(sensor = Sensor), "must not be named")
 
-  grped_t <- tourism %>% 
-    group_by(Purpose) %>% 
+  grped_t <- tourism %>%
+    group_by(Purpose) %>%
     group_by(Region | State, add = TRUE)
   expect_length(group_vars(grped_t), 2)
 })
 
-test_that("arrange()", {
- tsbl1 <- arrange(tourism, Quarter)
+test_that("arrange.tbl_ts()", {
+ expect_warning(tsbl1 <- arrange(tourism, Quarter), "not arranged by")
  expect_equal(tsbl1, tourism)
+ expect_false(is_ordered(tsbl1))
  expect_identical(key(tsbl1), key(tourism))
  expect_identical(groups(tsbl1), groups(tourism))
- tsbl2 <- tourism %>%
-   group_by(Region | State) %>%
-   arrange(Quarter)
- expect_equal(tsbl2, tourism)
- expect_identical(key(tsbl2), key(tourism))
- expect_identical(unname(group_vars(tsbl2)), "Region | State")
+ tsbl2 <- arrange(tsbl1, Region, State, Purpose, Quarter)
+ expect_identical(tsbl2, tourism)
+})
+
+idx_year <- seq.int(1970, 2010, by = 10)
+dat_x <- tsibble(year = idx_year, value = rnorm(5), index = year)
+
+test_that("warnings for arrange a univariate time series", {
+  expect_warning(arrange(dat_x, value), "not arranged by `year`")
+})
+
+test_that("expect warnings from arrange.tbl_ts()", {
+  expect_warning(pedestrian %>% arrange(Time), "not arranged by")
+  expect_warning(pedestrian %>% arrange(Sensor, desc(Date_Time)), "not arranged by")
+  expect_warning(pedestrian %>% arrange(desc(Date_Time)), "not arranged by")
+  expect_warning(pedestrian %>% arrange(Count, Date_Time, Sensor), "not arranged by")
+  expect_warning(pedestrian %>% arrange(Sensor, Count, Date_Time), "not arranged by")
+  expect_warning(tbl <- pedestrian %>% arrange(Date_Time, Sensor), "not arranged by")
+  expect_identical(tbl %>% arrange(Sensor, Date_Time), pedestrian)
+  bm <- pedestrian %>%
+    filter(Sensor == "Birrarung Marr")
+  expect_warning(bm %>% arrange(desc(Date_Time)), "not arranged by")
+})
+
+test_that("arrange.grouped_ts()", {
+  expect_warning(
+    tsbl2 <- tourism %>% group_by(Region | State) %>% arrange(Quarter),
+    "not arranged by"
+  )
+  expect_equal(tsbl2, tourism)
+  expect_identical(key(tsbl2), key(tourism))
+  expect_identical(unname(group_vars(tsbl2)), "Region | State")
+  expect_warning(
+    tsbl3 <- tourism %>%
+      group_by(Region | State) %>%
+      arrange(Quarter, .by_group = TRUE),
+    "not arranged by"
+  )
+  expect_equal(tsbl3, tourism)
+  expect_identical(key(tsbl3), key(tourism))
+  expect_identical(unname(group_vars(tsbl3)), "Region | State")
+  tsbl4 <- tourism %>%
+    group_by(Region | State) %>%
+    arrange(Purpose, Quarter, .by_group = TRUE)
+  expect_identical(tsbl4, group_by(tourism, Region | State))
 })
 
 test_that("filter() and slice()", {
@@ -52,6 +97,9 @@ test_that("filter() and slice()", {
     group_by(Purpose) %>%
     slice(1:3)
   expect_identical(dim(tsbl4), c(12L, ncol(tourism)))
+  expect_warning(slice(pedestrian, 3:1), "not arranged by `Sensor`, and `Date_Time`")
+  expect_error(slice(pedestrian, c(3, 3)), "Duplicated")
+  expect_error(slice(pedestrian, 3, 3), "only accepts one expression.")
 })
 
 test_that("select() and rename()", {
@@ -114,8 +162,8 @@ test_that("summarise()", {
   expect_identical(nrow(tsbl3), nrow(tourism))
 
   expect_error(pedestrian %>% summarise(month = yearmonth(Date_Time)))
-  tbl_ped <- pedestrian %>% 
-    group_by(Date) %>% 
+  tbl_ped <- pedestrian %>%
+    group_by(Date) %>%
     summarise(DailyCount = mean(Count), drop = TRUE)
   expect_is(tbl_ped, "tbl_df")
 })
