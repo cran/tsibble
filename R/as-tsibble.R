@@ -9,7 +9,7 @@ globalVariables(c("key", "value", "zzz"))
 #' simply call `id()`. See below for details.
 #' @param index A bare (or unquoted) variable to specify the time index variable.
 #' @param regular Regular time interval (`TRUE`) or irregular (`FALSE`). `TRUE`
-#' finds the minimal time span as the interval.
+#' finds the greatest common divisor of positive time distances as the interval.
 #'
 #' @inheritSection tsibble-package Index
 #'
@@ -17,10 +17,10 @@ globalVariables(c("key", "value", "zzz"))
 #'
 #' @inheritSection tsibble-package Interval
 #'
-#' @details A tsibble is arranged by its key(s) first and index in the ascending
-#' time order.
+#' @details A tsibble is sorted by its key(s) first and index.
 #'
 #' @return A tsibble object.
+#' @seealso [build_tsibble]
 #'
 #' @examples
 #' # create a tsibble w/o a key ----
@@ -50,12 +50,7 @@ tsibble <- function(..., key = id(), index, regular = TRUE) {
 #' Coerce to a tsibble object
 #'
 #' @param x Other objects to be coerced to a tsibble (`tbl_ts`).
-#' @param key Structural variable(s) that define unique time indices, used with
-#' the helper [id]. If a univariate time series (without an explicit key),
-#' simply call `id()`.See below for details.
-#' @param index A bare (or unquoted) variable to specify the time index variable.
-#' @param regular Regular time interval (`TRUE`) or irregular (`FALSE`). `TRUE`
-#' finds the minimal time span as the interval.
+#' @inheritParams tsibble
 #' @param validate `TRUE` suggests to verify that each key or each combination
 #' of key variables lead to unique time indices (i.e. a valid tsibble). It will
 #' also make sure that the nested variables are arranged from lower level to
@@ -169,12 +164,22 @@ as_tsibble.NULL <- function(x, ...) {
 
 #' @export
 groups.tbl_ts <- function(x) {
-  attr(x, "vars")
+  NULL
+}
+
+#' @export
+groups.grouped_ts <- function(x) {
+  syms(group_vars(x))
 }
 
 #' @export
 group_vars.tbl_ts <- function(x) {
-  format(groups(x))
+  character(0L)
+}
+
+#' @export
+group_vars.grouped_ts <- function(x) {
+  attr(x, "vars")
 }
 
 #' @export
@@ -208,7 +213,7 @@ measured_vars <- function(x) {
 #' @export
 measured_vars.tbl_ts <- function(x) {
   all_vars <- dplyr::tbl_vars(x)
-  key_vars <- key_flatten(key(x))
+  key_vars <- key_vars(x)
   idx_var <- quo_text(index(x))
   setdiff(all_vars, c(key_vars, idx_var))
 }
@@ -232,6 +237,13 @@ interval <- function(x) {
 index <- function(x) {
   not_tsibble(x)
   attr(x, "index")
+}
+
+#' @rdname index-rd
+#' @export
+index2 <- function(x) {
+  not_tsibble(x)
+  attr(x, "index2")
 }
 
 #' `is_regular` checks if a tsibble is spaced at regular time or not; `is_ordered`
@@ -318,16 +330,15 @@ as.tsibble <- function(x, ...) {
 
 #' Construct a tsibble object
 #'
-#' A relatively more flexible function to create a `tbl_ts` object. It is useful
+#' A relatively more controllable function to create a `tbl_ts` object. It is useful
 #' for creating a `tbl_ts` internally inside a function, and it allows users to
 #' determine if the time needs ordering and the interval needs calculating.
 #'
 #' @param x A `data.frame`, `tbl_df`, `tbl_ts`, or other tabular objects.
-#' @param key Structural variable(s) that define unique time indices, used with
-#' the helper [id]. If a univariate time series (without an explicit key),
-#' simply call `id()`.
 #' @inheritParams as_tsibble
-#' @param groups Grouping variable(s).
+#' @param index2 A candidate of `index` to update the index to a new one when
+#' [index_by]. By default, it's identical to `index`.
+#' @param groups Grouping variable(s) when [group_by.tbl_ts].
 #' @param ordered The default of `NULL` arranges the key variable(s) first and
 #' then index in ascending order. `TRUE` suggests to skip the ordering as `x` in
 #' the correct order. `FALSE` also skips the ordering but gives a warning instead.
@@ -335,8 +346,14 @@ as.tsibble <- function(x, ...) {
 #' is, if an class of `interval` is supplied.
 #'
 #' @export
+#' @examples
+#' # Prepare `pedestrian` to use a new index `Date` ----
+#' pedestrian %>%
+#'   build_tsibble(
+#'     key = key(.), index = !! index(.), index2 = Date, interval = interval(.)
+#'   )
 build_tsibble <- function(
-  x, key, index, groups = id(), regular = TRUE,
+  x, key, index, index2, groups = id(), regular = TRUE,
   validate = TRUE, ordered = NULL, interval = NULL
 ) {
   if (NROW(x) == 0 || has_length(x[[1]], 0)) { # no elements or length of 0
@@ -345,29 +362,38 @@ build_tsibble <- function(
   # if key is quosures
   use_id(key)
 
-  tbl <- ungroup(as_tibble(x, validate = validate)) # x is lst, data.frame, tbl_df
+  # x is lst, data.frame, tbl_df, use ungroup()
+  # x is tbl_ts, use as_tibble(ungroup = TRUE)
+  tbl <- ungroup(as_tibble(x, validate = validate))
   # extract or pass the index var
-  index <- extract_index_var(tbl, enquo(index))
+  index <- validate_index(tbl, enquo(index))
+  # if index2 not specified
+  index2 <- enquo(index2)
+  if (quo_is_missing(index2)) {
+    index2 <- index
+  } else {
+    index2 <- validate_index(tbl, index2)
+  }
   # (1) validate and process key vars (from expr to a list of syms)
-  key_vars <- validate_key(data = tbl, key)
+  key_vars <- validate_key(tbl, key)
   # (2) if there exists a list of lists, flatten it as characters
   flat_keys <- key_flatten(key_vars)
   # (3) index cannot be part of the keys
-  idx_chr <- quo_text2(index)
+  idx_chr <- c(quo_text(index), quo_text(index2))
   is_index_in_keys <- intersect(idx_chr, flat_keys)
   if (is_false(is_empty(is_index_in_keys))) {
-    abort(sprintf("`%s` can't be both `key` and `index`.", idx_chr))
+    abort(sprintf("`%s` can't be `index`, as it's used as `key`.", idx_chr))
   }
   # validate tbl_ts
   if (validate) {
-    tbl <- validate_tbl_ts(data = tbl, key = key_vars, index = index)
+    tbl <- validate_tsibble(data = tbl, key = key_vars, index = index)
     tbl <- validate_nested(data = tbl, key = key_vars)
   }
   if (is_false(regular)) {
     interval <- list()
   } else if (regular && is.null(interval)) {
     eval_idx <- eval_tidy(index, data = tbl)
-    interval <- pull_interval(eval_idx, duplicated = TRUE)
+    interval <- pull_interval(eval_idx)
   } else if (is_false(inherits(interval, "interval"))) {
     int_cls <- class(interval)[1]
     abort(sprintf("`interval` must be the `interval` class not %s.", int_cls))
@@ -380,50 +406,44 @@ build_tsibble <- function(
     ordered <- TRUE
   } else if (is_false(ordered)) { # false returns a warning
     if (is_empty(key_vars)) {
-      msg <- sprintf(
-        "The `tbl_ts` is not arranged by `%s` in ascending order.", idx_chr
-      )
+      msg <- sprintf("The `tbl_ts` is not sorted by `%s`.", idx_chr[1])
     } else {
       msg <- sprintf(
-        "The `tbl_ts` is not arranged by `%s`, and `%s` in ascending order.",
-        paste_comma(format(key)), idx_chr
+        "The `tbl_ts` is not sorted by `%s`, and `%s`.",
+        paste_comma(format(key)), idx_chr[1]
       )
     }
     warn(msg)
   } # true do nothing
 
-  # grped_key <- grouped_df(tbl, flat_keys)
-  tbl <- tibble::new_tibble(
-    tbl,
-    "key" = structure(key_vars, class = "key"),
-    # "key_indices" = attr(grped_key, "indices"),
-    "index" = index,
-    "interval" = structure(interval, class = "interval"),
-    "regular" = regular,
-    "ordered" = ordered,
-    subclass = "tbl_ts"
-  )
-
   if (is_empty(groups)) {
-    return(tbl)
+    return(tibble::new_tibble(
+      tbl,
+      "key" = structure(key_vars, class = "key"),
+      # "key_indices" = attr(grped_key, "indices"),
+      "index" = index,
+      "index2" = index2,
+      "interval" = structure(interval, class = "interval"),
+      "regular" = regular,
+      "ordered" = ordered,
+      subclass= c("tbl_ts")
+    ))
   }
 
   # convert grouped_df to tsibble:
   # the `groups` arg must be supplied, otherwise returns a `tbl_ts` not grouped
-  groups <- validate_key(x, groups)
-  tbl <- validate_nested(data = tbl, key = groups)
-
-  flat_grps <- key_flatten(groups)
-  grped_df <- grouped_df(tbl, flat_grps)
+  grped_df <- tbl %>% group_by(!!! groups)
   tibble::new_tibble(
     grped_df,
-    "vars" = structure(groups, class = "vars"),
+    "key" = structure(key_vars, class = "key"),
+    # "key_indices" = attr(grped_key, "indices"),
+    "index" = index,
+    "index2" = index2,
+    "interval" = structure(interval, class = "interval"),
+    "regular" = regular,
+    "ordered" = ordered,
     subclass = c("grouped_ts", "tbl_ts")
   )
-}
-
-detect_type <- function() {
-  c("time", "dttm", "date", "mth", "qtr")
 }
 
 
@@ -441,28 +461,30 @@ id <- function(...) {
 
 ## Although the "index" arg is possible to automate the detection of time
 ## objects, it would fail when tsibble contain multiple time objects.
-extract_index_var <- function(data, index) {
-  idx_type <- purrr::map_chr(data, index_sum)
+validate_index <- function(data, index) {
+  val_idx <- purrr::map_lgl(data, index_valid)
   is_quo <- is_quosure(index)
   if (quo_is_null(index)) {
-    abort("The `index` has been dropped somehow. Please reconstruct the `tbl_ts`.")
+    abort("`index` must not be NULL.")
   }
   if (quo_is_missing(index)) {
-    val_idx <- idx_type %in% detect_type()
-    if (sum(val_idx) != 1) {
-      abort("Can't determine the `index`. Please specify the `index` arg.")
+    if (sum(val_idx, na.rm = TRUE) != 1) {
+      abort("Can't determine the `index` and please specify.")
     }
-    chr_index <- colnames(data)[val_idx]
+    chr_index <- names(data)[val_idx]
+    chr_index <- chr_index[!is.na(chr_index)]
     inform(sprintf("The `index` is `%s`.", chr_index))
     return(sym(chr_index))
   } else {
-    chr_index <- quo_text2(index)
-    idx_na <- idx_type[chr_index]
-    if (is.na(idx_na)) {
+    chr_index <- quo_text(index)
+    idx_pos <- names(data) %in% chr_index
+    val_lgl <- val_idx[idx_pos]
+    if (is.na(val_lgl)) {
+      return(sym(chr_index))
+    } else if (!val_idx[idx_pos]) {
       cls_idx <- purrr::map_chr(data, ~ class(.)[1])
-      name_idx <- names(idx_na)
       abort(sprintf(
-        "Unsupported index type: `%s`", cls_idx[colnames(data) %in% name_idx])
+        "Unsupported index type: `%s`", cls_idx[idx_pos])
       )
     }
     sym(chr_index)
@@ -476,7 +498,7 @@ validate_nested <- function(data, key) {
   if (any(nest_lgl)) {
     key_nest <- key[nest_lgl]
     nest_keys <- purrr::map(
-      key_nest, ~ purrr::map_chr(., quo_text2)
+      key_nest, ~ purrr::map_chr(., quo_text)
     )
     n_dist <- purrr::map(
       nest_keys, ~ purrr::map_int(., ~ dplyr::n_distinct(data[[.]]))
@@ -500,9 +522,9 @@ validate_nested <- function(data, key) {
 
 # check if a comb of key vars result in a unique data entry
 # if TRUE return the data, otherwise raise an error
-validate_tbl_ts <- function(data, key, index) {
-  idx <- quo_text2(index)
-  # NOTE: bug in anyDuplicated.data.frame()
+validate_tsibble <- function(data, key, index) {
+  idx <- quo_text(index)
+  # NOTE: bug in anyDuplicated.data.frame() (fixed in R 3.5.0)
   # identifiers <- c(key_flatten(key), idx)
   # below calls anyDuplicated.data.frame():
   # time zone associated with the index will be dropped,
@@ -518,7 +540,7 @@ validate_tbl_ts <- function(data, key, index) {
     } else {
       msg <- paste0(msg, ".")
     }
-    msg <- paste(msg, "Use `inform_duplicates()` to check the duplicated rows.")
+    msg <- paste(msg, "Use `find_duplicates()` to check the duplicated rows.")
     abort(msg)
   }
   data
@@ -538,29 +560,28 @@ validate_tbl_ts <- function(data, key, index) {
 #' grped_ped <- pedestrian %>% group_by(Sensor)
 #' as_tibble(grped_ped)
 as_tibble.tbl_ts <- function(x, ...) {
-  drop_tsibble(x)
+  grps <- groups(x)
+  idx <- index(x)
+  idx2 <- index2(x)
+  attr(x, "key") <- attr(x, "index") <- attr(x, "index2") <- NULL
+  attr(x, "interval") <- attr(x, "regular") <- attr(x, "ordered") <- NULL
+  if (identical(idx, idx2)) {
+    if (is_empty(grps)) {
+      return(tibble::new_tibble(x))
+    }
+    return(group_by(tibble::new_tibble(x), !!! flatten(grps)))
+  } else {
+    group_by(tibble::new_tibble(x), !!! flatten(c(grps, idx2)))
+  }
 }
 
 #' @export
 as.tibble.tbl_ts <- as_tibble.tbl_ts
 
-#' @export
-as_tibble.grouped_ts <- function(x, ...) {
-  dx <- drop_tsibble(x)
-  tibble::new_tibble(
-    dx,
-    "vars" = structure(flatten(groups(x)), class = "vars"),
-    subclass = "grouped_df"
-  )
-}
-
-#' @export
-as.tibble.grouped_ts <- as_tibble.grouped_ts
-
 #' @rdname as-tibble
 #' @export
 as.data.frame.tbl_ts <- function(x, ...) {
-  x <- drop_tsibble(x)
+  x <- as_tibble(x)
   NextMethod()
 }
 
@@ -575,15 +596,9 @@ use_id <- function(x) {
   )
 }
 
-drop_tsibble <- function(x) {
-  attr(x, "key") <- attr(x, "index") <- NULL
-  attr(x, "interval") <- attr(x, "regular") <- attr(x, "ordered") <- NULL
-  tibble::new_tibble(x)
-}
-
-#' Inform duplication of key and index variables
+#' Find duplication of key and index variables
 #'
-#' Inform which row has duplicated key and index elements
+#' Find which row has duplicated key and index elements
 #'
 #' @param data A `tbl_ts` object.
 #' @param key Structural variable(s) that define unique time indices, used with
@@ -595,15 +610,27 @@ drop_tsibble <- function(x) {
 #'
 #' @return A logical vector of the same length as the row number of `data`
 #' @export
-inform_duplicates <- function(data, key = id(), index, fromLast = FALSE) {
+find_duplicates <- function(data, key = id(), index, fromLast = FALSE) {
   use_id(key)
-  index <- extract_index_var(data, enquo(index))
+  index <- validate_index(data, enquo(index))
 
   grouped_df(data, vars = key_flatten(key)) %>%
     mutate(zzz = duplicated.default(!! index, fromLast = fromLast)) %>%
     dplyr::pull(zzz)
 
-  # identifiers <- c(key_flatten(key), quo_text2(index))
+  # identifiers <- c(key_flatten(key), quo_text(index))
   # duplicated(data[, identifiers, drop = FALSE], fromLast = fromLast)
   # not handling time zone correctly for duplicated.data.frame
+}
+
+#' Defunct functions
+#'
+#' @inheritParams find_duplicates
+#' @rdname defunct
+#' @export
+inform_duplicates <- function(data, key = id(), index, fromLast = FALSE) {
+  .Defunct(
+    new = "find_duplicates",
+    msg = "This function is defunct. Please use `find_duplicates()` instead."
+  )
 }

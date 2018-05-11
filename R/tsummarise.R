@@ -12,6 +12,7 @@
 #' * [lubridate::year]: yearly aggregation
 #' * [yearquarter]: quarterly aggregation
 #' * [yearmonth]: monthly aggregation
+#' * [yearweek]: weekly aggregation
 #' * [as.Date] or [lubridate::as_date]: daily aggregation
 #' * [lubridate::ceiling_date], [lubridate::floor_date], or [lubridate::round_date]: 
 #' sub-daily aggregation
@@ -19,30 +20,15 @@
 #' @inheritParams dplyr::summarise_all
 #'
 #' @details
-#' The rightmost grouping level will be dropped.
+#' * For a grouped tsibble, the rightmost grouping variable will be dropped 
+#' after the operation.
+#' * The scoped variants only operate on the non-key and non-index variables.
 #'
 #' @seealso [dplyr::summarise_all]
-#' @rdname tsummarise
+#' @rdname tsibble-deprecated
 #' @export
-#' @examples
-#' # Monthly counts across Sensors
-#' data(pedestrian)
-#' monthly_ped <- pedestrian %>% 
-#'   group_by(Sensor) %>% 
-#'   tsummarise(
-#'     Year_Month = yearmonth(Date_Time), # Year_Month will be the new index
-#'     Max_Count = max(Count),
-#'     Min_Count = min(Count)
-#'   )
-#' monthly_ped
-#' index(monthly_ped)
-#'
-#' # Annual trips by Region and State ----
-#' data(tourism)
-#' tourism %>% 
-#'   group_by(Region | State) %>% 
-#'   tsummarise(Year = lubridate::year(Quarter), Total = sum(Trips))
 tsummarise <- function(.data, ...) {
+  .Deprecated("index_by() + summarise()", package = "tsibble")
   UseMethod("tsummarise")
 }
 
@@ -52,34 +38,8 @@ tsummarise.tbl_ts <- function(.data, ...) {
   tsum(.data, lst_quos$first, lst_quos$remainder, FUN = summarise)
 }
 
-#' @rdname tsummarise
+#' @rdname tsibble-deprecated
 #' @export
-#' @examples
-#' # scoped variants ----
-#' tsbl <- tsibble(
-#'   qtr = rep(yearquarter(seq(2010, 2012.25, by = 1 / 4)), 3),
-#'   group = rep(c("x", "y", "z"), each = 10),
-#'   a = rnorm(30),
-#'   b = rnorm(30),
-#'   c = rnorm(30),
-#'   key = id(group), index = qtr
-#' )
-#' tsbl %>% 
-#'   group_by(group) %>% 
-#'   tsummarise_all(year = lubridate::year(qtr), .funs = mean)
-#' tsbl %>% 
-#'   group_by(group) %>% 
-#'   tsummarise_if(
-#'      year = lubridate::year(qtr), 
-#'      .predicate = is.numeric, .funs = sum
-#'   )
-#' # additional arguments need putting into the `.funs`
-#' tsbl %>% 
-#'   group_by(group) %>% 
-#'   tsummarise_at(
-#'      year = lubridate::year(qtr), 
-#'      .vars = c("a", "c"), .funs = function(x) median(x, na.rm = TRUE)
-#'   )
 tsummarise_all <- function(.data, ..., .funs) {
   lst_quos <- separate_quos(warn = TRUE, ...)
   tsum(
@@ -88,7 +48,7 @@ tsummarise_all <- function(.data, ..., .funs) {
   )
 }
 
-#' @rdname tsummarise
+#' @rdname tsibble-deprecated
 #' @export
 tsummarise_if <- function(.data, ..., .predicate, .funs) {
   lst_quos <- separate_quos(warn = TRUE, ...)
@@ -99,7 +59,7 @@ tsummarise_if <- function(.data, ..., .predicate, .funs) {
   )
 }
 
-#' @rdname tsummarise
+#' @rdname tsibble-deprecated
 #' @export
 tsummarise_at <- function(.data, ..., .vars, .funs) {
   lst_quos <- separate_quos(warn = TRUE, ...)
@@ -110,19 +70,19 @@ tsummarise_at <- function(.data, ..., .vars, .funs) {
   )
 }
 
-#' @rdname tsummarise
+#' @rdname tsibble-deprecated
 #' @export
 tsummarize <- tsummarise
 
-#' @rdname tsummarise
+#' @rdname tsibble-deprecated
 #' @export
 tsummarize_all <- tsummarise_all
 
-#' @rdname tsummarise
+#' @rdname tsibble-deprecated
 #' @export
 tsummarize_if <- tsummarise_if
 
-#' @rdname tsummarise
+#' @rdname tsibble-deprecated
 #' @export
 tsummarize_at <- tsummarise_at
 
@@ -132,11 +92,11 @@ tsum <- function(.data, first, remainder = NULL, FUN = summarise) {
 
   # check if the index variable is present in the first call
   first_var <- as.character(first_arg(first))
-  idx_var <- quo_text2(index)
-  if (is_false(has_index_var(j = first_var, x = .data))) {
+  idx_var <- quo_text(index)
+  if (is_false(has_index(j = first_var, x = .data))) {
     abort(sprintf("Can't find `index` (`%s`) in the first name-value pair.", idx_var))
   }
-  idx <- quo_text2(index)
+  idx <- quo_text(index)
   idx_name <- names(first)
   if (idx_name == "") {
     names(first) <- idx_name <- idx
@@ -147,7 +107,7 @@ tsum <- function(.data, first, remainder = NULL, FUN = summarise) {
   chr_grps <- c(flat_grps <- key_flatten(grps), idx_name) 
   pre_data <- .data %>% 
     ungroup() %>% 
-    mutate(!!! first, drop = TRUE)
+    mutate(!!! first, .drop = TRUE)
   if (idx_name == idx) {
     grped_data <- pre_data %>% 
       grouped_df(vars = chr_grps)
@@ -166,8 +126,8 @@ tsum <- function(.data, first, remainder = NULL, FUN = summarise) {
   }
 
   build_tsibble(
-    result, key = grps, index = !! idx_sym, groups = drop_group(grps), 
-    validate = FALSE, ordered = is_ordered(.data)
+    result, key = grps, index = !! idx_sym, groups = grp_drop(grps), 
+    validate = FALSE, ordered = TRUE
   )
 }
 

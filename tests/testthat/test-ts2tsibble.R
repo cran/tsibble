@@ -1,10 +1,10 @@
-context("Test as_tsibble() w/o data of wide form")
+context("as_tsibble() for ts objects")
 
-test_that("Test a ts with different frequnecy", {
+test_that("a ts with different frequnecy", {
   x1 <- ts(1:10)
   tsbl1 <- as_tsibble(x1)
   expect_identical(dim(tsbl1), c(length(x1), 2L))
-  expect_identical(key_vars(tsbl1), "NULL")
+  expect_identical(key_vars(tsbl1), character(0))
   expect_identical(format(interval(tsbl1)), "1UNIT")
   x2 <- ts(1:10, start = 2000)
   tsbl2 <- as_tsibble(x2)
@@ -17,26 +17,29 @@ test_that("Test a ts with different frequnecy", {
   expect_identical(format(interval(tsbl4)), "1MONTH")
   x5 <- ts(1:10, start = c(2000, 1), frequency = 7)
   tsbl5 <- as_tsibble(x5)
-  expect_identical(format(interval(tsbl4)), "1MONTH")
+  expect_identical(format(interval(tsbl5)), "1DAY")
+  x6 <- ts(1:10, start = c(2000, 1), frequency = 52)
+  tsbl6 <- as_tsibble(x6)
+  expect_identical(format(interval(tsbl6)), "1WEEK")
 })
 
-test_that("Test a mts", {
+test_that("a mts", {
   x <- ts(matrix(1:10, ncol = 2))
   tsbl1 <- as_tsibble(x)
   expect_identical(dim(tsbl1), c(length(x), 3L))
   expect_identical(key_vars(tsbl1)[[1L]], "key")
   tsbl2 <- as_tsibble(x, gather = FALSE)
   expect_identical(dim(tsbl2), c(nrow(x), 3L))
-  expect_identical(key_vars(tsbl2), "NULL")
+  expect_identical(key_vars(tsbl2), character(0))
   expect_identical(colnames(tsbl2), c("index", "Series 1", "Series 2"))
 })
 
-test_that("Test a hts", {
+test_that("a hts", {
   eg1 <- hts::htseg1
   tsbl1 <- as_tsibble(hts::htseg1)
   expect_identical(dim(tsbl1), c(nrow(eg1$bts) * ncol(eg1$bts), 4L))
   expect_identical(
-    key_vars(tsbl1), 
+    format(key(tsbl1)),
     c("`Level 2` | `Level 1`" = "`Level 2` | `Level 1`")
   )
   expect_identical(unique(tsbl1$`Level 2`), unname(eg1$labels[[3]]))

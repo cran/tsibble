@@ -21,8 +21,8 @@ weather_tsbl
 ## ----weather-tsum--------------------------------------------------------
 weather_tsbl %>%
   group_by(origin) %>%
-  tsummarise(
-    date = as_date(time_hour),
+  index_by(date = as_date(time_hour)) %>% 
+  summarise(
     temp_high = max(temp, na.rm = TRUE),
     temp_low = min(temp, na.rm = TRUE)
   )
@@ -32,7 +32,7 @@ as_tsibble(tourism, key = id(Region | State, Purpose), index = Quarter)
 
 ## ----tourism-sum---------------------------------------------------------
 tourism %>%
-  group_by(Region | State) %>%
+  group_by(Region, State) %>%
   summarise(Geo_Trips = sum(Trips))
 
 ## ----flights-------------------------------------------------------------

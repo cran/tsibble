@@ -8,9 +8,21 @@ globalVariables(".")
 #' the same type as the original one. If using a function to fill the `NA`,
 #' please make sure that `na.rm = TRUE` is switched on.
 #'
-#' @seealso [case_na], [tidyr::fill], [tidyr::replace_na]
+#' @seealso [count_gaps], [case_na], [tidyr::fill], [tidyr::replace_na]
 #' @rdname fill-na
 #' @export
+fill_na <- function(.data, ...) {
+  UseMethod("fill_na")
+}
+
+#' @export
+fill_na.data.frame <- function(.data, ...) {
+  abort("Do you need `tidyr::complete()` for a `tbl_df`/`data.frame`?")
+}
+
+#' @rdname fill-na
+#' @param .full `FALSE` to insert `NA` for each key within its own period. `TRUE`
+#' to fill `NA` over the entire time span of the data (a.k.a. fully balanced panel).
 #'
 #' @examples
 #' harvest <- tsibble(
@@ -21,13 +33,14 @@ globalVariables(".")
 #' )
 #'
 #' # leave NA as is ----
-#' full_harvest <- fill_na(harvest)
+#' fill_na(harvest, .full = TRUE)
+#' full_harvest <- fill_na(harvest, .full = FALSE)
 #' full_harvest
 #'
 #' # use fill() to fill `NA` by previous/next entry
 #' full_harvest %>% 
 #'   group_by(fruit) %>% 
-#'   fill(kilo, .direction = "down")
+#'   tidyr::fill(kilo, .direction = "down")
 #'
 #' # replace NA with a specific value ----
 #' harvest %>%
@@ -51,45 +64,162 @@ globalVariables(".")
 #'     Time = lubridate::hour(Date_Time),
 #'     Count = as.integer(median(Count, na.rm = TRUE))
 #'   )
-fill_na <- function(.data, ...) {
-  UseMethod("fill_na")
-}
-
 #' @export
-fill_na.data.frame <- function(.data, ...) {
-  abort("Do you need `tidyr::complete()` for a `tbl_df`/`data.frame`?")
-}
-
-#' @export
-fill_na.tbl_ts <- function(.data, ...) {
-  if (!is_regular(.data)) {
-    abort("`fill_na()` can't handle `tbl_ts` of irregular interval.")
-  }
+fill_na.tbl_ts <- function(.data, ..., .full = FALSE) {
+  not_regular(.data)
   idx <- index(.data)
+  idx_chr <- quo_text(idx)
   key <- key(.data)
-  full_data <- .data %>%
-    tidyr::complete(
-      !! quo_text2(idx) := seq(
-        from = min0(!! idx), to = max0(!! idx),
-        by = time_unit(!! idx)
-      ),
-      tidyr::nesting(!!! flatten(key))
-    )
+  flat_key <- key_flatten(key)
+  tbl <- ungroup(as_tibble(.data))
+  grped_tbl <- tbl %>% 
+    grouped_df(vars = flat_key)
+  if (.full) {
+    idx_full <- seq_by(eval_tidy(idx, data = tbl))
+    ref_data <- grped_tbl %>% 
+      summarise(
+        !! idx_chr := list(tibble::tibble(!! idx_chr := idx_full))
+      ) %>% 
+      tidyr::unnest(!! idx)
+  } else {
+    ref_data <- grped_tbl %>% 
+      summarise(
+        !! idx_chr := list(tibble::tibble(!! idx_chr := seq_by(!! idx)))
+      ) %>% 
+      tidyr::unnest(!! idx)
+  }
+  full_data <- ungroup(ref_data) %>% 
+    left_join(.data, by = c(flat_key, idx_chr))
 
   if (is_grouped_ts(.data)) {
-    full_data <- do(full_data, modify_na(., !!! enquos(...)))
+    full_data <- full_data %>% 
+      grouped_df(vars = group_vars(.data)) %>% 
+      dplyr::do(modify_na(., !!! enquos(...)))
   } else {
     full_data <- full_data %>%
       modify_na(!!! enquos(...))
   }
-  full_data <- full_data %>%
-    select(!!! syms(colnames(.data))) # keep the original order
-  # ensure the time ordering
-  tsbl <- build_tsibble(
-    full_data, key = key, index = !! idx, 
-    validate = FALSE, ordered = NULL
+  cn <- names(.data)
+  if (!identical(cn, names(full_data))) {
+    full_data <- full_data %>%
+      select(!!! syms(cn)) # keep the original order
+  }
+  update_tsibble(full_data, .data, interval = interval(.data))
+}
+
+#' Count implicit gaps
+#'
+#' `count_gaps()` counts gaps for a tsibble; `gaps()` find where the gaps in `x` 
+#' with respect to `y`.
+#' 
+#' @param .data A `tbl_ts`.
+#' @param ... Other arguments passed on to individual methods.
+#'
+#' @rdname gaps
+#' @export
+#' @seealso [fill_na]
+#' @return
+#' A tibble contains:
+#' * the "key" of the `tbl_ts`
+#' * "from": the starting time point of the gap
+#' * "end": the ending time point of the gap
+#' * "n": the implicit missing observations during the time period
+count_gaps <- function(.data, ...) {
+  not_regular(.data)
+  UseMethod("count_gaps")
+}
+
+#' @rdname gaps
+#' @export
+#' @examples
+#' # Implicit missing time without group_by ----
+#' # All the sensors have 2 common missing time points in the data
+#' count_gaps(pedestrian)
+count_gaps.tbl_ts <- function(.data, ...) {
+  idx <- index(.data)
+  idx_full <- seq_by(eval_tidy(idx, data = .data))
+  ungroup(as_tibble(.data)) %>% 
+    summarise(gaps = list(gaps(unique.default(!! idx), idx_full))) %>% 
+    tidyr::unnest(gaps)
+}
+
+#' @rdname gaps
+#' @param .full `FALSE` to find gaps for each group within its own period. `TRUE`
+#' to find gaps over the entire time span of the data.
+#' @export
+#' @examples
+#' # Time gaps for each sensor per month ----
+#' pedestrian %>% 
+#'   index_by(yrmth = yearmonth(Date)) %>% 
+#'   group_by(Sensor) %>% 
+#'   count_gaps()
+#' # Time gaps for each sensor ----
+#' ped_gaps <- pedestrian %>% 
+#'   group_by(Sensor) %>% 
+#'   count_gaps(.full = TRUE)
+#' if (!requireNamespace("ggplot2", quietly = TRUE)) {
+#'   stop("Please install the ggplot2 package to run these following examples.")
+#' }
+#' library(ggplot2)
+#' ggplot(ped_gaps, aes(colour = Sensor)) +
+#'   geom_linerange(aes(x = Sensor, ymin = from, ymax = to)) +
+#'   geom_point(aes(x = Sensor, y = from)) +
+#'   geom_point(aes(x = Sensor, y = to)) +
+#'   coord_flip() +
+#'   theme(legend.position = "bottom")
+count_gaps.grouped_ts <- function(.data, .full = FALSE, ...) {
+  idx <- index(.data)
+  tbl <- as_tibble(.data)
+  if (.full) {
+    idx_full <- seq_by(eval_tidy(idx, data = tbl))
+    out <- tbl %>% 
+      summarise(gaps = list(gaps(!! idx, idx_full))) %>% 
+      tidyr::unnest(gaps)
+  } else {
+    out <- tbl %>% 
+      summarise(gaps = list(gaps(!! idx, seq_by(!! idx)))) %>% 
+      tidyr::unnest(gaps)
+  }
+  ungroup(out)
+}
+
+#' @rdname gaps
+#' @param x,y A vector of numbers, dates, or date-times. The length of `y` must
+#' be greater than the length of `x`.
+#' @export
+#' @examples
+#' # Vectors ----
+#' gaps(x = c(1:3, 5:6, 9:10), y = 1:10)
+gaps <- function(x, y) {
+  len_x <- length(x)
+  len_y <- length(y)
+  if (len_y < len_x) {
+    msg <- sprintf(
+      "The length of `x` (%d) must not be greater than the length of `y` (%d).",
+      len_x, len_y
+    )
+    abort(msg)
+  }
+  gap_vec <- logical(length = len_y)
+  gap_vec[-match(x, y)] <- TRUE
+  gap_rle <- rle_lgl(gap_vec)
+  lgl_rle <- gap_rle$values
+  gap_idx <- gap_rle$lengths
+  to <- cumsum(gap_idx)
+  from <- c(1, to[-length(to)] + 1)
+  nobs <- gap_idx[lgl_rle]
+  if (is_empty(nobs)) {
+    return(tibble::tibble(from = NA, to = NA, n = 0L))
+  }
+  tibble::tibble(
+    from = y[from][lgl_rle],
+    to = y[to][lgl_rle],
+    n = nobs
   )
-  restore_index_class(.data, tsbl)
+}
+
+seq_by <- function(x) {
+  seq(from = min0(x), to = max0(x), by = time_unit(x))
 }
 
 modify_na <- function(.data, ...) {
@@ -143,8 +273,14 @@ case_na <- function(formula) {
 }
 
 restore_index_class <- function(data, newdata) {
-  old_idx <- quo_text2(index(data))
-  new_idx <- quo_text2(index(newdata))
+  old_idx <- quo_text(index(data))
+  new_idx <- quo_text(index(newdata))
   class(newdata[[new_idx]]) <- class(data[[old_idx]])
   newdata
+}
+
+not_regular <- function(x) {
+  if (!is_regular(x)) {
+    abort("Can't handle `tbl_ts` of irregular interval.")
+  }
 }

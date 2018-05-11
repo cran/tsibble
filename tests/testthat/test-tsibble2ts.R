@@ -1,6 +1,6 @@
-context("Test as.ts.tbl_ts()")
+context("tsibble to ts")
 
-test_that("Test a tsibble with different frequnecy", {
+test_that("a tsibble with different frequnecy", {
   x1 <- ts(1:10)
   tsbl1 <- as_tsibble(x1)
   y1 <- as.ts(tsbl1)
@@ -26,14 +26,14 @@ test_that("Test a tsibble with different frequnecy", {
   expect_equal(start(y4), c(2000, 1))
 })
 
-test_that("Test a tsibble with a single key", {
+test_that("a tsibble with a single key", {
   x <- ts(matrix(1:10, ncol = 2))
   tsbl1 <- as_tsibble(x)
   y1 <- as.ts(x)
   expect_identical(x, y1)
 })
 
-test_that("Test a tsibble with more than one measured vars", {
+test_that("a tsibble with more than one measured vars", {
   expect_error(as.ts(pedestrian), "Can't determine the `value`:")
   expect_error(as.ts(pedestrian, value = Date_Time), "Can't determine the `value`:")
   y <- as.ts(pedestrian, value = Count)
@@ -42,26 +42,26 @@ test_that("Test a tsibble with more than one measured vars", {
   expect_equal(ncol(y), 4)
 })
 
-test_that("Test a tsibble with composite keys", {
+test_that("a tsibble with composite keys", {
   eg1 <- hts::htseg1
   tsbl1 <- as_tsibble(hts::htseg1)
   expect_error(as.ts(tsbl1))
   expect_error(as.ts(tourism))
 })
 
-test_that("Test time.* and guess_frequency.*", {
+test_that("time.* and guess_frequency.*", {
  dat <- seq(as.Date("2017-01-01"), as.Date("2017-01-31"), by = 1)
  y <- time(dat)
  expect_is(y, "ts")
  expect_equal(frequency(y), 7)
  expect_equal(guess_frequency(dat), 7)
  dat_min <- seq(
-   as.POSIXct("2017-01-01 00:00"), as.POSIXct("2017-01-10 23:00"), 
+   as.POSIXct("2017-01-01 00:00"), as.POSIXct("2017-01-10 23:00"),
    by = "1 min"
  )
  expect_equal(guess_frequency(dat_min), 60)
  dat_sec <- seq(
-   as.POSIXct("2017-01-01 00:00"), as.POSIXct("2017-01-10 23:00"), 
+   as.POSIXct("2017-01-01 00:00"), as.POSIXct("2017-01-10 23:00"),
    by = 1
  )
  expect_equal(guess_frequency(dat_sec), 60)

@@ -1,30 +1,18 @@
-context("Test pillar methods")
+context("pillar methods")
 library(pillar)
 
+a <- yearweek(seq(ymd("2017-02-01"), length.out = 12, by = "1 week"))
 x <- yearmonth(seq(2010, 2012, by = 1 / 12))
-x2 <- rep(x, 2)
 y <- yearquarter(seq(2010, 2012, by = 1 / 4))
-y2 <- rep(y, 2)
 
-test_that("Test some S3 methods for yearmonth & yearquarter", {
-  expect_is(rep(x, 2), "yearmonth")
-  expect_equal(length(rep(x, 2)), length(x) * 2)
-  expect_is(c(x, x), "yearmonth")
-  expect_is(unique(x2), "yearmonth")
-  expect_identical(yearmonth(x), x)
-  expect_is(rep(y, 2), "yearquarter")
-  expect_equal(length(rep(y, 2)), length(y) * 2)
-  expect_is(c(y, y), "yearquarter")
-  expect_is(unique(y2), "yearquarter")
-  expect_identical(yearquarter(y), y)
-  expect_is(y[1:2], "yearquarter")
-})
-
-test_that("Test pillar methods", {
+test_that("pillar S3 methods", {
+  expect_equal(type_sum(a), "week")
+  expect_equal(is_vector_s3(x), TRUE)
   expect_equal(type_sum(x), "mth")
   expect_equal(is_vector_s3(x), TRUE)
   expect_equal(type_sum(y), "qtr")
   expect_equal(is_vector_s3(y), TRUE)
+  expect_equal(obj_sum(a), rep("week", length(a)))
   expect_equal(obj_sum(x), rep("mth", length(x)))
   expect_equal(obj_sum(y), rep("qtr", length(y)))
 
@@ -43,9 +31,43 @@ tbl2 <- tsibble(
   key = id(group), index = qtr
 )
 
-test_that("Test tbl_sum()", {
+test_that("tbl_sum.tbl_ts()", {
   expect_identical(tbl_sum(tbl1), c("A tsibble" = "10 x 2 [1DAY]"))
   expect_identical(
-    tbl_sum(tbl2), 
-    c("A tsibble" = "30 x 3 [1QUARTER]", "Keys" = "group [3]"))
+    tbl_sum(tbl1 %>% index_by(yrmth = yearmonth(date))),
+    c("A tsibble" = "10 x 3 [1DAY]", "Groups" = "@ yrmth")
+  )
+  expect_identical(
+    tbl_sum(tbl2),
+    c("A tsibble" = "30 x 3 [1QUARTER]", "Keys" = "group [3]")
+  )
+  expect_identical(
+    tbl_sum(tbl2 %>% index_by(year = year(qtr))),
+    c(
+      "A tsibble" = "30 x 4 [1QUARTER]",
+      "Keys" = "group [3]",
+      "Groups" = "@ year"
+    )
+  )
 })
+
+test_that("tbl_sum.grouped_ts()", {
+  expect_identical(
+    tbl_sum(tbl2 %>% group_by(group)),
+    c(
+      "A tsibble" = "30 x 3 [1QUARTER]",
+      "Keys" = "group [3]",
+      "Groups" = "group [3]"
+    )
+  )
+  expect_identical(
+    tbl_sum(tbl2 %>% index_by(year = year(qtr)) %>% group_by(group)),
+    c(
+      "A tsibble" = "30 x 4 [1QUARTER]",
+      "Keys" = "group [3]",
+      "Groups" = "group [3] @ year"
+    )
+  )
+})
+
+

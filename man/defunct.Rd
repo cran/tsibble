@@ -2,7 +2,7 @@
 % Please edit documentation in R/as-tsibble.R
 \name{inform_duplicates}
 \alias{inform_duplicates}
-\title{Inform duplication of key and index variables}
+\title{Defunct functions}
 \usage{
 inform_duplicates(data, key = id(), index, fromLast = FALSE)
 }
@@ -18,9 +18,6 @@ simply call \code{id()}.}
 \item{fromLast}{\code{TRUE} does the duplication check from the last of identical
 elements.}
 }
-\value{
-A logical vector of the same length as the row number of \code{data}
-}
 \description{
-Inform which row has duplicated key and index elements
+Defunct functions
 }

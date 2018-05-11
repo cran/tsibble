@@ -1,6 +1,6 @@
 #' @export
 print.tbl_ts <- function(x, ..., n = NULL, width = NULL, n_extra = NULL) {
-  has_index(x)
+  is_index_null(x)
   cat_line(format(x, ..., n = n, width = width, n_extra = n_extra))
   invisible(x)
 }
@@ -12,9 +12,13 @@ format.tbl_ts <- function(x, ..., n = NULL, width = NULL, n_extra = NULL) {
 
 #' @export
 glimpse.tbl_ts <- function(x, width = NULL, ...) {
-  as_tsibble(
-    NextMethod(), id = key(x), index = !! index(x),
-    validate = FALSE, regular = is_regular(x)
+  idx <- index(x)
+  t_span <- paste(range(dplyr::pull(x, !! idx), na.rm = TRUE), collapse = " ~ ")
+  cat_line(t_span)
+  build_tsibble(
+    NextMethod(), key = key(x), index = !! idx, index2 = !! index2(x), 
+    groups = groups(x), validate = FALSE, ordered = is_ordered(x), 
+    regular = is_regular(x)
   )
   invisible(x)
 }
@@ -44,12 +48,6 @@ format.key <- function(x, ...) {
   names(comb_keys) <- comb_keys
   comb_keys
 }
-
-#' @export
-print.vars <- print.key
-
-#' @export
-format.vars <- format.key
 
 #' @export
 print.interval <- function(x, digits = NULL, ...) {

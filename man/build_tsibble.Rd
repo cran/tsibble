@@ -4,7 +4,7 @@
 \alias{build_tsibble}
 \title{Construct a tsibble object}
 \usage{
-build_tsibble(x, key, index, groups = id(), regular = TRUE,
+build_tsibble(x, key, index, index2, groups = id(), regular = TRUE,
   validate = TRUE, ordered = NULL, interval = NULL)
 }
 \arguments{
@@ -12,14 +12,17 @@ build_tsibble(x, key, index, groups = id(), regular = TRUE,
 
 \item{key}{Structural variable(s) that define unique time indices, used with
 the helper \link{id}. If a univariate time series (without an explicit key),
-simply call \code{id()}.}
+simply call \code{id()}. See below for details.}
 
 \item{index}{A bare (or unquoted) variable to specify the time index variable.}
 
-\item{groups}{Grouping variable(s).}
+\item{index2}{A candidate of \code{index} to update the index to a new one when
+\link{index_by}. By default, it's identical to \code{index}.}
+
+\item{groups}{Grouping variable(s) when \link{group_by.tbl_ts}.}
 
 \item{regular}{Regular time interval (\code{TRUE}) or irregular (\code{FALSE}). \code{TRUE}
-finds the minimal time span as the interval.}
+finds the greatest common divisor of positive time distances as the interval.}
 
 \item{validate}{\code{TRUE} suggests to verify that each key or each combination
 of key variables lead to unique time indices (i.e. a valid tsibble). It will
@@ -35,7 +38,14 @@ the correct order. \code{FALSE} also skips the ordering but gives a warning inst
 is, if an class of \code{interval} is supplied.}
 }
 \description{
-A relatively more flexible function to create a \code{tbl_ts} object. It is useful
+A relatively more controllable function to create a \code{tbl_ts} object. It is useful
 for creating a \code{tbl_ts} internally inside a function, and it allows users to
 determine if the time needs ordering and the interval needs calculating.
+}
+\examples{
+# Prepare `pedestrian` to use a new index `Date` ----
+pedestrian \%>\%
+  build_tsibble(
+    key = key(.), index = !! index(.), index2 = Date, interval = interval(.)
+  )
 }

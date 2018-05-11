@@ -17,7 +17,7 @@ simply call \code{id()}. See below for details.}
 \item{index}{A bare (or unquoted) variable to specify the time index variable.}
 
 \item{regular}{Regular time interval (\code{TRUE}) or irregular (\code{FALSE}). \code{TRUE}
-finds the minimal time span as the interval.}
+finds the greatest common divisor of positive time distances as the interval.}
 }
 \value{
 A tsibble object.
@@ -26,18 +26,17 @@ A tsibble object.
 Create a tsibble object
 }
 \details{
-A tsibble is arranged by its key(s) first and index in the ascending
-time order.
+A tsibble is sorted by its key(s) first and index.
 }
 \section{Index}{
 
 The time indices are no longer an attribute (for example, the \code{tsp} attribute
 in a \code{ts} object), but preserved as the essential component of the tsibble. A
 few index classes, such as \code{Date}, \code{POSIXct}, and \code{difftime}, forms the basis of
-the tsibble, with new additions \link{yearmonth} and \link{yearquarter} representing
-year-month and year-quarter respectively. \code{zoo::yearmth} and \code{zoo::yearqtr}
-are also supported. It is extensible to work with custom index, for example
-trading days and weekly data.
+the tsibble, with new additions \link{yearweek}, \link{yearmonth}, and \link{yearquarter}
+representing year-week, year-month, and year-quarter respectively. \code{zoo::yearmth}
+and \code{zoo::yearqtr} are also supported. It is extensible to work with custom
+index, for example trading days and weekly data.
 }
 
 \section{Key}{
@@ -62,7 +61,7 @@ relationship. Nested and crossed variables can be combined, such as
 \code{data(tourism)} using \code{id(Region | State, Purpose)}.
 }
 
-These key variables are descriptors, not values.
+These key variables describe the data structure.
 }
 
 \section{Interval}{
@@ -97,4 +96,7 @@ tsbl2 <- tsibble(
 )
 tsbl2
 
+}
+\seealso{
+\link{build_tsibble}
 }

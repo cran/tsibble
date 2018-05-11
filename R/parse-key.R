@@ -36,7 +36,7 @@ key_vars <- function(x) {
 
 #' @export
 key_vars.tbl_ts <- function(x) {
-  format(key(x))
+  key_flatten(key(x))
 }
 
 #' @rdname key
@@ -93,7 +93,11 @@ n_keys <- function(x) {
 
 #' @export
 n_keys.tbl_ts <- function(x) {
-  length(key_size(x))
+  key <- key_vars(x)
+  if (is_empty(key)) {
+    return(1L)
+  }
+  NROW(distinct(ungroup(as_tibble(x)), !!! syms(key)))
 }
 
 #' @rdname key-size
@@ -122,7 +126,7 @@ key_distinct <- function(x) { # x = a list of keys (symbols)
   unname(comb_keys)
 }
 
-drop_group <- function(x) {
+grp_drop <- function(x) {
   len <- length(x)
   new_grps <- x[-len] # drop one grouping level
   last_x <- dplyr::last(x)
@@ -140,7 +144,7 @@ key_flatten <- function(x) {
   if (is.null(x)) {
     x <- id()
   }
-  unname(purrr::map_chr(flatten(x), quo_text2))
+  unname(purrr::map_chr(flatten(x), quo_text))
 }
 
 #' Change/update key variables for a given `tbl_ts`
@@ -161,55 +165,59 @@ key_update <- function(.data, ..., validate = TRUE) {
   quos <- enquos(...)
   key <- validate_key(.data, quos)
   build_tsibble(
-    .data, key = key, index = !! index(.data), groups = groups(.data),
-    regular = is_regular(.data), validate = validate, 
+    .data, key = key, index = !! index(.data), index2 = !! index2(.data),
+    groups = groups(.data), regular = is_regular(.data), validate = validate, 
     ordered = is_ordered(.data), interval = interval(.data)
   )
 }
 
 # drop some keys
-key_reduce <- function(.data, .vars) {
+key_reduce <- function(.data, .vars, validate = TRUE) {
   old_key <- key(.data)
   old_chr <- key_flatten(old_key)
   key_idx <- which(.vars %in% old_chr)
   key_vars <- .vars[key_idx]
-  old_lgl <- rep(is_nest(old_key), purrr::map(old_key, length))
+  old_lgl <- FALSE
+  if (!is_empty(old_key)) {
+    old_lgl <- rep(is_nest(old_key), purrr::map(old_key, length))
+  }
   new_lgl <- old_lgl[match(key_vars, old_chr)]
 
   new_key <- syms(key_vars[!new_lgl])
   if (any(new_lgl)) {
     new_key <- c(list(syms(key_vars[new_lgl])), new_key)
   }
-  key_update(.data, !!! new_key)
+  key_update(.data, !!! new_key, validate = validate)
 }
 
-# rename key
-key_rename <- function(.data, ...) {
-  quos <- enquos(...)
+key_rename <- function(
+  .data, .vars, names1 = names(.data), names2 = names(.vars)
+) {
+  # key (key of the same size (bf & af))
   old_key <- key(.data)
-  new_chr <- old_chr <- key_flatten(old_key)
-  rhs <- purrr::map_chr(quos, quo_get_expr)
-  key_idx <- which(rhs %in% old_chr)
-  key_rhs <- rhs[key_idx]
-  key_lhs <- names(key_rhs)
+  old_chr <- key_flatten(old_key)
+  new_chr <- names2[.vars %in% old_chr]
+  dat_key_pos <- match(old_chr, names1)
   lgl <- FALSE
   if (!is_empty(old_key)) {
     lgl <- rep(is_nest(old_key), purrr::map(old_key, length))
   }
-  new_chr[match(key_rhs, old_chr)] <- key_lhs
   new_key <- syms(new_chr[!lgl])
   if (is_empty(new_chr)) {
     new_key <- id()
   } else if (any(lgl)) {
     new_key <- c(list(syms(new_chr[lgl])), new_key)
   }
-  dat_key_pos <- match(old_chr, names(.data))
-  names(.data)[dat_key_pos] <- new_chr
-  build_tsibble(
-    .data, key = new_key, index = !! index(.data),
-    regular = is_regular(.data), validate = FALSE, 
-    ordered = is_ordered(.data), interval = interval(.data)
-  )
+  new_key
+}
+
+grp_rename <- function(
+  .data, .vars, names1 = names(.data), names2 = names(.vars)
+) {
+  old_grp_chr <- group_vars(.data)
+  dat_grp_pos <- match(old_grp_chr, names1)
+  new_grp_chr <- names2[.vars %in% old_grp_chr]
+  syms(new_grp_chr)
 }
 
 # The function takes a nested key/group str, i.e. `|` sym
@@ -266,4 +274,4 @@ flatten_nest <- function(key) { # call
     key
   }
 }
-
+ 
