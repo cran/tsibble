@@ -71,7 +71,8 @@ index_by.tbl_ts <- function(.data, ...) {
   if (is_false(has_length(exprs, 1))) {
     abort("`index_by()` only accepts one expression.")
   }
-  tbl <- group_by(as_tibble(.data), !!! exprs)
+  # ungroup() protect the index class
+  tbl <- mutate(ungroup(.data), !!! exprs)
   idx2 <- sym(names(exprs)[1])
   build_tsibble(
     tbl, key = key(.data), index = !! index(.data), index2 = !! idx2,
@@ -90,6 +91,14 @@ index2_rename <- function(.data, .vars, names = names(.vars)) {
   idx_chr <- quo_text(index2(.data))
   new_idx_chr <- names[idx_chr == .vars]
   sym(new_idx_chr)
+}
+
+index2_update <- function(x, .vars) {
+  chr <- intersect(quo_name(index2(x)), .vars)
+  if (is_empty(chr)) {
+    return(index(x))
+  }
+  sym(chr)
 }
 
 tsibble_rename <- function(.data, ...) {
@@ -116,7 +125,7 @@ tsibble_rename <- function(.data, ...) {
   )
 }
 
-tsibble_select <- function(.data, ...) {
+tsibble_select <- function(.data, ..., validate = TRUE) {
   names_dat <- names(.data)
   val_vars <- tidyselect::vars_select(names_dat, ...)
   names_vars <- names(val_vars)
@@ -152,13 +161,15 @@ tsibble_select <- function(.data, ...) {
   # groups
   new_grp <- grp_rename(.data, val_vars)
   
-  vec_names <- union(names_vars, names(.data))
-  # either key or index is present in ...
-  # suggests that the operations are done on these variables
-  # validate = TRUE to check if tsibble still holds
-  val_idx <- has_index(vec_names, .data)
-  val_key <- has_any_key(vec_names, .data)
-  validate <- val_idx || val_key
+  if (validate) {
+    vec_names <- union(names_vars, names(.data))
+    # either key or index is present in ...
+    # suggests that the operations are done on these variables
+    # validate = TRUE to check if tsibble still holds
+    val_idx <- has_index(vec_names, .data)
+    val_key <- has_any_key(vec_names, .data)
+    validate <- val_idx || val_key
+  }
   
   build_tsibble(
     sel_data, key = new_key, index = !! idx, index2 = !! idx2,

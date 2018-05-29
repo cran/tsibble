@@ -1,5 +1,3 @@
-globalVariables(c("key", "value", "zzz"))
-
 #' Create a tsibble object
 #'
 #' @param ... A set of name-value pairs. The names of "key" and "index" should
@@ -17,7 +15,7 @@ globalVariables(c("key", "value", "zzz"))
 #'
 #' @inheritSection tsibble-package Interval
 #'
-#' @details A tsibble is sorted by its key(s) first and index.
+#' @details A tsibble is sorted by its key first and index.
 #'
 #' @return A tsibble object.
 #' @seealso [build_tsibble]
@@ -149,11 +147,7 @@ as_tsibble.grouped_ts <- as_tsibble.grouped_df
 #' @keywords internal
 #' @export
 as_tsibble.default <- function(x, ...) {
-  cls <- class(x)[1]
-  msg <- sprintf(
-    "`as_tsibble()` doesn't know how to coerce the `%s` class yet.", cls
-  )
-  abort(msg)
+  dont_know(x, "as_tsibble")
 }
 
 #' @keywords internal
@@ -274,7 +268,7 @@ is_ordered <- function(x) {
 }
 
 not_tsibble <- function(x) {
-  if (is_false(is_tsibble(x))) {
+  if (is_false(is_tsibble(x) || inherits(x, "lst_ts"))) {
     abort(sprintf("%s is not a tsibble.", deparse(substitute(x))))
   }
 }
@@ -416,7 +410,8 @@ build_tsibble <- function(
     warn(msg)
   } # true do nothing
 
-  if (is_empty(groups)) {
+  idx_lgl <- identical(index, index2)
+  if (is_empty(groups) && idx_lgl) {
     return(tibble::new_tibble(
       tbl,
       "key" = structure(key_vars, class = "key"),
@@ -432,7 +427,11 @@ build_tsibble <- function(
 
   # convert grouped_df to tsibble:
   # the `groups` arg must be supplied, otherwise returns a `tbl_ts` not grouped
-  grped_df <- tbl %>% group_by(!!! groups)
+  if (idx_lgl) {
+    grped_df <- tbl %>% group_by(!!! groups)
+  } else {
+    grped_df <- tbl %>% group_by(!!! groups, !! index2)
+  }
   tibble::new_tibble(
     grped_df,
     "key" = structure(key_vars, class = "key"),
@@ -456,7 +455,7 @@ build_tsibble <- function(
 #' @seealso [tsibble], [as_tsibble]
 #' @export
 id <- function(...) {
-  unname(enquos(...))
+  enexprs(...)
 }
 
 ## Although the "index" arg is possible to automate the detection of time
@@ -476,7 +475,7 @@ validate_index <- function(data, index) {
     inform(sprintf("The `index` is `%s`.", chr_index))
     return(sym(chr_index))
   } else {
-    chr_index <- quo_text(index)
+    chr_index <- tidyselect::vars_pull(names(data), !! index)
     idx_pos <- names(data) %in% chr_index
     val_lgl <- val_idx[idx_pos]
     if (is.na(val_lgl)) {
@@ -531,7 +530,7 @@ validate_tsibble <- function(data, key, index) {
   # e.g. nycflights13::weather, thus result in duplicates.
   # dup <- anyDuplicated(data[, identifiers, drop = FALSE])
   tbl_dup <- grouped_df(data, vars = key_flatten(key)) %>%
-    summarise(zzz = anyDuplicated.default(!! index))
+    summarise(!! "zzz" := anyDuplicated.default(!! index))
   if (any_not_equal_to_c(tbl_dup$zzz, 0)) {
     msg <- sprintf("Invalid tsibble: identical data entries from `%s`", idx)
     if (!is_empty(key)) {
@@ -560,23 +559,27 @@ validate_tsibble <- function(data, key, index) {
 #' grped_ped <- pedestrian %>% group_by(Sensor)
 #' as_tibble(grped_ped)
 as_tibble.tbl_ts <- function(x, ...) {
-  grps <- groups(x)
-  idx <- index(x)
-  idx2 <- index2(x)
   attr(x, "key") <- attr(x, "index") <- attr(x, "index2") <- NULL
   attr(x, "interval") <- attr(x, "regular") <- attr(x, "ordered") <- NULL
-  if (identical(idx, idx2)) {
-    if (is_empty(grps)) {
-      return(tibble::new_tibble(x))
-    }
-    return(group_by(tibble::new_tibble(x), !!! flatten(grps)))
-  } else {
-    group_by(tibble::new_tibble(x), !!! flatten(c(grps, idx2)))
-  }
+  tibble::new_tibble(x)
+}
+
+#' @export
+as_tibble.grouped_ts <- function(x, ...) {
+  group_by(NextMethod(), !!! groups(x))
+}
+
+#' @keywords internal
+#' @export
+as_tibble.lst_ts <- function(x, ...) {
+  tibble::new_tibble(x)
 }
 
 #' @export
 as.tibble.tbl_ts <- as_tibble.tbl_ts
+
+#' @export
+as.tibble.grouped_ts <- as_tibble.grouped_ts
 
 #' @rdname as-tibble
 #' @export
@@ -615,22 +618,10 @@ find_duplicates <- function(data, key = id(), index, fromLast = FALSE) {
   index <- validate_index(data, enquo(index))
 
   grouped_df(data, vars = key_flatten(key)) %>%
-    mutate(zzz = duplicated.default(!! index, fromLast = fromLast)) %>%
-    dplyr::pull(zzz)
+    mutate(!! "zzz" := duplicated.default(!! index, fromLast = fromLast)) %>%
+    dplyr::pull(!! "zzz")
 
   # identifiers <- c(key_flatten(key), quo_text(index))
   # duplicated(data[, identifiers, drop = FALSE], fromLast = fromLast)
   # not handling time zone correctly for duplicated.data.frame
-}
-
-#' Defunct functions
-#'
-#' @inheritParams find_duplicates
-#' @rdname defunct
-#' @export
-inform_duplicates <- function(data, key = id(), index, fromLast = FALSE) {
-  .Defunct(
-    new = "find_duplicates",
-    msg = "This function is defunct. Please use `find_duplicates()` instead."
-  )
 }

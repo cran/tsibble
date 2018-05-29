@@ -11,8 +11,16 @@
 #' few index classes, such as `Date`, `POSIXct`, and `difftime`, forms the basis of 
 #' the tsibble, with new additions [yearweek], [yearmonth], and [yearquarter] 
 #' representing year-week, year-month, and year-quarter respectively. `zoo::yearmth` 
-#' and `zoo::yearqtr` are also supported. It is extensible to work with custom 
-#' index, for example trading days and weekly data.
+#' and `zoo::yearqtr` are also supported. For a `tbl_ts` of regular interval,
+#' a choice of index representation has to be made. For example, a monthly data 
+#' should correspond to time index created by [yearmonth] or `zoo::yearmth`, 
+#' instead of `Date` or `POSIXct`. Because months in a year ensures the regularity,
+#' 12 months every year. However, if using `Date`, a month contains days ranging
+#' from 28 to 31 days, which results in irregular time space. This is also applicable
+#' to year-week and year-quarter.
+#'
+#' Since the **tibble** that underlies the **tsibble** only accepts a 1d atomic 
+#' vector or a list, a `tbl_ts` doesn't accept `POSIXlt` and `timeDate` columns.
 #'
 #' @section Key:
 #' Key variable(s) together with the index uniquely identifies each record. And
@@ -49,12 +57,26 @@
 #' The tsibble package fully utilises the `print` method from the tibble. Please
 #' refer to [tibble::tibble-package] to change display options.
 #'
-#' @rdname tsibble-package
-#' @name tsibble-package
-#' @docType package
-#' @aliases NULL
+#' @aliases NULL tsibble-package
 #' @useDynLib tsibble, .registration = TRUE
 #' @importFrom Rcpp sourceCpp
 #' @import rlang
+#' @examples
+#' # create a tsibble w/o a key ----
+#' tsbl1 <- tsibble(
+#'   date = seq(as.Date("2017-01-01"), as.Date("2017-01-10"), by = 1),
+#'   value = rnorm(10),
+#'   key = id(), index = date
+#' )
+#' tsbl1
+#'
+#' # create a tsibble with one key ----
+#' tsbl2 <- tsibble(
+#'   qtr = rep(yearquarter(seq(2010, 2012.25, by = 1 / 4)), 3),
+#'   group = rep(c("x", "y", "z"), each = 10),
+#'   value = rnorm(30),
+#'   key = id(group), index = qtr
+#' )
+#' tsbl2
 "_PACKAGE"
 

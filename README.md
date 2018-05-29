@@ -1,7 +1,7 @@
 
 <!-- README.md is generated from README.Rmd. Please edit that file -->
 
-# tsibble
+# tsibble <img src="man/figures/logo.png" align="right" />
 
 */ˈt͡sɪbəl/*
 
@@ -13,6 +13,7 @@ Status](https://ci.appveyor.com/api/projects/status/github/tidyverts/tsibble?bra
 Status](https://img.shields.io/codecov/c/github/tidyverts/tsibble/master.svg)](https://codecov.io/github/tidyverts/tsibble?branch=master)
 [![CRAN\_Status\_Badge](http://www.r-pkg.org/badges/version/tsibble)](https://cran.r-project.org/package=tsibble)
 [![Downloads](http://cranlogs.r-pkg.org/badges/tsibble?color=brightgreen)](https://cran.r-project.org/package=tsibble)
+[![lifecycle](https://img.shields.io/badge/lifecycle-maturing-blue.svg)](https://www.tidyverse.org/lifecycle/#maturing)
 
 The **tsibble** package provides a data class of `tbl_ts` to store and
 manage temporal-context data frames in a “tidy” form. A *tsibble*
@@ -54,7 +55,7 @@ weather_tsbl
 #> # A tsibble: 26,130 x 5 [1HOUR]
 #> # Keys:      origin [3]
 #>   origin time_hour            temp humid precip
-#> * <chr>  <dttm>              <dbl> <dbl>  <dbl>
+#>   <chr>  <dttm>              <dbl> <dbl>  <dbl>
 #> 1 EWR    2013-01-01 00:00:00  37.0  54.0      0
 #> 2 EWR    2013-01-01 01:00:00  37.0  54.0      0
 #> 3 EWR    2013-01-01 02:00:00  37.9  52.1      0
@@ -66,7 +67,7 @@ weather_tsbl
 The **key** is not constrained to a single variable, but expressive of
 nested and crossed data structures. This incorporates univariate,
 multivariate, hierarchical and grouped time series into the tsibble
-framework. See `?tsibble` and
+framework. See `package?tsibble` and
 [`vignette("intro-tsibble")`](http://pkg.earo.me/tsibble/articles/intro-tsibble.html)
 for details.
 
@@ -128,15 +129,15 @@ full_weather %>%
     avg_temp = mean(temp, na.rm = TRUE),
     ttl_precip = sum(precip, na.rm = TRUE)
   )
-#> # A tsibble: 36 x 4 [1DAY]
+#> # A tsibble: 36 x 4 [1MONTH]
 #> # Keys:      origin [3]
 #>   origin year_month avg_temp ttl_precip
-#> * <chr>  <date>        <dbl>      <dbl>
-#> 1 EWR    2013-01-01     35.6       2.7 
-#> 2 EWR    2013-02-01     34.1       2.76
-#> 3 EWR    2013-03-01     40.0       1.94
-#> 4 EWR    2013-04-01     52.9       1.05
-#> 5 EWR    2013-05-01     63.1       2.76
+#>   <chr>       <mth>    <dbl>      <dbl>
+#> 1 EWR      2013 Jan     35.6       2.7 
+#> 2 EWR      2013 Feb     34.1       2.76
+#> 3 EWR      2013 Mar     40.0       1.94
+#> 4 EWR      2013 Apr     52.9       1.05
+#> 5 EWR      2013 May     63.1       2.76
 #> # ... with 31 more rows
 ```
 
@@ -187,6 +188,7 @@ Use `?tsibble::reexports` for a full list of re-exported functions.
       - `rename()`
       - `*_join()`
       - `group_by()`, `ungroup()`
+  - **tidyr**: `gather()`, `spread()`, `nest()`, `unnest()`
   - **tibble:** `glimpse()`, `as_tibble()`/`as.tibble()`
   - **rlang:** `!!`, `!!!`
 

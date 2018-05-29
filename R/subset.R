@@ -26,13 +26,15 @@
     x <- key_reduce(x, chr_j)
   }
 
+  ordered <- is_ordered(x)
   if (!missing(i)) {
+    ordered <- row_validate(i)
     result <- purrr::map(result, `[`, i)
   }
 
   build_tsibble(
     result, key = key(x), index = !! index(x), index2 = !! index2(x),
-    validate = FALSE, regular = is_regular(x), ordered = is_ordered(x)
+    validate = FALSE, regular = is_regular(x), ordered = ordered
   )
 }
 
@@ -45,7 +47,7 @@ is_index_null <- function(x) {
 # this function usually follows validate_vars()
 has_index <- function(j, x) {
   is_index_null(x)
-  index <- c(quo_text(index(x)), names(index2(x)))
+  index <- c(quo_name(index(x)), quo_name(index2(x)))
   any(index %in% j)
 }
 

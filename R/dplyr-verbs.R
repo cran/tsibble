@@ -101,12 +101,16 @@ slice.tbl_ts <- function(.data, ...) {
     abort("`slice()` only accepts one expression.")
   }
   pos_eval <- eval_tidy(expr(!! dplyr::first(pos)))
-  pos_dup <- anyDuplicated.default(pos_eval)
+  ascending <- row_validate(pos_eval)
+  by_row(slice, .data, ordered = ascending, interval = NULL, ...)
+}
+
+row_validate <- function(x) {
+  pos_dup <- anyDuplicated.default(x)
   if (any_not_equal_to_c(pos_dup, 0)) {
     abort(sprintf("Duplicated integers occurs to the position of %i.", pos_dup))
   }
-  ascending <- is_ascending(pos_eval)
-  by_row(slice, .data, ordered = ascending, interval = NULL, ...)
+  is_ascending(x)
 }
 
 #' Select/rename variables by name
@@ -162,8 +166,7 @@ mutate.tbl_ts <- function(.data, ..., .drop = FALSE) {
     return(mut_data)
   }
   lst_quos <- enquos(..., .named = TRUE)
-  vec_names <- union(names(lst_quos), colnames(.data))
-  mut_data <- mutate(as_tibble(.data), ...)
+  vec_names <- union(names(lst_quos), names(.data))
   # either key or index is present in ...
   # suggests that the operations are done on these variables
   # validate = TRUE to check if tsibble still holds
@@ -219,8 +222,9 @@ summarise.tbl_ts <- function(.data, ..., .drop = FALSE) {
   idx2 <- index2(.data)
 
   lst_quos <- enquos(..., .named = TRUE)
+  idx2_chr <- quo_name(idx2)
   nonkey <- setdiff(names(lst_quos), 
-    squash(c(key(.data), quo_text(idx), quo_text(idx2)))
+    squash(c(key(.data), quo_name(idx), idx2_chr))
   )
   nonkey_quos <- lst_quos[nonkey]
 
@@ -233,12 +237,13 @@ summarise.tbl_ts <- function(.data, ..., .drop = FALSE) {
     int <- NULL
     reg <- TRUE
   }
-  new_key <- key(key_reduce(.data, group_vars(.data), validate = FALSE))
+  grps <- group_vars(.data)
+  new_key <- key(key_reduce(.data, grps, validate = FALSE))
 
   build_tsibble(
     sum_data, key = new_key, index = !! idx2,
-    groups = grp_drop(groups(.data)), validate = FALSE, regular = reg, 
-    ordered = TRUE, interval = int
+    groups = grp_drop(grps, idx2_chr), validate = FALSE, 
+    regular = reg, ordered = TRUE, interval = int
   )
 }
 
@@ -287,7 +292,7 @@ ungroup.grouped_ts <- function(x, ...) {
 #' @seealso [dplyr::ungroup]
 #' @export
 ungroup.tbl_ts <- function(x, ...) {
-  attr(x, "index2") <- list()
+  attr(x, "index2") <- index(x)
   x
 }
 

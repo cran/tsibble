@@ -2,6 +2,7 @@
 % Please edit documentation in R/tsibble-pkg.R
 \docType{package}
 \name{tsibble-package}
+\alias{tsibble-package}
 \title{tsibble: tidy temporal data frames and tools}
 \description{
 The \strong{tsibble} package provides a data class of \code{tbl_ts} to store and manage
@@ -16,8 +17,16 @@ in a \code{ts} object), but preserved as the essential component of the tsibble.
 few index classes, such as \code{Date}, \code{POSIXct}, and \code{difftime}, forms the basis of
 the tsibble, with new additions \link{yearweek}, \link{yearmonth}, and \link{yearquarter}
 representing year-week, year-month, and year-quarter respectively. \code{zoo::yearmth}
-and \code{zoo::yearqtr} are also supported. It is extensible to work with custom
-index, for example trading days and weekly data.
+and \code{zoo::yearqtr} are also supported. For a \code{tbl_ts} of regular interval,
+a choice of index representation has to be made. For example, a monthly data
+should correspond to time index created by \link{yearmonth} or \code{zoo::yearmth},
+instead of \code{Date} or \code{POSIXct}. Because months in a year ensures the regularity,
+12 months every year. However, if using \code{Date}, a month contains days ranging
+from 28 to 31 days, which results in irregular time space. This is also applicable
+to year-week and year-quarter.
+
+Since the \strong{tibble} that underlies the \strong{tsibble} only accepts a 1d atomic
+vector or a list, a \code{tbl_ts} doesn't accept \code{POSIXlt} and \code{timeDate} columns.
 }
 
 \section{Key}{
@@ -65,6 +74,24 @@ The tsibble package fully utilises the \code{print} method from the tibble. Plea
 refer to \link[tibble:tibble-package]{tibble::tibble-package} to change display options.
 }
 
+\examples{
+# create a tsibble w/o a key ----
+tsbl1 <- tsibble(
+  date = seq(as.Date("2017-01-01"), as.Date("2017-01-10"), by = 1),
+  value = rnorm(10),
+  key = id(), index = date
+)
+tsbl1
+
+# create a tsibble with one key ----
+tsbl2 <- tsibble(
+  qtr = rep(yearquarter(seq(2010, 2012.25, by = 1 / 4)), 3),
+  group = rep(c("x", "y", "z"), each = 10),
+  value = rnorm(30),
+  key = id(group), index = qtr
+)
+tsbl2
+}
 \seealso{
 Useful links:
 \itemize{
