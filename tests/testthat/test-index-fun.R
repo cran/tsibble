@@ -1,5 +1,27 @@
 context("year-week, year-month, year-quarter")
 
+yw <- seq(yearweek(as.Date("1970-01-01")), length.out = 3, by = 1)
+ym <- seq(yearmonth(1970 + 0 / 12), length.out = 3, by = 1)
+yq <- seq(yearquarter(1970 + 0 / 4), length.out = 3, by = 1)
+
+test_that("is_53weeks()", {
+  expect_equal(is_53weeks(2015:2016), c(TRUE, FALSE))
+  expect_error(is_53weeks("2015"), "positive integers.")
+})
+
+test_that("units_since()", {
+  expect_equal(units_since(yw), 0:2)
+  expect_equal(units_since(ym), 0:2)
+  expect_equal(units_since(yq), 0:2)
+})
+
+test_that("diff()", {
+  expect_is(diff(yw), "difftime")
+  expect_equal(as.numeric(diff(yw)), rep(1, 2))
+  expect_equal(as.numeric(diff(ym)), rep(1, 2))
+  expect_equal(as.numeric(diff(yq)), rep(1, 2))
+})
+
 a <- yearweek(seq(ymd("2017-02-01"), length.out = 12, by = "1 week"))
 a2 <- rep(a, 2)
 x <- yearmonth(seq(2010, 2012, by = 1 / 12))
@@ -36,4 +58,10 @@ test_that("POSIXct", {
   expect_equal(format(yearweek(xx)), "2018 W01")
   expect_equal(format(yearmonth(xx)), "2018 Jan")
   expect_equal(format(yearquarter(xx)), "2018 Q1")
+})
+
+test_that("character", {
+  expect_equal(format(yearweek(as.character(xx))), "2018 W01")
+  expect_equal(format(yearmonth(as.character(xx))), "2018 Jan")
+  expect_equal(format(yearquarter(as.character(xx))), "2018 Q1")
 })

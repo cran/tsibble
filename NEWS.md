@@ -1,3 +1,48 @@
+# tsibble 0.4.0
+
+## Breaking changes
+
+* Restructured windowed functions to follow the `purrr` style exactly (#35): 
+  + `slide()`, `tile()`, `stretch()` return lists only instead of numerics before.
+  + added `slide2()`, `pslide()` to map over multiple inputs simultaneously. 
+  + added other type-stable variants such as `slide_dbl()`, `slide_int()`, `slide_chr()`, `slide_lgl()`.
+  * A negative window size results in a backward moving direction.
+  * `slide()` gained a new argument `.partial` to support partial sliding.
+* Renamed `x` to `.x` in `slider()`, `tiler()`, `stretcher()`.
+* `pslider()`, `ptiler()`, `pstretcher()` support multiple inputs now, and split them in parallel.
+
+## New features
+
+* New `holiday_aus()` for Australian national and state-based public holiday.
+* Defined `diff()` for year-week, year-month, and year-quarter.
+* `yearweek()`, `yearmonth()`, `yearquarter()` supported for character.
+* Added `slide2()`, `pslide()`, `tile2()`, `ptile()`, `stretch2()`, `pstretch()` to slide over multiple inputs simultaneously (#33).
+* New S3 generics `units_since()` for index classes.
+* New `is_53weeks()` for determine if the year has 53 ISO weeks.
+* New S3 generics `key_sum()` for extending tsibble.
+
+## Improvements
+
+* `as_tsibble.ts()` removed the `tsp` attribute from the `value` column.
+* Dropped the "lst_col" attribute from `lst_ts` (#25).
+* More informative error message when a data frame is passed to `tsibble()`.
+* More informative error message for `fill_na()` and `count_gaps` when a tsibble of unknown interval.
+* `as_tsibble.tbl_ts()` & `as_tsibble.grouped_ts()` now return self (#34).
+* `id()` is used in the tsibble context (e.g. `as_tsibble()`, `tsibble()`, `build_tsibble()`) regardless of the conflicts with dplyr or plyr, to avoid frustrating message (#36).
+* `select.tbl_ts()` now preserved index.
+
+## Bug fixes
+
+* Fixed bug in `as.ts.tbl_ts()` for ignoring the `value` argument when the key is empty.
+* Fixed bug in `[.tbl_ts()` when subsetting columns by characters (#30).
+* Fixed bug in `fill_na.tbl_ts()` dropping custom index class (#32).
+* Fixed bug in `format.yearweek()` due to the boundary issue (#27).
+* If a column passed as `index` contains `NA`, abort.
+
+## Misc
+
+* Suggested on `nycflights13 >= 1.0.0`.
+
 # tsibble 0.3.0
 
 The **tsibble** package has a hexagon logo now! Thanks Mitch (@mitchelloharawild).

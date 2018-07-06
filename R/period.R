@@ -67,6 +67,13 @@ unique.yearweek <- function(x, incomparables = FALSE, ...) {
 }
 
 #' @export
+diff.yearweek <- function(x, lag = 1, differences = 1, ...) {
+  out <- diff((x - as_date("1969-12-29")) / 7, 
+    lag = lag, differences = differences)
+  structure(out, class = "difftime", units = "weeks")
+}
+
+#' @export
 yearweek.default <- function(x) {
   dont_know(x, "yearweek")
 }
@@ -80,30 +87,62 @@ yearweek.POSIXt <- function(x) {
 yearweek.Date <- yearweek.POSIXt
 
 #' @export
+yearweek.character <- function(x) {
+  as_yearweek(as_date(x))
+}
+
+#' @export
 yearweek.yearweek <- function(x) {
   as_yearweek(x)
 }
 
 #' @export
-format.yearweek <- function(x, format = "%Y W%w", ...) {
+format.yearweek <- function(x, format = "%Y W%V", ...) {
   x <- as_date(x)
-  year <- lubridate::year(x)
+  yr <- lubridate::year(x)
+  ord <- lubridate::make_date(yr, 1)
+  wday <- lubridate::wday(x) - 1
+  wday[wday == 0] <- 7
+  wks <- as.integer(floor((x - ord - wday + 10) / 7))
+  yrs <- yr
+  yrs[wks == 0] <- yr[wks == 0] - 1
+  yrs[wks == 53] <- yr[wks == 53] + !is_53weeks(yr)
+  if (format == "%Y W%V") {
+    return(paste(yrs, strftime(x, format = "W%V")))
+  }
   year_sym <- "%Y"
   if (grepl("%y", format)) {
-    year <- sprintf("%02d", year %% 100)
+    yrs <- sprintf("%02d", yrs %% 100)
     year_sym <- "%y"
   } else if (grepl("%C", format)) {
-    year <- year %/% 100
+    yrs <- yrs %/% 100
     year_sym <- "%C"
   }
   wk <- strftime(x, format = "%V")
-  wk_sub <- purrr::map_chr(wk, ~ gsub("%w", ., x = format))
-  year_sub <- purrr::map2_chr(year, wk_sub, ~ gsub(year_sym, .x, x = .y))
+  wk_sub <- purrr::map_chr(wk, ~ gsub("%V", ., x = format))
+  year_sub <- purrr::map2_chr(yrs, wk_sub, ~ gsub(year_sym, .x, x = .y))
   year_sub
 }
 
+#' @rdname period
+#' @param year A vector of years.
+#' @return `TRUE`/`FALSE` if the year has 53 ISO weeks.
 #' @export
-print.yearweek <- function(x, format = "%Y W%w", ...) {
+#' @examples
+#' is_53weeks(2015:2016)
+is_53weeks <- function(year) {
+  if (!is_bare_numeric(year) || year < 1) {
+    abort("`year` must be positive integers.")
+  }
+  pre_year <- year - 1
+  p_year <- function(year) {
+    (year + floor(year / 4) - floor(year / 100) + floor(year / 400)) %% 7
+  }
+  p_year(year) == 4 | p_year(pre_year) == 3
+}
+
+#' @export
+print.yearweek <- function(x, format = "%Y W%V", ...) {
   print(format(x, format = format))
   invisible(x)
 }
@@ -150,6 +189,13 @@ unique.yearmonth <- function(x, incomparables = FALSE, ...) {
 }
 
 #' @export
+diff.yearmonth <- function(x, lag = 1, differences = 1, ...) {
+  out <- diff((lubridate::year(x) - 1970) * 12 + lubridate::month(x), 
+    lag = lag, differences = differences)
+  structure(out, class = "difftime", units = "month")
+}
+
+#' @export
 yearmonth.default <- function(x) {
   dont_know(x, "yearmonth")
 }
@@ -161,6 +207,11 @@ yearmonth.POSIXt <- function(x) {
 
 #' @export
 yearmonth.Date <- yearmonth.POSIXt
+
+#' @export
+yearmonth.character <- function(x) {
+  as_yearmonth(as_date(x))
+}
 
 #' @export
 yearmonth.yearweek <- yearmonth.POSIXt
@@ -229,6 +280,13 @@ unique.yearquarter <- function(x, incomparables = FALSE, ...) {
 }
 
 #' @export
+diff.yearquarter <- function(x, lag = 1, differences = 1, ...) {
+  out <- diff((lubridate::year(x) - 1970) * 4 + lubridate::quarter(x),
+    lag = lag, differences = differences)
+  structure(out, class = "difftime", units = "quarter")
+}
+
+#' @export
 yearquarter.default <- function(x) {
   dont_know(x, "yearquarter")
 }
@@ -240,6 +298,11 @@ yearquarter.POSIXt <- function(x) {
 
 #' @export
 yearquarter.Date <- yearquarter.POSIXt
+
+#' @export
+yearquarter.character <- function(x) {
+  as_yearquarter(as_date(x))
+}
 
 #' @export
 yearquarter.yearweek <- yearquarter.POSIXt
@@ -274,19 +337,9 @@ as_date.yearquarter <- function(x, ...) {
   x
 }
 
-as_date.yearmonth <- function(x, ...) {
-  tz_x <- tz(x)
-  class(x) <- "Date"
-  tz(x) <- tz_x
-  x
-}
+as_date.yearmonth <- as_date.yearquarter
 
-as_date.yearweek <- function(x, ...) {
-  tz_x <- tz(x)
-  class(x) <- "Date"
-  tz(x) <- tz_x
-  x
-}
+as_date.yearweek <- as_date.yearquarter
 
 #' @export
 as.Date.yearquarter <- as_date.yearquarter
@@ -392,6 +445,49 @@ seq.yearquarter <- function(
 #' @export
 as.POSIXlt.yearquarter <- function(x, tz = "", ...) {
   as.POSIXlt(as_date(x), tz = tz, ...)
+}
+
+#' Time units since Unix Epoch
+#'
+#' @param x An object of `POSIXct`, `Date`, `yearweek`, `yearmonth`, `yearquarter`.
+#'
+#' @details
+#' origin:
+#' * `POSIXct`: 1970-01-01 00:00:00
+#' * `Date`: 1970-01-01
+#' * `yearweek`: 1970 W01 (i.e. 1969-12-29)
+#' * `yearmonth`: 1970 Jan
+#' * `yearquarter`: 1970 Qtr1
+#' @export
+#' @examples
+#' units_since(x = yearmonth(2012 + (0:11) / 12))
+units_since <- function(x) {
+  UseMethod("units_since")
+}
+
+#' @export
+units_since.yearweek <- function(x) {
+  as.numeric((x - as_date("1969-12-29")) / 7)
+}
+
+#' @export
+units_since.yearmonth <- function(x) {
+  as.numeric((lubridate::year(x) - 1970) * 12 + lubridate::month(x) - 1)
+}
+
+#' @export
+units_since.yearquarter <- function(x) {
+  as.numeric((lubridate::year(x) - 1970) * 4 + lubridate::quarter(x) - 1)
+}
+
+#' @export
+units_since.Date <- function(x) {
+  as.numeric(x)
+}
+
+#' @export
+units_since.POSIXct <- function(x) {
+  as.numeric(x)
 }
 
 seq_date <- function(

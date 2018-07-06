@@ -34,11 +34,11 @@ first_arg <- function(x) {
 
 # regular time interval is obtained from the greatest common divisor of positive
 # time distances.
-min_interval <- function(x) {
+gcd_interval <- function(x) {
   if (has_length(x, 1)) { # only one time index
     return(NA_real_)
   }
-  gcd_interval(x)
+  gcd_vector(x)
 }
 
 validate_vars <- function(j, x) { # j = quos/chr/dbl
@@ -57,12 +57,12 @@ surround <- function(x, bracket = "(") {
   }
 }
 
-min0 <- function(x) {
-  min(x, na.rm = TRUE)
+min0 <- function(...) {
+  min(..., na.rm = TRUE)
 }
 
-max0 <- function(x) {
-  max(x, na.rm = TRUE)
+max0 <- function(...) {
+  max(..., na.rm = TRUE)
 }
 
 dont_know <- function(x, FUN) {
@@ -71,4 +71,13 @@ dont_know <- function(x, FUN) {
     "`%s()` doesn't know how to coerce the `%s` class yet.", FUN, cls
   )
   abort(msg)
+}
+
+unknown_interval <- function(x) {
+  not_zero <- !purrr::map_lgl(x, function(x) x == 0)
+  # if output is empty, it means that duplicated time entries
+  # if output is NA, it means that only one time entry
+  if (anyNA(not_zero)) {
+    abort("Cannot deal with data of unknown interval.")
+  }
 }

@@ -12,7 +12,7 @@
 #' @export
 as_tsibble.ts <- function(x, tz = "UTC", ...) {
   idx <- time_to_date(x, tz = tz)
-  value <- unclass(x) # rm its ts class
+  value <- as.numeric(x) # rm its ts class
   tbl <- tibble::tibble(index = idx, value = value)
   build_tsibble(
     tbl, key = id(), index = index, validate = FALSE, ordered = TRUE
@@ -107,18 +107,18 @@ as_tsibble.hts <- function(x, tz = "UTC", ...) {
 # }
 
 as_tibble.gts <- function(x, ...) {
-  tibble::as_tibble(x$bts)
+  as_tibble(x$bts)
 }
 
 bind_time <- function(x, tz = "UTC") {
   dplyr::bind_cols(
-    index = time_to_date(x, tz = tz), tibble::as_tibble(x, validate = FALSE)
+    index = time_to_date(x, tz = tz), as_tibble(x, validate = FALSE)
   )
 }
 
 gather_ts <- function(x, tz = "UTC") {
   tbl <- bind_time(x, tz = tz)
-  tidyr::gather(tbl, key = "key", value = "value", -index)
+  gather(tbl, key = "key", value = "value", -index)
 }
 
 # recursive function to repeat nodes for hts

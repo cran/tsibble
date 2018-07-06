@@ -40,9 +40,16 @@
 #'
 #' @export
 tsibble <- function(..., key = id(), index, regular = TRUE) {
-  tbl <- tibble::tibble(...)
+  dots <- rlang::list2(...)
+  if (is_empty(dots)) {
+    abort("A tsibble must not be empty.")
+  }
+  if (has_length(dots, 1) && is.data.frame(dots[[1]])) {
+    abort("Must not be a data frame, do you want `as_tsibble()`?")
+  }
+  tbl <- tibble::tibble(!!! dots)
   index <- enquo(index)
-  build_tsibble(tbl, key = key, index = !! index, regular = regular)
+  build_tsibble(tbl, key = !! enquo(key), index = !! index, regular = regular)
 }
 
 #' Coerce to a tsibble object
@@ -93,27 +100,15 @@ as_tsibble.tbl_df <- function(
 ) {
   index <- enquo(index)
   build_tsibble(
-    x, key = key, index = !! index, regular = regular,
+    x, key = !! enquo(key), index = !! index, regular = regular,
     validate = validate
   )
 }
 
 #' @rdname as-tsibble
 #' @export
-as_tsibble.tbl_ts <- function(
-  x, key = id(), index, regular = TRUE, validate = TRUE, ...
-) {
-  if (is_empty(key)) {
-    key <- key(x)
-  }
-  index <- enquo(index)
-  if (quo_is_missing(index)) {
-    index <- index(x)
-  }
-  build_tsibble(
-    x, key = key, index = !! index, regular = regular,
-    validate = validate
-  )
+as_tsibble.tbl_ts <- function(x, ...) {
+  x
 }
 
 #' @rdname as-tsibble
@@ -135,14 +130,14 @@ as_tsibble.grouped_df <- function(
 ) {
   index <- enquo(index)
   build_tsibble(
-    x, key = key, index = !! index, groups = groups, regular = regular,
-    validate = validate
+    x, key = !! enquo(key), index = !! index, groups = !! enquo(groups), 
+    regular = regular, validate = validate
   )
 }
 
 #' @keywords internal
 #' @export
-as_tsibble.grouped_ts <- as_tsibble.grouped_df
+as_tsibble.grouped_ts <- as_tsibble.tbl_ts
 
 #' @keywords internal
 #' @export
@@ -334,7 +329,7 @@ as.tsibble <- function(x, ...) {
 #' [index_by]. By default, it's identical to `index`.
 #' @param groups Grouping variable(s) when [group_by.tbl_ts].
 #' @param ordered The default of `NULL` arranges the key variable(s) first and
-#' then index in ascending order. `TRUE` suggests to skip the ordering as `x` in
+#' then index from past to future. `TRUE` suggests to skip the ordering as `x` in
 #' the correct order. `FALSE` also skips the ordering but gives a warning instead.
 #' @param interval `NULL` computes the interval. Use the specified interval as
 #' is, if an class of `interval` is supplied.
@@ -354,7 +349,7 @@ build_tsibble <- function(
     abort("A tsibble must not be empty.")
   }
   # if key is quosures
-  use_id(key)
+  key <- use_id(x, !! enquo(key))
 
   # x is lst, data.frame, tbl_df, use ungroup()
   # x is tbl_ts, use as_tibble(ungroup = TRUE)
@@ -421,7 +416,7 @@ build_tsibble <- function(
       "interval" = structure(interval, class = "interval"),
       "regular" = regular,
       "ordered" = ordered,
-      subclass= c("tbl_ts")
+      subclass = c("tbl_ts")
     ))
   }
 
@@ -462,7 +457,6 @@ id <- function(...) {
 ## objects, it would fail when tsibble contain multiple time objects.
 validate_index <- function(data, index) {
   val_idx <- purrr::map_lgl(data, index_valid)
-  is_quo <- is_quosure(index)
   if (quo_is_null(index)) {
     abort("`index` must not be NULL.")
   }
@@ -473,7 +467,6 @@ validate_index <- function(data, index) {
     chr_index <- names(data)[val_idx]
     chr_index <- chr_index[!is.na(chr_index)]
     inform(sprintf("The `index` is `%s`.", chr_index))
-    return(sym(chr_index))
   } else {
     chr_index <- tidyselect::vars_pull(names(data), !! index)
     idx_pos <- names(data) %in% chr_index
@@ -486,8 +479,11 @@ validate_index <- function(data, index) {
         "Unsupported index type: `%s`", cls_idx[idx_pos])
       )
     }
-    sym(chr_index)
   }
+  if (anyNA(data[[chr_index]])) {
+    abort(sprintf("Column `%s` passed as `index` must not contain `NA`.", chr_index))
+  }
+  sym(chr_index)
 }
 
 # check if the number of unique values is in descending order for a set of
@@ -588,15 +584,22 @@ as.data.frame.tbl_ts <- function(x, ...) {
   NextMethod()
 }
 
-use_id <- function(x) {
-  tryCatch(
-    is_quosures(x),
-    error = function(e) {
-      e$call <- NULL
-      e$message <- "Have you forgotten `tsibble::id()` to create the `key`?"
-      stop(e)
-    }
+use_id <- function(x, key) {
+  key <- enquo(key)
+  safe_key <- purrr::safely(eval_tidy)(
+    get_expr(key), 
+    env = child_env(get_env(key), id = id)
   )
+  if (is_null(safe_key$error)) {
+    fn <- function(x) {
+      if (is_list(x)) all(purrr::map_lgl(x, fn)) else is_expression(x)
+    }
+    lgl <- fn(safe_key$result)
+    if (lgl) {
+      return(safe_key$result)
+    }
+  }
+  abort("Have you forgotten `id()` to create the `key`?")
 }
 
 #' Find duplication of key and index variables
@@ -614,7 +617,7 @@ use_id <- function(x) {
 #' @return A logical vector of the same length as the row number of `data`
 #' @export
 find_duplicates <- function(data, key = id(), index, fromLast = FALSE) {
-  use_id(key)
+  key <- use_id(data, !! enquo(key))
   index <- validate_index(data, enquo(index))
 
   grouped_df(data, vars = key_flatten(key)) %>%

@@ -51,10 +51,10 @@ ordered_by_arrange <- function(.data, ..., .by_group = FALSE) {
   if (is_false(any(idx_pos))) { # no index presented in the ...
     mvars <- measured_vars(.data)
     # if there's any measured variable in the ..., the time order will change.
-    ordered <- ifelse(any(mvars %in% val_vars), FALSE, TRUE)
+    ordered <- !any(mvars %in% val_vars)
   } else if (quo_is_call(idx_is_call)) { # desc(index)
     fn <- call_name(idx_is_call)
-    ordered <- ifelse(fn == "desc", FALSE, TRUE)
+    ordered <- fn != "desc"
   } else {
     exp_vars <- c(red_key, idx)
     exp_idx <- which(val_vars %in% exp_vars)
@@ -153,9 +153,9 @@ rename.tbl_ts <- function(.data, ...) {
 #'
 #' @details
 #' These column-wise verbs from dplyr have an additional argument of `.drop = FALSE`
-#' for tsibble. The index variable cannot be dropped for a tsibble. If any key
-#' variable is changed, it will validate whether it's a tsibble internally.
-#' Turning `.drop = TRUE` converts to a tibble first and then do the operations.
+#' for tsibble. If any key variable is changed, it will validate whether it's a 
+#' tsibble internally.  Turning `.drop = TRUE` converts to a tibble first and 
+#' then do the operations.
 #' * `summarise()` will not collapse on the index variable.
 #' @rdname mutate
 #' @seealso [dplyr::mutate]
@@ -309,11 +309,11 @@ by_row <- function(FUN, .data, ordered = TRUE, interval = NULL, ...) {
 
 # put new data with existing attributes
 update_tsibble <- function(new, old, ordered = TRUE, interval = NULL) {
-  build_tsibble(
+  restore_index_class(build_tsibble(
     new, key = key(old), index = !! index(old), index2 = !! index2(old),
     groups = groups(old), regular = is_regular(old), validate = FALSE, 
     ordered = ordered, interval = interval
-  )
+  ), old)
 }
 
 # needed when grouping by index2 (e.g. summarise)

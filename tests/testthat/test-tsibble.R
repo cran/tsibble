@@ -15,6 +15,12 @@ test_that("A tsibble cannot be empty", {
   expect_error(as_tsibble(), "NULL")
 })
 
+test_that("A tsibble must not contain missing values in index", {
+  expect_error(
+    tsibble(idx = ymd_h("2017-10-01 0", tz = "Australia/Melbourne") + hours(1:3)),
+    "must not contain `NA`.")
+})
+
 test_that("A tibble is not tsibble", {
   expect_false(is_tsibble(dat_x))
   expect_error(key(dat_x), "Can't find the `key`")
@@ -24,9 +30,19 @@ test_that("A tibble is not tsibble", {
 })
 
 test_that("Coerce to tbl_df and data.frame", {
+  expect_error(tsibble(dat_x), "not be a data frame,")
   tsbl <- as_tsibble(dat_x, index = date_time)
   expect_identical(as_tibble(tsbl), dat_x)
   expect_identical(as.data.frame(tsbl), as.data.frame(dat_x))
+})
+
+start <- as.POSIXct("2010-01-15 13:55:23.975", tz = "UTC")
+x <-  start + lubridate::milliseconds(x = seq(0, 99, by = 10))
+df <- data.frame(time = x, value = rnorm(10))
+tsbl <- as_tsibble(df, index = time)
+
+test_that("POSIXct with 10 milliseconds interval", {
+  expect_output(print(tsbl), "A tsibble: 10 x 2 \\[0.01SECOND\\]")
 })
 
 test_that("POSIXt with 1 second interval", {
@@ -314,13 +330,7 @@ test_that("as_tsibble.tbl_ts & as_tsibble.grouped_df", {
   ped <- as_tsibble(pedestrian)
   expect_identical(ped, pedestrian)
   grped_ped <- pedestrian %>% group_by(Date)
-  expect_identical(
-    as_tsibble(grped_ped, key = id(Sensor), index = Date_Time),
-    pedestrian
-  )
-  expect_equal(as_tsibble(
-    grped_ped, key = id(Sensor), index = Date_Time, groups = id(Date)
-  ), grped_ped)
+  expect_equal(as_tsibble(grped_ped), grped_ped)
 })
 
 test_that("build_tsibble()", {

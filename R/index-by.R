@@ -126,19 +126,20 @@ tsibble_rename <- function(.data, ...) {
 }
 
 tsibble_select <- function(.data, ..., validate = TRUE) {
+  dots <- c(enquos(...), new_quosure(index(.data)))
   names_dat <- names(.data)
-  val_vars <- tidyselect::vars_select(names_dat, ...)
+  val_vars <- tidyselect::vars_select(names_dat, !!! dots)
   names_vars <- names(val_vars)
-  sel_data <- select(as_tibble(.data), ...)
+  sel_data <- select(as_tibble(.data), !!! val_vars)
 
   # checking
-  val_idx <- has_index(j = val_vars, x = .data)
-  if (is_false(val_idx)) {
-    abort(sprintf(
-      "The `index` (`%s`) must not be dropped. Do you need `.drop = TRUE` to drop `tbl_ts`?",
-      quo_text(index(.data))
-    ))
-  }
+  # val_idx <- has_index(j = val_vars, x = .data)
+  # if (is_false(val_idx)) {
+  #   abort(sprintf(
+  #     "The `index` (`%s`) must not be dropped, do you want `.drop = TRUE` to drop `tbl_ts`?",
+  #     quo_text(index(.data))
+  #   ))
+  # }
   
   # index
   idx <- index_rename(.data, val_vars, names = names_vars)
@@ -166,9 +167,10 @@ tsibble_select <- function(.data, ..., validate = TRUE) {
     # either key or index is present in ...
     # suggests that the operations are done on these variables
     # validate = TRUE to check if tsibble still holds
-    val_idx <- has_index(vec_names, .data)
-    val_key <- has_any_key(vec_names, .data)
-    validate <- val_idx || val_key
+    # val_idx <- has_index(vec_names, .data)
+    # val_key <- has_any_key(vec_names, .data)
+    # validate <- val_idx || val_key
+    validate <- has_any_key(vec_names, .data)
   }
   
   build_tsibble(

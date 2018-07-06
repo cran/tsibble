@@ -67,6 +67,7 @@ fill_na.data.frame <- function(.data, ...) {
 #' @export
 fill_na.tbl_ts <- function(.data, ..., .full = FALSE) {
   not_regular(.data)
+  unknown_interval(interval(.data))
   idx <- index(.data)
   idx_chr <- quo_text(idx)
   key <- key(.data)
@@ -126,6 +127,7 @@ fill_na.tbl_ts <- function(.data, ..., .full = FALSE) {
 #' * "n": the implicit missing observations during the time period
 count_gaps <- function(.data, ...) {
   not_regular(.data)
+  unknown_interval(interval(.data))
   UseMethod("count_gaps")
 }
 
@@ -218,6 +220,14 @@ gaps <- function(x, y) {
   )
 }
 
+# has_gaps <- function(.data, .full = FALSE) {
+#   grouped_df(.data, key_vars(.data)) %>% 
+#     mutate(!! "diff" := difference(as.double(!! index(.data)))) %>% 
+#     summarise(!! "lgl" := any_not_equal_to_c(diff[-1], diff[2])) %>% 
+#     dplyr::pull("lgl") %>% 
+#     any()
+# }
+
 seq_by <- function(x) {
   seq(from = min0(x), to = max0(x), by = time_unit(x))
 }
@@ -272,11 +282,11 @@ case_na <- function(formula) {
   dplyr::case_when(is.na(lhs) ~ rhs, TRUE ~ lhs)
 }
 
-restore_index_class <- function(data, newdata) {
-  old_idx <- quo_text(index(data))
-  new_idx <- quo_text(index(newdata))
-  class(newdata[[new_idx]]) <- class(data[[old_idx]])
-  newdata
+restore_index_class <- function(new, old) {
+  old_idx <- quo_text(index(old))
+  new_idx <- quo_text(index(new))
+  class(new[[new_idx]]) <- class(old[[old_idx]])
+  new
 }
 
 not_regular <- function(x) {

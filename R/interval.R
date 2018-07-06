@@ -27,7 +27,7 @@ pull_interval <- function(x) {
 # Assume date is regularly spaced
 pull_interval.POSIXt <- function(x) {
   dttm <- as.numeric(x)
-  nhms <- min_interval(dttm) # num of seconds
+  nhms <- gcd_interval(dttm) # num of seconds
   period <- split_period(nhms)
   structure(
     list(hour = period$hour, minute = period$minute, second = period$second),
@@ -44,21 +44,21 @@ pull_interval.hms <- pull_interval.difftime # for hms package
 #' @export
 pull_interval.Date <- function(x) {
   dttm <- as.numeric(x)
-  ndays <- min_interval(dttm) # num of seconds
+  ndays <- gcd_interval(dttm) # num of seconds
   structure(list(day = ndays), class = "interval")
 }
 
 #' @export
 pull_interval.yearweek <- function(x) {
-  wk <- lubridate::year(x) + (lubridate::isoweek(x) - 1) / 52.5
-  nweeks <- ceiling(min_interval(wk) * 52.5)
+  wk <- units_since(x)
+  nweeks <- gcd_interval(wk)
   structure(list(week = nweeks), class = "interval")
 }
 
 #' @export
 pull_interval.yearmonth <- function(x) {
-  mon <- lubridate::year(x) + (lubridate::month(x) - 1) / 12
-  nmonths <- ceiling(min_interval(mon) * 12)
+  mon <- units_since(x)
+  nmonths <- gcd_interval(mon)
   structure(list(month = nmonths), class = "interval")
 }
 
@@ -69,8 +69,8 @@ pull_interval.yearmth <- function(x) {
 
 #' @export
 pull_interval.yearquarter <- function(x) {
-  qtr <- lubridate::year(x) + (lubridate::quarter(x) - 1) / 4
-  nqtrs <- ceiling(min_interval(qtr) * 4)
+  qtr <- units_since(x)
+  nqtrs <- gcd_interval(qtr)
   structure(list(quarter = nqtrs), class = "interval")
 }
 
@@ -81,8 +81,8 @@ pull_interval.yearqtr <- function(x) {
 
 #' @export
 pull_interval.numeric <- function(x) {
-  nunits <- min_interval(x)
-  if (min0(x) > 999) {
+  nunits <- gcd_interval(x)
+  if (min0(x) > 1599 && max0(x) < 2500) {
     return(structure(list(year = nunits), class = "interval"))
   }
   structure(list(unit = nunits), class = "interval")
@@ -95,6 +95,9 @@ pull_interval.numeric <- function(x) {
 #' x <- yearmonth(seq(2016, 2018, by = 0.5))
 #' time_unit(x)
 time_unit <- function(x) {
+  if (has_length(x, 1)) {
+    return(0L)
+  }
   UseMethod("time_unit")
 }
 
@@ -107,7 +110,7 @@ time_unit.POSIXt <- function(x) {
 #' @export
 time_unit.numeric <- function(x) {
   int <- pull_interval(x)
-  if (min0(x) > 999) {
+  if (min0(x) > 1599 && max0(x) < 2500) {
     return(int$year)
   }
   int$unit

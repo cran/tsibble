@@ -52,16 +52,16 @@ weather <- nycflights13::weather %>%
   select(origin, time_hour, temp, humid, precip)
 weather_tsbl <- as_tsibble(weather, key = id(origin), index = time_hour)
 weather_tsbl
-#> # A tsibble: 26,130 x 5 [1HOUR]
-#> # Keys:      origin [3]
+#> # A tsibble: 26,115 x 5 [1HOUR]
+#> # Key:       origin [3]
 #>   origin time_hour            temp humid precip
 #>   <chr>  <dttm>              <dbl> <dbl>  <dbl>
-#> 1 EWR    2013-01-01 00:00:00  37.0  54.0      0
-#> 2 EWR    2013-01-01 01:00:00  37.0  54.0      0
-#> 3 EWR    2013-01-01 02:00:00  37.9  52.1      0
-#> 4 EWR    2013-01-01 03:00:00  37.9  54.5      0
-#> 5 EWR    2013-01-01 04:00:00  37.9  57.0      0
-#> # ... with 2.612e+04 more rows
+#> 1 EWR    2013-01-01 01:00:00  39.0  59.4      0
+#> 2 EWR    2013-01-01 02:00:00  39.0  61.6      0
+#> 3 EWR    2013-01-01 03:00:00  39.0  64.4      0
+#> 4 EWR    2013-01-01 04:00:00  39.9  62.2      0
+#> 5 EWR    2013-01-01 05:00:00  39.0  64.4      0
+#> # ... with 2.611e+04 more rows
 ```
 
 The **key** is not constrained to a single variable, but expressive of
@@ -92,17 +92,17 @@ full_weather <- weather_tsbl %>%
   group_by(origin) %>% 
   tidyr::fill(temp, humid, .direction = "down")
 full_weather
-#> # A tsibble: 26,208 x 5 [1HOUR]
-#> # Keys:      origin [3]
+#> # A tsibble: 26,190 x 5 [1HOUR]
+#> # Key:       origin [3]
 #> # Groups:    origin [3]
 #>   origin time_hour            temp humid precip
 #>   <chr>  <dttm>              <dbl> <dbl>  <dbl>
-#> 1 EWR    2013-01-01 00:00:00  37.0  54.0      0
-#> 2 EWR    2013-01-01 01:00:00  37.0  54.0      0
-#> 3 EWR    2013-01-01 02:00:00  37.9  52.1      0
-#> 4 EWR    2013-01-01 03:00:00  37.9  54.5      0
-#> 5 EWR    2013-01-01 04:00:00  37.9  57.0      0
-#> # ... with 2.62e+04 more rows
+#> 1 EWR    2013-01-01 01:00:00  39.0  59.4      0
+#> 2 EWR    2013-01-01 02:00:00  39.0  61.6      0
+#> 3 EWR    2013-01-01 03:00:00  39.0  64.4      0
+#> 4 EWR    2013-01-01 04:00:00  39.9  62.2      0
+#> 5 EWR    2013-01-01 05:00:00  39.0  64.4      0
+#> # ... with 2.618e+04 more rows
 ```
 
 `fill_na()` also handles filling `NA` by values or functions, and
@@ -130,14 +130,14 @@ full_weather %>%
     ttl_precip = sum(precip, na.rm = TRUE)
   )
 #> # A tsibble: 36 x 4 [1MONTH]
-#> # Keys:      origin [3]
+#> # Key:       origin [3]
 #>   origin year_month avg_temp ttl_precip
 #>   <chr>       <mth>    <dbl>      <dbl>
-#> 1 EWR      2013 Jan     35.6       2.7 
-#> 2 EWR      2013 Feb     34.1       2.76
-#> 3 EWR      2013 Mar     40.0       1.94
-#> 4 EWR      2013 Apr     52.9       1.05
-#> 5 EWR      2013 May     63.1       2.76
+#> 1 EWR      2013 Jan     35.6       3.53
+#> 2 EWR      2013 Feb     34.2       3.83
+#> 3 EWR      2013 Mar     40.1       3   
+#> 4 EWR      2013 Apr     53.0       1.47
+#> 5 EWR      2013 May     63.3       5.44
 #> # ... with 31 more rows
 ```
 
@@ -147,13 +147,15 @@ space.
 ### A family of window functions: `slide()`, `tile()`, `stretch()`
 
 Temporal data often involves moving window calculations. Several
-functions in the *tsibble* allow for different variations of moving
-windows using purrr-like syntax:
+functions in *tsibble* allow for different variations of moving windows
+using purrr-like syntax:
 
-  - `slide()`: sliding window with overlapping observations.
-  - `tile()`: tiling window without overlapping observations.
-  - `stretch()`: fixing an initial window and expanding to include more
+  - `slide()`/`slide2()`/`pslide()`: sliding window with overlapping
     observations.
+  - `tile()`/`tile2()`/`ptile()`: tiling window without overlapping
+    observations.
+  - `stretch()`/`stretch2()`/`pstretch()`: fixing an initial window and
+    expanding to include more observations.
 
 For example, a moving average of window size 3 is carried out on hourly
 temperatures for each group (*origin*).
@@ -161,32 +163,31 @@ temperatures for each group (*origin*).
 ``` r
 full_weather %>% 
   group_by(origin) %>% 
-  mutate(temp_ma = slide(temp, ~ mean(., na.rm = TRUE), size = 3))
-#> # A tsibble: 26,208 x 6 [1HOUR]
-#> # Keys:      origin [3]
+  mutate(temp_ma = slide_dbl(temp, ~ mean(., na.rm = TRUE), .size = 3))
+#> # A tsibble: 26,190 x 6 [1HOUR]
+#> # Key:       origin [3]
 #> # Groups:    origin [3]
 #>   origin time_hour            temp humid precip temp_ma
 #>   <chr>  <dttm>              <dbl> <dbl>  <dbl>   <dbl>
-#> 1 EWR    2013-01-01 00:00:00  37.0  54.0      0    NA  
-#> 2 EWR    2013-01-01 01:00:00  37.0  54.0      0    NA  
-#> 3 EWR    2013-01-01 02:00:00  37.9  52.1      0    37.3
-#> 4 EWR    2013-01-01 03:00:00  37.9  54.5      0    37.6
-#> 5 EWR    2013-01-01 04:00:00  37.9  57.0      0    37.9
-#> # ... with 2.62e+04 more rows
+#> 1 EWR    2013-01-01 01:00:00  39.0  59.4      0    NA  
+#> 2 EWR    2013-01-01 02:00:00  39.0  61.6      0    NA  
+#> 3 EWR    2013-01-01 03:00:00  39.0  64.4      0    39.0
+#> 4 EWR    2013-01-01 04:00:00  39.9  62.2      0    39.3
+#> 5 EWR    2013-01-01 05:00:00  39.0  64.4      0    39.3
+#> # ... with 2.618e+04 more rows
 ```
 
 ## Reexported functions from the tidyverse
 
-It can be noticed that the tsibble seamlessly works with *dplyr* verbs.
-Use `?tsibble::reexports` for a full list of re-exported functions.
+It can be noticed that the tsibble seamlessly works with *tidyverse*
+verbs. Use `?tsibble::reexports` for a full list of re-exported
+functions.
 
   - **dplyr:**
       - `arrange()`, `filter()`, `slice()`
-      - `mutate()`/`transmute()`, `select()`,
-        `summarise()`/`summarize()` with an additional argument `.drop =
-        FALSE` to drop `tbl_ts` and coerce to `tbl_df`
-      - `rename()`
-      - `*_join()`
+      - `mutate()`, `transmute()`, `select()`, `rename()`,
+        `summarise()`/`summarize()`
+      - `left/right/full/inner/anti/semi_join()`
       - `group_by()`, `ungroup()`
   - **tidyr**: `gather()`, `spread()`, `nest()`, `unnest()`
   - **tibble:** `glimpse()`, `as_tibble()`/`as.tibble()`
@@ -201,3 +202,9 @@ Use `?tsibble::reexports` for a full list of re-exported functions.
     time-aware tibbles.
   - [padr](https://github.com/EdwinTh/padr): padding of missing records
     in time series.
+
+-----
+
+Please note that this project is released with a [Contributor Code of
+Conduct](.github/CODE_OF_CONDUCT.md). By participating in this project
+you agree to abide by its terms.
