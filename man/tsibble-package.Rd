@@ -5,19 +5,21 @@
 \alias{tsibble-package}
 \title{tsibble: tidy temporal data frames and tools}
 \description{
-The \strong{tsibble} package provides a data class of \code{tbl_ts} to store and manage
-temporal data frames in a "tidy" form. A tsibble consists of a time index,
-key(s) and other measured variables in a data-centric format, which is built on
-top of the tibble.
+\if{html}{\figure{logo.png}{options: align='right'}}
+The \strong{tsibble} package provides a data class of \code{tbl_ts} to represent tidy
+temporal-context data. A tsibble consists of a time index, key, and other
+measured variables in a data-centric format, which is built on top of the tibble.
 }
 \section{Index}{
 
-The time indices are no longer an attribute (for example, the \code{tsp} attribute
-in a \code{ts} object), but preserved as the essential component of the tsibble. A
+The time indices are preserved as the essential data component of the tsibble,
+instead of implicit attribute (for example, the \code{tsp} attribute in a \code{ts} object). A
 few index classes, such as \code{Date}, \code{POSIXct}, and \code{difftime}, forms the basis of
 the tsibble, with new additions \link{yearweek}, \link{yearmonth}, and \link{yearquarter}
-representing year-week, year-month, and year-quarter respectively. \code{zoo::yearmth}
-and \code{zoo::yearqtr} are also supported. For a \code{tbl_ts} of regular interval,
+representing year-week, year-month, and year-quarter respectively. Any arbitrary
+index class are also supported, including \code{zoo::yearmth}, \code{zoo::yearqtr}, and
+\code{nanotime}.
+For a \code{tbl_ts} of regular interval,
 a choice of index representation has to be made. For example, a monthly data
 should correspond to time index created by \link{yearmonth} or \code{zoo::yearmth},
 instead of \code{Date} or \code{POSIXct}. Because months in a year ensures the regularity,
@@ -32,7 +34,7 @@ vector or a list, a \code{tbl_ts} doesn't accept \code{POSIXlt} and \code{timeDa
 \section{Key}{
 
 Key variable(s) together with the index uniquely identifies each record. And
-key(s) also imposes the structure on a tsibble, which can be created via the
+the key also imposes the structure on a tsibble, which can be created via the
 \link{id} function as identifiers:
 \itemize{
 \item None: an implicit variable \code{id()} resulting a univariate time series.
@@ -51,20 +53,32 @@ relationship. Nested and crossed variables can be combined, such as
 \code{data(tourism)} using \code{id(Region | State, Purpose)}.
 }
 
-These key variables describe the data structure.
+These key variables describe the data structure, which will prove useful in
+data visualisation and statistical modelling.
 }
 
 \section{Interval}{
 
 The \link{interval} function returns the interval associated with the tsibble.
 \itemize{
-\item Regular: the value and its time unit including "second", "minute", "hour",
-"day", "week", "month", "quarter", "year". An unrecognisable time interval is
-labelled as "unit".
+\item Regular: the value and its time unit including "nanosecond", "microsecond",
+"millisecond", "second", "minute", "hour", "day", "week", "month", "quarter",
+"year". An unrecognisable time interval is labelled as "unit".
 \item Irregular: \code{as_tsibble(regular = FALSE)} gives the irregular tsibble. It is
 marked with \code{!}.
 \item Unknown: if there is only one entry for each key variable, the interval
 cannot be determined (\code{?}).
+}
+
+An interval is obtained based on the corresponding index representation:
+\itemize{
+\item integer/numeric: either "unit" or "year"
+\item \code{yearquarter}/\code{yearqtr}: "quarter"
+\item \code{yearmonth}/\code{yearmth}: "month"
+\item \code{yearweek}: "week"
+\item \code{Date}: "day"
+\item \code{POSIXct}: "hour", "minute", "second", "millisecond", "microsecond"
+\item \code{nanotime}: "nanosecond"
 }
 }
 

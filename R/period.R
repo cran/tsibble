@@ -26,6 +26,7 @@
 #' x <- seq(as.Date("2016-01-01"), as.Date("2016-12-31"), by = "1 month")
 #' yearweek(x)
 #' yearmonth(yearweek(x)); yearmonth(x)
+#' yearmonth("201807")
 #' yearquarter(x)
 #'
 #' # coerce numerics to yearmonth, yearquarter ----
@@ -68,9 +69,39 @@ unique.yearweek <- function(x, incomparables = FALSE, ...) {
 
 #' @export
 diff.yearweek <- function(x, lag = 1, differences = 1, ...) {
-  out <- diff((x - as_date("1969-12-29")) / 7, 
+  out <- diff((as_date(x) - as_date("1969-12-29")) / 7, 
     lag = lag, differences = differences)
   structure(out, class = "difftime", units = "weeks")
+}
+
+#' @export
+`+.yearweek` <- function(e1, e2) {
+  if (nargs() == 1L) return(e1)
+  e1_yrwk <- is_yearweek(e1)
+  e2_yrwk <- is_yearweek(e2)
+  if (e1_yrwk && e2_yrwk) {
+    abort("binary `+` is not defined for `yearweek` objects")
+  }
+  if (e1_yrwk) {
+    return(yearweek(as_date(e1) + e2 * 7))
+  } else {
+    return(yearweek(e1 * 7 + as_date(e2)))
+  }
+}
+
+#' @export
+`-.yearweek` <- function(e1, e2) {
+  if (nargs() == 1L) return(e1)
+  e1_yrwk <- is_yearweek(e1)
+  e2_yrwk <- is_yearweek(e2)
+  if (e1_yrwk && e2_yrwk) {
+    abort("binary `-` is not defined for `yearweek` objects")
+  }
+  yearweek(as_date(e1) - e2 * 7)
+}
+
+is_yearweek <- function(x) {
+  inherits(x, "yearweek")
 }
 
 #' @export
@@ -88,7 +119,7 @@ yearweek.Date <- yearweek.POSIXt
 
 #' @export
 yearweek.character <- function(x) {
-  as_yearweek(as_date(x))
+  as_yearweek(as_date(anytime::anytime(x)))
 }
 
 #' @export
@@ -106,7 +137,8 @@ format.yearweek <- function(x, format = "%Y W%V", ...) {
   wks <- as.integer(floor((x - ord - wday + 10) / 7))
   yrs <- yr
   yrs[wks == 0] <- yr[wks == 0] - 1
-  yrs[wks == 53] <- yr[wks == 53] + !is_53weeks(yr)
+  is_53 <- yr[wks == 53]
+  yrs[wks == 53] <- is_53 + !is_53weeks(is_53)
   if (format == "%Y W%V") {
     return(paste(yrs, strftime(x, format = "W%V")))
   }
@@ -131,6 +163,7 @@ format.yearweek <- function(x, format = "%Y W%V", ...) {
 #' @examples
 #' is_53weeks(2015:2016)
 is_53weeks <- function(year) {
+  if (is_empty(year)) return(FALSE)
   if (!is_bare_numeric(year) || year < 1) {
     abort("`year` must be positive integers.")
   }
@@ -196,6 +229,36 @@ diff.yearmonth <- function(x, lag = 1, differences = 1, ...) {
 }
 
 #' @export
+`+.yearmonth` <- function(e1, e2) {
+  if (nargs() == 1L) return(e1)
+  e1_yrmth <- is_yearmonth(e1)
+  e2_yrmth <- is_yearmonth(e2)
+  if (e1_yrmth && e2_yrmth) {
+    abort("binary `+` is not defined for `yearmonth` objects")
+  }
+  if (e1_yrmth) {
+    return(yearmonth(as_date(e1) + lubridate::period(e2, units = "month")))
+  } else {
+    return(yearmonth(lubridate::period(e1, units = "month") + as_date(e2)))
+  }
+}
+
+#' @export
+`-.yearmonth` <- function(e1, e2) {
+  if (nargs() == 1L) return(e1)
+  e1_yrmth <- is_yearmonth(e1)
+  e2_yrmth <- is_yearmonth(e2)
+  if (e1_yrmth && e2_yrmth) {
+    abort("binary `-` is not defined for `yearmonth` objects")
+  }
+  yearmonth(as_date(e1) - lubridate::period(e2, units = "month"))
+}
+
+is_yearmonth <- function(x) {
+  inherits(x, "yearmonth")
+}
+
+#' @export
 yearmonth.default <- function(x) {
   dont_know(x, "yearmonth")
 }
@@ -210,7 +273,7 @@ yearmonth.Date <- yearmonth.POSIXt
 
 #' @export
 yearmonth.character <- function(x) {
-  as_yearmonth(as_date(x))
+  as_yearmonth(as_date(anytime::anytime(x)))
 }
 
 #' @export
@@ -287,6 +350,36 @@ diff.yearquarter <- function(x, lag = 1, differences = 1, ...) {
 }
 
 #' @export
+`+.yearquarter` <- function(e1, e2) {
+  if (nargs() == 1L) return(e1)
+  e1_yrqtr <- is_yearquarter(e1)
+  e2_yrqtr <- is_yearquarter(e2)
+  if (e1_yrqtr && e2_yrqtr) {
+    abort("binary `+` is not defined for `yearquarter` objects")
+  }
+  if (e1_yrqtr) {
+    return(yearquarter(as_date(e1) + lubridate::period(e2 * 3, units = "month")))
+  } else {
+    return(yearquarter(lubridate::period(e1 * 3, units = "month") + as_date(e2)))
+  }
+}
+
+#' @export
+`-.yearquarter` <- function(e1, e2) {
+  if (nargs() == 1L) return(e1)
+  e1_yrqtr <- is_yearquarter(e1)
+  e2_yrqtr <- is_yearquarter(e2)
+  if (e1_yrqtr && e2_yrqtr) {
+    abort("binary `-` is not defined for `yearquarter` objects")
+  }
+  yearquarter(as_date(e1) - lubridate::period(e2 * 3, units = "month"))
+}
+
+is_yearquarter <- function(x) {
+  inherits(x, "yearquarter")
+}
+
+#' @export
 yearquarter.default <- function(x) {
   dont_know(x, "yearquarter")
 }
@@ -301,7 +394,7 @@ yearquarter.Date <- yearquarter.POSIXt
 
 #' @export
 yearquarter.character <- function(x) {
-  as_yearquarter(as_date(x))
+  as_yearquarter(as_date(anytime::anytime(x)))
 }
 
 #' @export
@@ -389,9 +482,7 @@ pillar_shaft.yearquarter <- pillar_shaft.yearweek
 seq.yearweek <- function(
   from, to, by, length.out = NULL, along.with = NULL,
   ...) {
-  if (!is_bare_numeric(by, n = 1)) {
-    abort("`by` only takes a numeric.")
-  }
+  bad_by(by)
   by_wk <- paste(by, "week")
   yearweek(seq_date(
     from = from, to = to, by = by_wk, length.out = length.out,
@@ -403,9 +494,7 @@ seq.yearweek <- function(
 seq.yearmonth <- function(
   from, to, by, length.out = NULL, along.with = NULL,
   ...) {
-  if (!is_bare_numeric(by, n = 1)) {
-    abort("`by` only takes a numeric.")
-  }
+  bad_by(by)
   by_mth <- paste(by, "month")
   yearmonth(seq_date(
     from = from, to = to, by = by_mth, length.out = length.out,
@@ -417,9 +506,7 @@ seq.yearmonth <- function(
 seq.yearquarter <- function(
   from, to, by, length.out = NULL, along.with = NULL,
   ...) {
-  if (!is.numeric(by)) {
-    abort("`by` only takes a numeric.")
-  }
+  bad_by(by)
   by_qtr <- paste(by, "quarter")
   yearquarter(seq_date(
     from = from, to = to, by = by_qtr, length.out = length.out,
@@ -467,7 +554,7 @@ units_since <- function(x) {
 
 #' @export
 units_since.yearweek <- function(x) {
-  as.numeric((x - as_date("1969-12-29")) / 7)
+  as.numeric((as_date(x) - as_date("1969-12-29")) / 7)
 }
 
 #' @export
@@ -588,4 +675,10 @@ seq_date <- function(
     else res[res >= to]
   }
   res
+}
+
+bad_by <- function(by) {
+  if (!is_bare_numeric(by, n = 1)) {
+    abort("`by` only takes a numeric.")
+  }
 }

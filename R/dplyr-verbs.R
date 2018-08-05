@@ -1,33 +1,38 @@
-#' Arrange rows by variables
+#' Tidyverse methods for tsibble
+#'
+#' * `arrange()`: if not arranging key and index in past-to-future order, a warning is
+#' likely to be issued.
+#' * `slice()`: if row numbers are not in ascending order, a warning is likely to
+#' be issued.
+#' * `select()`: keeps the variables you mention as well as the index. 
+#' * `transmute()`: keeps the variable you operate on, as well as the index and key.
+#' * The column-wise verbs, including `select()`, `transmute()`, `summarise()`, 
+#' `mutate()` & `transmute()`, have an additional argument of `.drop = FALSE` for 
+#' tsibble. The index variable cannot be dropped for a tsibble. If any key variable 
+#' is changed, it will validate whether it's a tsibble internally. Turning 
+#' `.drop = TRUE` converts to a tibble first and then do the operations.
 #'
 #' @param .data A `tbl_ts`.
-#' @param ...  A set of unquoted variables, separated by commas.
-#' @param .by_group `TRUE` will sort first by grouping variables.
+#' @param ... same arguments accepted as its dplyr generic.
+#' @inheritParams dplyr::arrange
 #'
-#' @details If not arranging key and index in ascending order, a warning is
-#' likely to be issued.
-#' @rdname arrange
-#' @seealso [dplyr::arrange]
+#' @name tidyverse
+#' @rdname tidyverse
 #' @export
 arrange.tbl_ts <- function(.data, ...) {
   quos <- enquos(...)
-  if (is_empty(quos)) {
-    return(.data)
-  }
+  if (is_empty(quos)) return(.data)
   ordered <- ordered_by_arrange(.data, !!! quos)
 
   arr_data <- NextMethod()
   update_tsibble(arr_data, .data, ordered = ordered, interval = interval(.data))
 }
 
-#' @rdname arrange
-#' @seealso [dplyr::arrange]
+#' @rdname tidyverse
 #' @export
 arrange.grouped_ts <- function(.data, ..., .by_group = FALSE) {
   quos <- enquos(...)
-  if (is_empty(quos)) {
-    return(.data)
-  }
+  if (is_empty(quos)) return(.data)
   ordered <- ordered_by_arrange(.data, !!! quos, .by_group = .by_group)
 
   arr_data <- arrange(as_tibble(.data), !!! quos, .by_group = .by_group)
@@ -77,23 +82,13 @@ ordered_by_arrange <- function(.data, ..., .by_group = FALSE) {
   ordered
 }
 
-#' Return rows with matching conditions
-#'
-#' @param .data A `tbl_ts`.
-#' @param ...  Logical predicates defined in terms of the variables.
-#' @seealso [dplyr::filter]
+#' @rdname tidyverse
 #' @export
 filter.tbl_ts <- function(.data, ...) {
   by_row(filter, .data, ordered = is_ordered(.data), interval = NULL, ...)
 }
 
-#' Selects rows by position
-#'
-#' @param .data A `tbl_ts`.
-#' @param ...  Unique integers of row numbers to be selected.
-#' @details If row numbers are not in ascending order, a warning is likely to
-#' be issued.
-#' @seealso [dplyr::slice]
+#' @rdname tidyverse
 #' @export
 slice.tbl_ts <- function(.data, ...) {
   pos <- enquos(...)
@@ -102,7 +97,9 @@ slice.tbl_ts <- function(.data, ...) {
   }
   pos_eval <- eval_tidy(expr(!! dplyr::first(pos)))
   ascending <- row_validate(pos_eval)
-  by_row(slice, .data, ordered = ascending, interval = NULL, ...)
+  int <- NULL
+  if (is_min_gap_one(pos_eval)) int <- interval(.data)
+  by_row(slice, .data, ordered = ascending, interval = int, ...)
 }
 
 row_validate <- function(x) {
@@ -113,21 +110,10 @@ row_validate <- function(x) {
   is_ascending(x)
 }
 
-#' Select/rename variables by name
-#'
-#' @param .data A tsibble.
-#' @param ... Unquoted variable names separated by commas. `rename()` requires
-#' named arguments.
 #' @param .drop `FALSE` returns a tsibble object as the input. `TRUE` drops a
 #' tsibble and returns a tibble.
 #'
-#' @details
-#' These column-wise verbs from dplyr have an additional argument of `.drop = FALSE`
-#' for tsibble. The index variable cannot be dropped for a tsibble. If any key
-#' variable is changed, it will validate whether it's a tsibble internally.
-#' Turning `.drop = TRUE` converts to a tibble first and then do the operations.
-#' @rdname select
-#' @seealso [dplyr::select]
+#' @rdname tidyverse
 #' @export
 select.tbl_ts <- function(.data, ..., .drop = FALSE) {
   if (.drop) {
@@ -136,29 +122,13 @@ select.tbl_ts <- function(.data, ..., .drop = FALSE) {
   tsibble_select(.data, ...)
 }
 
-#' @rdname select
-#' @seealso [dplyr::rename]
+#' @rdname tidyverse
 #' @export
 rename.tbl_ts <- function(.data, ...) {
   tsibble_rename(.data, ...)
 }
 
-#' Add new variables
-#'
-#' `mutate()` adds new variables; `transmute()` keeps the newly created variables
-#' along with index and keys;
-#'
-#' @inheritParams select.tbl_ts
-#' @param ... Name-value pairs of expressions.
-#'
-#' @details
-#' These column-wise verbs from dplyr have an additional argument of `.drop = FALSE`
-#' for tsibble. If any key variable is changed, it will validate whether it's a 
-#' tsibble internally.  Turning `.drop = TRUE` converts to a tibble first and 
-#' then do the operations.
-#' * `summarise()` will not collapse on the index variable.
-#' @rdname mutate
-#' @seealso [dplyr::mutate]
+#' @rdname tidyverse
 #' @export
 mutate.tbl_ts <- function(.data, ..., .drop = FALSE) {
   mut_data <- mutate(as_tibble(.data), ...)
@@ -181,8 +151,7 @@ mutate.tbl_ts <- function(.data, ..., .drop = FALSE) {
   )
 }
 
-#' @rdname mutate
-#' @seealso [dplyr::transmute]
+#' @rdname tidyverse
 #' @export
 transmute.tbl_ts <- function(.data, ..., .drop = FALSE) {
   if (.drop) {
@@ -195,13 +164,10 @@ transmute.tbl_ts <- function(.data, ..., .drop = FALSE) {
   select(mut_data, vec_names)
 }
 
-#' Collapse multiple rows to a single value
-#'
-#' @inheritParams mutate.tbl_ts
-#'
-#' @details Time index will not be collapsed by `summarise.tbl_ts`.
-#' @rdname summarise
-#' @seealso [dplyr::summarise]
+#' @rdname tidyverse
+#' @details
+#' * `summarise()` will not collapse on the index variable.
+#' @export
 #' @examples
 #' # Sum over sensors ----
 #' pedestrian %>%
@@ -213,7 +179,6 @@ transmute.tbl_ts <- function(.data, ..., .drop = FALSE) {
 #' ## .drop = TRUE ----
 #' pedestrian %>%
 #'   summarise(Total = sum(Count), .drop = TRUE)
-#' @export
 summarise.tbl_ts <- function(.data, ..., .drop = FALSE) {
   if (.drop) {
     return(summarise(as_tibble(.data), ...))
@@ -247,29 +212,20 @@ summarise.tbl_ts <- function(.data, ..., .drop = FALSE) {
   )
 }
 
-#' @rdname summarise
-#' @seealso [dplyr::summarize]
+#' @rdname tidyverse
 #' @export
 summarize.tbl_ts <- summarise.tbl_ts
 
-#' Group by one or more variables
-#'
-#' @param .data A tsibble.
 #' @inheritParams dplyr::group_by
-#' @param x A (grouped) tsibble.
-#'
-#' @rdname group-by
-#' @seealso [dplyr::group_by]
 #' @importFrom dplyr grouped_df
+#' @rdname tidyverse
 #' @export
 #' @examples
-#' data(tourism)
 #' tourism %>%
 #'   group_by(Region, State) %>%
 #'   summarise(geo_trips = sum(Trips))
 group_by.tbl_ts <- function(.data, ..., add = FALSE) {
   grped_tbl <- group_by(as_tibble(.data), ..., add = add)
-
   build_tsibble(
     grped_tbl, key = key(.data), index = !! index(.data), 
     index2 = !! index2(.data), groups = groups(grped_tbl), validate = FALSE, 
@@ -278,8 +234,19 @@ group_by.tbl_ts <- function(.data, ..., add = FALSE) {
   )
 }
 
-#' @rdname group-by
-#' @seealso [dplyr::ungroup]
+#' Group by key variables
+#'
+#' @param .tbl A `tbl_ts` object.
+#' @inheritParams dplyr::group_by_all
+#' @export
+#' @examples
+#' tourism %>% 
+#'   group_by_key()
+group_by_key <- function(.tbl, .funs = list(), ...) {
+  dplyr::group_by_at(.tbl, .vars = key_vars(.tbl), .funs = .funs, ...)
+}
+
+#' @rdname tidyverse
 #' @export
 ungroup.grouped_ts <- function(x, ...) {
   build_tsibble(
@@ -289,7 +256,6 @@ ungroup.grouped_ts <- function(x, ...) {
   )
 }
 
-#' @seealso [dplyr::ungroup]
 #' @export
 ungroup.tbl_ts <- function(x, ...) {
   attr(x, "index2") <- index(x)
@@ -309,9 +275,9 @@ by_row <- function(FUN, .data, ordered = TRUE, interval = NULL, ...) {
 
 # put new data with existing attributes
 update_tsibble <- function(new, old, ordered = TRUE, interval = NULL) {
-  restore_index_class(build_tsibble(
+  restore_index_class(build_tsibble_meta(
     new, key = key(old), index = !! index(old), index2 = !! index2(old),
-    groups = groups(old), regular = is_regular(old), validate = FALSE, 
+    groups = groups(old), regular = is_regular(old),
     ordered = ordered, interval = interval
   ), old)
 }
@@ -320,6 +286,6 @@ update_tsibble <- function(new, old, ordered = TRUE, interval = NULL) {
 as_tibble2 <- function(x) {
   grps <- groups(x)
   idx2 <- index2(x)
-  x <- tibble::new_tibble(x)
+  x <- as_tibble(x)
   group_by(x, !!! flatten(c(grps, idx2)))
 }

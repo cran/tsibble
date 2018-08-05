@@ -57,27 +57,18 @@ print.interval <- function(x, digits = NULL, ...) {
 
 #' @export
 format.interval <- function(x, digits = NULL, ...) {
-  if (is_empty(x)) {
-    return("!")
-  }
-  if (is.null(digits)) {
-    digits <- 1
-    secs <- x$second
-    if (!(is.null(secs) || is.na(secs))) {
-      digits <- 3
-      decs <- secs - floor(secs)
-      if (decs < 0.001) {
-        digits  <- nchar(decs)
-      }
-    }
-  }
+  if (is_empty(x)) return("!")
   not_zero <- !purrr::map_lgl(x, function(x) x == 0)
-  # if output is empty, it means that duplicated time entries
-  # if output is NA, it means that only one time entry
+  # if output contains all the zeros
+  if (sum(not_zero) == 0) return("?")
+  x <- translate_interval(x)
   output <- x[not_zero]
-  vec_x <- round(rlang::flatten_dbl(output), digits = digits)
-  if (is_empty(output) || is_empty(vec_x)) {
-    return("?")
-  }
-  paste0(vec_x, toupper(names(output)), collapse = " ")
+  paste0(output, names(output), collapse = " ")
+}
+
+translate_interval <- function(x) {
+  set_names(
+    x, 
+    c("Y", "Q", "M", "W", "D", "h", "m", "s", "ms", "\xC2\xB5s", "ns", "")
+  )
 }

@@ -1,17 +1,19 @@
 #' tsibble: tidy temporal data frames and tools
 #'
-#' The **tsibble** package provides a data class of `tbl_ts` to store and manage
-#' temporal data frames in a "tidy" form. A tsibble consists of a time index, 
-#' key(s) and other measured variables in a data-centric format, which is built on 
-#' top of the tibble. 
+#' \if{html}{\figure{logo.png}{options: align='right'}}
+#' The **tsibble** package provides a data class of `tbl_ts` to represent tidy 
+#' temporal-context data. A tsibble consists of a time index, key, and other 
+#' measured variables in a data-centric format, which is built on top of the tibble. 
 #'
 #' @section Index:
-#' The time indices are no longer an attribute (for example, the `tsp` attribute 
-#' in a `ts` object), but preserved as the essential component of the tsibble. A 
+#' The time indices are preserved as the essential data component of the tsibble,
+#' instead of implicit attribute (for example, the `tsp` attribute in a `ts` object). A 
 #' few index classes, such as `Date`, `POSIXct`, and `difftime`, forms the basis of 
 #' the tsibble, with new additions [yearweek], [yearmonth], and [yearquarter] 
-#' representing year-week, year-month, and year-quarter respectively. `zoo::yearmth` 
-#' and `zoo::yearqtr` are also supported. For a `tbl_ts` of regular interval,
+#' representing year-week, year-month, and year-quarter respectively. Any arbitrary
+#' index class are also supported, including `zoo::yearmth`, `zoo::yearqtr`, and
+#' `nanotime`. 
+#' For a `tbl_ts` of regular interval,
 #' a choice of index representation has to be made. For example, a monthly data 
 #' should correspond to time index created by [yearmonth] or `zoo::yearmth`, 
 #' instead of `Date` or `POSIXct`. Because months in a year ensures the regularity,
@@ -24,7 +26,7 @@
 #'
 #' @section Key:
 #' Key variable(s) together with the index uniquely identifies each record. And
-#' key(s) also imposes the structure on a tsibble, which can be created via the
+#' the key also imposes the structure on a tsibble, which can be created via the
 #' [id] function as identifiers:
 #' * None: an implicit variable `id()` resulting a univariate time series.
 #' * A single variable: an explicit variable. For example, `data(pedestrian)`
@@ -41,17 +43,27 @@
 #' relationship. Nested and crossed variables can be combined, such as 
 #' `data(tourism)` using `id(Region | State, Purpose)`.
 #'
-#' These key variables describe the data structure.
+#' These key variables describe the data structure, which will prove useful in
+#' data visualisation and statistical modelling.
 #'
 #' @section Interval:
 #' The [interval] function returns the interval associated with the tsibble.
-#' * Regular: the value and its time unit including "second", "minute", "hour", 
-#' "day", "week", "month", "quarter", "year". An unrecognisable time interval is
-#' labelled as "unit".
+#' * Regular: the value and its time unit including "nanosecond", "microsecond",
+#' "millisecond", "second", "minute", "hour", "day", "week", "month", "quarter", 
+#' "year". An unrecognisable time interval is labelled as "unit".
 #' * Irregular: `as_tsibble(regular = FALSE)` gives the irregular tsibble. It is
 #' marked with `!`.
 #' * Unknown: if there is only one entry for each key variable, the interval
 #' cannot be determined (`?`).
+#'
+#' An interval is obtained based on the corresponding index representation:
+#' * integer/numeric: either "unit" or "year"
+#' * `yearquarter`/`yearqtr`: "quarter"
+#' * `yearmonth`/`yearmth`: "month"
+#' * `yearweek`: "week"
+#' * `Date`: "day"
+#' * `POSIXct`: "hour", "minute", "second", "millisecond", "microsecond"
+#' * `nanotime`: "nanosecond"
 #'
 #' @section Print options:
 #' The tsibble package fully utilises the `print` method from the tibble. Please

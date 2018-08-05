@@ -1,17 +1,16 @@
 #' Extract time interval from a vector
 #'
 #' Assuming regularly spaced time, the `pull_interval()` returns a list of time
-#' components as the "interval" class; the `time_unit()` returns the value of
-#' time units.
+#' components as the "interval" class.
 #'
 #' @param x A vector of `POSIXt`, `Date`, `yearmonth`, `yearquarter`, `difftime`,
 #' `hms`, `integer`, `numeric`.
 #'
-#' @details The `pull_interval()` and `time_unit()` make a tsibble extensible to
+#' @details `index_valid()` and `pull_interval()` make a tsibble extensible to 
 #' support custom time index.
-#' @return `pull_interval()`: an "interval" class (a list) includes "year", 
-#' "quarter", "month", #' "week", "day", "hour", "minute", "second", "unit", and
-#' other self-defined interval.
+#' @return an "interval" class (a list) includes "year", 
+#' "quarter", "month", "week", "day", "hour", "minute", "second", "millisecond",
+#' "microsecond", "nanosecond", "unit".
 #'
 #' @rdname pull-interval
 #' @export
@@ -20,23 +19,53 @@
 #' x <- seq(as.Date("2017-10-01"), as.Date("2017-10-31"), by = 3)
 #' pull_interval(x)
 pull_interval <- function(x) {
+  if (has_length(x, 1)) {
+    return(init_interval())
+  }
   UseMethod("pull_interval")
 }
 
 #' @export
 # Assume date is regularly spaced
 pull_interval.POSIXt <- function(x) {
-  dttm <- as.numeric(x)
-  nhms <- gcd_interval(dttm) # num of seconds
-  period <- split_period(nhms)
-  structure(
-    list(hour = period$hour, minute = period$minute, second = period$second),
-    class = "interval"
-  )
+  fmt6 <- substring(format(x[1], "%OS6"), first = 4)
+  dttm <- as.double(x)
+  if (fmt6 == "000000") { # second
+    nhms <- gcd_interval(dttm)
+    period <- split_period(nhms)
+    return(init_interval(
+      hour = period$hour, 
+      minute = period$minute, 
+      second = period$second
+    ))
+  } else if (substring(fmt6, 4) %in% c("000", "999")) { # millisecond
+    nhms <- ceiling(gcd_interval(dttm) * 1e+3)
+    return(init_interval(millisecond = nhms))
+  } else { # microsecond
+    dttm <- dttm * 1e+6
+    nhms <- gcd_interval(dttm)
+    return(init_interval(microsecond = nhms))
+  }
 }
 
 #' @export
-pull_interval.difftime <- pull_interval.POSIXt
+pull_interval.nanotime <- function(x) {
+  nano <- as.numeric(x)
+  int <- gcd_interval(nano) # num of nanoseconds
+  init_interval(nanosecond = int)
+}
+
+#' @export
+pull_interval.difftime <- function(x) {
+  dttm <- as.double(x)
+  nhms <- gcd_interval(dttm)
+  period <- split_period(nhms)
+  init_interval(
+    hour = period$hour, 
+    minute = period$minute, 
+    second = period$second
+  )
+}
 
 #' @export
 pull_interval.hms <- pull_interval.difftime # for hms package
@@ -45,21 +74,21 @@ pull_interval.hms <- pull_interval.difftime # for hms package
 pull_interval.Date <- function(x) {
   dttm <- as.numeric(x)
   ndays <- gcd_interval(dttm) # num of seconds
-  structure(list(day = ndays), class = "interval")
+  init_interval(day = ndays)
 }
 
 #' @export
 pull_interval.yearweek <- function(x) {
   wk <- units_since(x)
   nweeks <- gcd_interval(wk)
-  structure(list(week = nweeks), class = "interval")
+  init_interval(week = nweeks)
 }
 
 #' @export
 pull_interval.yearmonth <- function(x) {
   mon <- units_since(x)
   nmonths <- gcd_interval(mon)
-  structure(list(month = nmonths), class = "interval")
+  init_interval(month = nmonths)
 }
 
 #' @export
@@ -71,7 +100,7 @@ pull_interval.yearmth <- function(x) {
 pull_interval.yearquarter <- function(x) {
   qtr <- units_since(x)
   nqtrs <- gcd_interval(qtr)
-  structure(list(quarter = nqtrs), class = "interval")
+  init_interval(quarter = nqtrs)
 }
 
 #' @export
@@ -83,57 +112,49 @@ pull_interval.yearqtr <- function(x) {
 pull_interval.numeric <- function(x) {
   nunits <- gcd_interval(x)
   if (min0(x) > 1599 && max0(x) < 2500) {
-    return(structure(list(year = nunits), class = "interval"))
+    return(init_interval(year = nunits))
   }
-  structure(list(unit = nunits), class = "interval")
+  init_interval(unit = nunits)
 }
 
-#' @rdname pull-interval
+#' @export
+`[[.interval` <- function(x, i, j, ..., exact = TRUE) {
+  NextMethod()
+}
+
+#' @export
+`[.interval` <- function(x, i, j, drop = FALSE) {
+  NextMethod()
+}
+
+init_interval <- function(
+  year = 0, quarter = 0, month = 0, week = 0, 
+  day = 0, hour = 0, minute = 0, second = 0, 
+  millisecond = 0, microsecond = 0, nanosecond = 0, 
+  unit = 0
+) {
+  structure(list(
+    year = year, quarter = quarter, month = month, week = week,
+    day = day, hour = hour, minute = minute, second = second,
+    millisecond = millisecond, microsecond = microsecond, 
+    nanosecond = nanosecond, unit = unit
+  ), class = "interval")
+}
+
+#' Extract time unit from a vector
+#'
+#' @inheritParams pull_interval
 #' @export
 #' @examples
-#' # at two months interval ----
 #' x <- yearmonth(seq(2016, 2018, by = 0.5))
 #' time_unit(x)
 time_unit <- function(x) {
-  if (has_length(x, 1)) {
-    return(0L)
-  }
-  UseMethod("time_unit")
-}
-
-#' @export
-time_unit.POSIXt <- function(x) {
+  if (has_length(x, 1)) return(0L)
   int <- pull_interval(x)
-  int$second + int$minute * 60 + int$hour * 60 * 60
-}
-
-#' @export
-time_unit.numeric <- function(x) {
-  int <- pull_interval(x)
-  if (min0(x) > 1599 && max0(x) < 2500) {
-    return(int$year)
-  }
-  int$unit
-}
-
-#' @export
-time_unit.Date <- function(x) {
-  pull_interval(x)$day
-}
-
-#' @export
-time_unit.yearweek <- function(x) {
-  pull_interval(x)$week
-}
-
-#' @export
-time_unit.yearmonth <- function(x) {
-  pull_interval(x)$month
-}
-
-#' @export
-time_unit.yearquarter <- function(x) {
-  pull_interval(x)$quarter
+  int$nanosecond + int$microsecond * 1e-6 + int$millisecond * 1e-3 +
+  int$second + int$minute * 60 + int$hour * 3600 + 
+  int$day + int$week + int$month + int$quarter + 
+  int$year + int$unit
 }
 
 # from ts time to dates

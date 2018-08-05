@@ -3,10 +3,9 @@
 \name{is_tsibble}
 \alias{is_tsibble}
 \alias{is.tsibble}
-\alias{is.tsibble}
 \alias{is_grouped_ts}
 \alias{is.grouped_ts}
-\title{Test if the object is a tsibble}
+\title{If the object is a tsibble}
 \usage{
 is_tsibble(x)
 
@@ -19,7 +18,7 @@ is_grouped_ts(x)
 TRUE if the object inherits from the tbl_ts class.
 }
 \description{
-Test if the object is a tsibble
+If the object is a tsibble
 }
 \examples{
 # A tibble is not a tsibble ----

@@ -17,13 +17,13 @@
 #' * [tile] for tiling window without overlapping observations
 #'
 #' @examples
-#' .x <- 1:5
-#' .lst <- list(x = .x, y = 6:10, z = 11:15)
-#' stretch_dbl(.x, mean, .size = 2)
-#' stretch_lgl(.x, ~ mean(.) > 2, .size = 2)
-#' stretch(.lst, ~ ., .size = 2)
-stretch <- function(.x, .f, ..., .size = 1, .init = 1) {
-  lst_x <- stretcher(.x, .size = .size, .init = .init)
+#' x <- 1:5
+#' lst <- list(x = x, y = 6:10, z = 11:15)
+#' stretch_dbl(x, mean, .size = 2)
+#' stretch_lgl(x, ~ mean(.) > 2, .size = 2)
+#' stretch(lst, ~ ., .size = 2)
+stretch <- function(.x, .f, ..., .size = 1, .init = 1, .bind = FALSE) {
+  lst_x <- stretcher(.x, .size = .size, .init = .init, .bind)
   purrr::map(lst_x, .f, ...)
 }
 
@@ -40,15 +40,23 @@ for(type in c("lgl", "chr", "dbl", "int")){
 
 #' @rdname stretch
 #' @export
-stretch_dfr <- function(.x, .f, ..., .size = 1, .init = 1, .id = NULL) {
-  out <- stretch(.x, .f = .f, ..., .size = .size, .init = .init)
+stretch_dfr <- function(
+  .x, .f, ..., .size = 1, .init = 1, .bind = FALSE, .id = NULL
+) {
+  out <- stretch(
+    .x, .f = .f, ..., .size = .size, .init = .init, 
+    .bind = .bind
+  )
   dplyr::bind_rows(!!! out, .id = .id)
 }
 
 #' @rdname stretch
 #' @export
-stretch_dfc <- function(.x, .f, ..., .size = 1, .init = 1) {
-  out <- stretch(.x, .f = .f, ..., .size = .size, .init = .init)
+stretch_dfc <- function(.x, .f, ..., .size = 1, .init = 1, .bind = FALSE) {
+  out <- stretch(
+    .x, .f = .f, ..., .size = .size, .init = .init,
+    .bind = .bind
+  )
   dplyr::bind_cols(!!! out)
 }
 
@@ -71,18 +79,18 @@ stretch_dfc <- function(.x, .f, ..., .size = 1, .init = 1) {
 #' * [tile2] for tiling window without overlapping observations
 #'
 #' @examples
-#' .x <- 1:5
-#' .y <- 6:10
-#' .z <- 11:15
-#' .lst <- list(x = .x, y = .y, z = .z)
-#' .df <- as.data.frame(.lst)
-#' stretch2(.x, .y, sum, .size = 2)
-#' stretch2(.lst, .lst, ~ ., .size = 2)
-#' stretch2(.df, .df, ~ ., .size = 2)
-#' pstretch(.lst, sum, size = 1)
-#' pstretch(list(.lst, .lst), ~ ., .size = 2)
-stretch2 <- function(.x, .y, .f, ..., .size = 1, .init = 1) {
-  lst <- pstretcher(.x, .y, .size = .size, .init = .init)
+#' x <- 1:5
+#' y <- 6:10
+#' z <- 11:15
+#' lst <- list(x = x, y = y, z = z)
+#' df <- as.data.frame(lst)
+#' stretch2(x, y, sum, .size = 2)
+#' stretch2(lst, lst, ~ ., .size = 2)
+#' stretch2(df, df, ~ ., .size = 2)
+#' pstretch(lst, sum, .size = 1)
+#' pstretch(list(lst, lst), ~ ., .size = 2)
+stretch2 <- function(.x, .y, .f, ..., .size = 1, .init = 1, .bind = FALSE) {
+  lst <- pstretcher(.x, .y, .size = .size, .init = .init, .bind = .bind)
   purrr::map2(lst[[1]], lst[[2]], .f, ...)
 }
 
@@ -99,25 +107,32 @@ for(type in c("lgl", "chr", "dbl", "int")){
 
 #' @rdname stretch2
 #' @export
-stretch2_dfr <- function(.x, .y, .f, ..., .size = 1, .init = 1, .id = NULL) {
-  out <- stretch(.x, .y, .f = .f, ..., .size = .size, .init = .init)
+stretch2_dfr <- function(
+  .x, .y, .f, ..., .size = 1, .init = 1, .bind = FALSE, .id = NULL
+) {
+  out <- stretch2(
+    .x, .y, .f = .f, ..., .size = .size, .init = .init,
+    .bind = .bind
+  )
   dplyr::bind_rows(!!! out, .id = .id)
 }
 
 #' @rdname stretch2
 #' @export
-stretch2_dfc <- function(.x, .y, .f, ..., .size = 1, .init = 1) {
-  out <- stretch(.x, .y, .f = .f, ..., .size = .size, .init = .init)
+stretch2_dfc <- function(
+  .x, .y, .f, ..., .size = 1, .init = 1, .bind = FALSE
+) {
+  out <- stretch2(
+    .x, .y, .f = .f, ..., .size = .size, .init = .init,
+    .bind = .bind
+  )
   dplyr::bind_cols(!!! out)
 }
 
 #' @rdname stretch2
 #' @export
-pstretch <- function(.l, .f, ..., .size = 1, .init = 1) {
-  if (is.data.frame(.l)) {
-    .l <- as.list(.l)
-  }
-  lst <- pstretcher(!!! .l, .size = .size, .init = .init)
+pstretch <- function(.l, .f, ..., .size = 1, .init = 1, .bind = FALSE) {
+  lst <- pstretcher(!!! .l, .size = .size, .init = .init, .bind = .bind)
   purrr::pmap(lst, .f, ...)
 }
 
@@ -134,71 +149,65 @@ for(type in c("lgl", "chr", "dbl", "int")){
 
 #' @rdname stretch2
 #' @export
-pstretch_dfr <- function(.l, .f, ..., .size = 1, .init = 1, .id = NULL) {
-  lst <- stretcher(.l, .size = .size, .init = .init)
-  out <- purrr::pmap(lst, .f, ...)
+pstretch_dfr <- function(
+  .l, .f, ..., .size = 1, .init = 1, .bind = FALSE, .id = NULL
+) {
+  out <- pstretch(.l, .f, ..., .size = .size, .init = .init, .bind = .bind)
   dplyr::bind_rows(!!! out, .id = .id)
 }
 
 #' @rdname stretch2
 #' @export
-pstretch_dfc <- function(.l, .f, ..., .size = 1, .init = 1) {
-  lst <- stretcher(.l, .size = .size, .init = .init)
-  out <- purrr::pmap(lst, .f, ...)
+pstretch_dfc <- function(.l, .f, ..., .size = 1, .init = 1, .bind = FALSE) {
+  out <- pstretch(.l, .f, ..., .size = .size, .init = .init, .bind = .bind)
   dplyr::bind_cols(!!! out)
 }
 
-#' Splits the input to a list according to the stretching window size.
+#' Split the input to a list according to the stretching window size.
 #'
-#' @param x An objects to be splitted.
-#' @param ... Multiple objects to be splitted in parallel.
+#' @param .x An objects to be split.
+#' @param ... Multiple objects to be split in parallel.
 #' @inheritParams stretch
 #' @rdname stretcher
 #' @export
 #' @examples
-#' .x <- 1:5
-#' .y <- 6:10
-#' .z <- 11:15
-#' .lst <- list(x = .x, y = .y, z = .z)
-#' .df <- as.data.frame(.lst)
+#' x <- 1:5
+#' y <- 6:10
+#' z <- 11:15
+#' lst <- list(x = x, y = y, z = z)
+#' df <- as.data.frame(lst)
 #'
-#' stretcher(.x, .size = 2)
-#' stretcher(.lst, .size = 2)
-#' pstretcher(.lst, .size = 2)
-#' stretcher(.df, .size = 2)
-#' pstretcher(.df, .df, .size = 2)
-stretcher <- function(.x, .size = 1, .init = 1) {
-  if (is.data.frame(.x)) .x <- as.list(.x)
-  stretcher_base(.x, .size = .size, .init = .init)
-}
-
-#' @rdname stretcher
-#' @export
-pstretcher <- function(..., .size = 1, .init = 1) { # parallel sliding
-  lst <- recycle(list2(...))
-  df_lgl <- purrr::map_lgl(lst, is.data.frame)
-  if (any(df_lgl)) {
-    lst[df_lgl] <- purrr::map(lst[df_lgl], as.list)
-  }
-  purrr::map(lst, function(x) stretcher_base(x, .size = .size, .init = .init))
-}
-
-stretcher_base <- function(x, .size = 1, .init = 1) {
+#' stretcher(x, .size = 2)
+#' stretcher(lst, .size = 2)
+#' stretcher(df, .size = 2)
+#' pstretcher(df, df, .size = 2)
+stretcher <- function(.x, .size = 1, .init = 1, .bind = FALSE) {
   bad_window_function(.size)
   if (!is_integerish(.init, n = 1) || .init < 1) {
     abort("`.init` must be a positive integer.")
   }
+  if (is.data.frame(.x)) .x <- as.list(.x)
+  len_x <- NROW(.x)
   abs_size <- abs(.size)
   counter <- incr(init = .init, size = abs_size)
-  if (sign(.size) < 0) x <- rev(x)
-
-  ncall <- seq_len(ceiling((NROW(x) - .init) / abs_size) - 1)
+  if (sign(.size) < 0) .x <- rev(.x)
+  ncall <- seq_len(ceiling((len_x - .init) / abs_size) - 1)
   incr_lst <- c(
     list(seq_len(.init)),
     purrr::map(ncall, ~ seq_len(counter())),
-    list(seq_along(x))
+    list(seq_len(len_x))
   )
-  purrr::map(incr_lst, ~ x[.])
+  out <- purrr::map(incr_lst, function(idx) .x[idx])
+  if (.bind) return(bind_lst(out)) else out
+  out
+}
+
+
+#' @rdname stretcher
+#' @export
+pstretcher <- function(..., .size = 1, .init = 1, .bind = FALSE) { # parallel sliding
+  lst <- recycle(list2(...))
+  purrr::map(lst, function(x) stretcher(x, .size, .init, .bind))
 }
 
 incr <- function(init, size) {

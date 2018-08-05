@@ -5,7 +5,6 @@ knitr::opts_chunk$set(
   comment = "#>"
 )
 options(tibble.print_min = 5)
-Sys.setenv(TZ = "")
 
 ## ----weather-------------------------------------------------------------
 library(tsibble)

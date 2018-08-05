@@ -5,9 +5,11 @@
 \alias{pslider}
 \title{Splits the input to a list according to the rolling window size.}
 \usage{
-slider(.x, .size = 1, .fill = NA, .partial = FALSE)
+slider(.x, .size = 1, .fill = NA, .partial = FALSE,
+  .align = "right", .bind = FALSE)
 
-pslider(..., .size = 1, .fill = NA, .partial = FALSE)
+pslider(..., .size = 1, .fill = NA, .partial = FALSE,
+  .align = "right", .bind = FALSE)
 }
 \arguments{
 \item{.x}{An object to slide over.}
@@ -15,10 +17,18 @@ pslider(..., .size = 1, .fill = NA, .partial = FALSE)
 \item{.size}{An integer for window size. If positive, moving forward from left
 to right; if negative, moving backward (from right to left).}
 
-\item{.fill}{A single value or data frame to replace \code{NA}.}
+\item{.fill}{A value to fill at the left of the data range (\code{NA} by default).
+\code{NULL} means no filling.}
 
 \item{.partial}{if \code{TRUE}, split to partial set (\code{FALSE} ignores specified
-\code{.fill}).}
+\code{.fill} and \code{.align}).}
+
+\item{.align}{Align index at the "\strong{r}ight", "\strong{c}entre"/"center", or "\strong{l}eft"
+of the window. If \code{.size} is even for center alignment, "centre-right" & "centre-left"
+is needed.}
+
+\item{.bind}{If \code{.x} is a list or data frame, the input will be flattened
+to a list of data frames.}
 
 \item{...}{Multiple objects to be split in parallel.}
 
@@ -28,15 +38,15 @@ to right; if negative, moving backward (from right to left).}
 Splits the input to a list according to the rolling window size.
 }
 \examples{
-.x <- 1:5
-.y <- 6:10
-.z <- 11:15
-.lst <- list(x = .x, y = .y, z = .z)
-.df <- as.data.frame(.lst)
+x <- 1:5
+y <- 6:10
+z <- 11:15
+lst <- list(x = x, y = y, z = z)
+df <- as.data.frame(lst)
 
-slider(.x, .size = 2)
-slider(.lst, .size = 2)
-pslider(list(.x, .y), list(.y))
-slider(.df, .size = 2)
-pslider(.df, .df, .size = 2)
+slider(x, .size = 2)
+slider(lst, .size = 2)
+pslider(list(x, y), list(y))
+slider(df, .size = 2)
+pslider(df, df, .size = 2)
 }

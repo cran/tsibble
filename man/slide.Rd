@@ -2,17 +2,18 @@
 % Please edit documentation in R/slide.R
 \name{slide}
 \alias{slide}
-\alias{slide}
 \alias{slide_dfr}
 \alias{slide_dfc}
 \title{Sliding window calculation}
 \usage{
-slide(.x, .f, ..., .size = 1, .fill = NA, .partial = FALSE)
+slide(.x, .f, ..., .size = 1, .fill = NA, .partial = FALSE,
+  .align = "right", .bind = FALSE)
 
 slide_dfr(.x, .f, ..., .size = 1, .fill = NA, .partial = FALSE,
-  .id = NULL)
+  .align = "right", .bind = FALSE, .id = NULL)
 
-slide_dfc(.x, .f, ..., .size = 1, .fill = NA, .partial = FALSE)
+slide_dfc(.x, .f, ..., .size = 1, .fill = NA, .partial = FALSE,
+  .align = "right", .bind = FALSE)
 }
 \arguments{
 \item{.x}{An object to slide over.}
@@ -43,9 +44,16 @@ to extract named attributes. If a component is not present, the value of
 \item{.size}{An integer for window size. If positive, moving forward from left
 to right; if negative, moving backward (from right to left).}
 
-\item{.fill}{A single value or data frame to replace \code{NA}.}
+\item{.fill}{A value to fill at the left of the data range (\code{NA} by default).
+\code{NULL} means no filling.}
 
 \item{.partial}{if \code{TRUE}, partial sliding.}
+
+\item{.align}{Align index at the "\strong{r}ight", "\strong{c}entre"/"center", or "\strong{l}eft"
+of the window. If \code{.size} is even for center alignment, "centre-right" & "centre-left"
+is needed.}
+
+\item{.bind}{If \code{.x} is a list, should \code{.x} be combined before applying \code{.f}?}
 
 \item{.id}{If not \code{NULL} a variable with this name will be created
 giving either the name or the index of the data frame.}
@@ -66,11 +74,12 @@ you may like to check out for
 \href{https://CRAN.R-project.org/package=RcppRoll}{RcppRoll} for faster performance.
 }
 \examples{
-.x <- 1:5
-.lst <- list(x = .x, y = 6:10, z = 11:15)
-slide_dbl(.x, mean, .size = 2)
-slide_lgl(.x, ~ mean(.) > 2, .size = 2)
-slide(.lst, ~ ., .size = 2)
+x <- 1:5
+lst <- list(x = x, y = 6:10, z = 11:15)
+slide_dbl(x, mean, .size = 2)
+slide_dbl(x, mean, .size = 2, align = "center")
+slide_lgl(x, ~ mean(.) > 2, .size = 2)
+slide(lst, ~ ., .size = 2)
 }
 \seealso{
 \itemize{

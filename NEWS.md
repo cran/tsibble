@@ -1,3 +1,40 @@
+# tsibble 0.5.0
+
+This release introduced the breaking changes to the "interval" class to make tsibble better support finer time resolution (e.g. millisecond, microsecond, and nanosecond). The "interval" format changes from upper case to short hand. To support new time index class, only `index_valid()` and `pull_interval()` need to be defined now.
+
+## New features
+
+* Added "nanotime" support for nanoseconds.
+* Added scoped variant `group_by_key()` to easily group the key variables.
+* `slide()` gained a new argument `.align = "right"` to align at "right", "center", or "left". If window size is even for center alignment, either "center-right" or "center-left" is needed.
+* Defined arithmetic operators (`+` & `-`) for yearweek, yearmonth, and yearquarter.
+* `slide()` and `stretch()` gained a new argument `.bind = FALSE`.
+
+## Improvements
+
+* Speed improvement for internals when it's a known valid tsibble. (#43)
+* Better support "millisecond" and "microsecond".
+* A new vignette on window functions.
+
+## Internal changes
+
+* Replaced `NA` or `NULL` with `0` in the "interval" class to make the representation simpler.
+* The `interval` class has new slots of "millisecond", "microsecond", "nanosecond".
+* `time_unit()` is a function instead of S3 generic, and made index extension a bit easier.
+
+## Bug fixes
+
+* Fixed warning in `format.yearweek()`.
+* Fixed `group_by.lst_ts()` for dropping the grouping information.
+* Fixed `stretch2()` only applying `.f` to one input.
+* Fixed NSE in `as_tsibble.grouped_df()` for groups. (#44)
+* Fixed bug in `.fill = NULL` for `slide()`.
+
+## Misc
+
+* Moved package "timeDate" from Imports to Suggests.
+* Added "anytime" to Imports for better parsing characters.
+
 # tsibble 0.4.0
 
 ## Breaking changes

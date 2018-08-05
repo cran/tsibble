@@ -7,18 +7,16 @@
 
 [![Travis-CI Build
 Status](https://travis-ci.org/tidyverts/tsibble.svg?branch=master)](https://travis-ci.org/tidyverts/tsibble)
-[![AppVeyor Build
-Status](https://ci.appveyor.com/api/projects/status/github/tidyverts/tsibble?branch=master&svg=true)](https://ci.appveyor.com/project/tidyverts/tsibble)
 [![Coverage
 Status](https://img.shields.io/codecov/c/github/tidyverts/tsibble/master.svg)](https://codecov.io/github/tidyverts/tsibble?branch=master)
 [![CRAN\_Status\_Badge](http://www.r-pkg.org/badges/version/tsibble)](https://cran.r-project.org/package=tsibble)
 [![Downloads](http://cranlogs.r-pkg.org/badges/tsibble?color=brightgreen)](https://cran.r-project.org/package=tsibble)
 [![lifecycle](https://img.shields.io/badge/lifecycle-maturing-blue.svg)](https://www.tidyverse.org/lifecycle/#maturing)
 
-The **tsibble** package provides a data class of `tbl_ts` to store and
-manage temporal-context data frames in a “tidy” form. A *tsibble*
-consists of a time index, key and other measured variables in a
-data-centric format, which is built on top of the *tibble*.
+The **tsibble** package provides a data class of `tbl_ts` to represent
+tidy temporal-context data. A *tsibble* consists of a time index, key
+and other measured variables in a data-centric format, which is built on
+top of the *tibble*.
 
 ## Installation
 
@@ -52,10 +50,10 @@ weather <- nycflights13::weather %>%
   select(origin, time_hour, temp, humid, precip)
 weather_tsbl <- as_tsibble(weather, key = id(origin), index = time_hour)
 weather_tsbl
-#> # A tsibble: 26,115 x 5 [1HOUR]
+#> # A tsibble: 26,115 x 5 [1h]
 #> # Key:       origin [3]
 #>   origin time_hour            temp humid precip
-#>   <chr>  <dttm>              <dbl> <dbl>  <dbl>
+#> * <chr>  <dttm>              <dbl> <dbl>  <dbl>
 #> 1 EWR    2013-01-01 01:00:00  39.0  59.4      0
 #> 2 EWR    2013-01-01 02:00:00  39.0  61.6      0
 #> 3 EWR    2013-01-01 03:00:00  39.0  64.4      0
@@ -92,11 +90,11 @@ full_weather <- weather_tsbl %>%
   group_by(origin) %>% 
   tidyr::fill(temp, humid, .direction = "down")
 full_weather
-#> # A tsibble: 26,190 x 5 [1HOUR]
+#> # A tsibble: 26,190 x 5 [1h]
 #> # Key:       origin [3]
 #> # Groups:    origin [3]
 #>   origin time_hour            temp humid precip
-#>   <chr>  <dttm>              <dbl> <dbl>  <dbl>
+#> * <chr>  <dttm>              <dbl> <dbl>  <dbl>
 #> 1 EWR    2013-01-01 01:00:00  39.0  59.4      0
 #> 2 EWR    2013-01-01 02:00:00  39.0  61.6      0
 #> 3 EWR    2013-01-01 03:00:00  39.0  64.4      0
@@ -129,10 +127,10 @@ full_weather %>%
     avg_temp = mean(temp, na.rm = TRUE),
     ttl_precip = sum(precip, na.rm = TRUE)
   )
-#> # A tsibble: 36 x 4 [1MONTH]
+#> # A tsibble: 36 x 4 [1M]
 #> # Key:       origin [3]
 #>   origin year_month avg_temp ttl_precip
-#>   <chr>       <mth>    <dbl>      <dbl>
+#> * <chr>       <mth>    <dbl>      <dbl>
 #> 1 EWR      2013 Jan     35.6       3.53
 #> 2 EWR      2013 Feb     34.2       3.83
 #> 3 EWR      2013 Mar     40.1       3   
@@ -141,8 +139,10 @@ full_weather %>%
 #> # ... with 31 more rows
 ```
 
-This combo can also help with regularising a tsibble of irregular time
-space.
+While collapsing rows (like `summarise()`), `group_by()` and
+`index_by()` will take care of updating the key and index respectively.
+This `index_by()` + `summarise()` combo can help with regularising a
+tsibble of irregular time space too.
 
 ### A family of window functions: `slide()`, `tile()`, `stretch()`
 
@@ -164,11 +164,11 @@ temperatures for each group (*origin*).
 full_weather %>% 
   group_by(origin) %>% 
   mutate(temp_ma = slide_dbl(temp, ~ mean(., na.rm = TRUE), .size = 3))
-#> # A tsibble: 26,190 x 6 [1HOUR]
+#> # A tsibble: 26,190 x 6 [1h]
 #> # Key:       origin [3]
 #> # Groups:    origin [3]
 #>   origin time_hour            temp humid precip temp_ma
-#>   <chr>  <dttm>              <dbl> <dbl>  <dbl>   <dbl>
+#> * <chr>  <dttm>              <dbl> <dbl>  <dbl>   <dbl>
 #> 1 EWR    2013-01-01 01:00:00  39.0  59.4      0    NA  
 #> 2 EWR    2013-01-01 02:00:00  39.0  61.6      0    NA  
 #> 3 EWR    2013-01-01 03:00:00  39.0  64.4      0    39.0
@@ -177,11 +177,11 @@ full_weather %>%
 #> # ... with 2.618e+04 more rows
 ```
 
-## Reexported functions from the tidyverse
+## Working with the tidyverse
 
 It can be noticed that the tsibble seamlessly works with *tidyverse*
-verbs. Use `?tsibble::reexports` for a full list of re-exported
-functions.
+verbs, but in a slightly different way that it does the best to keep the
+index. Use `?tidyverse` for a full list of tidyverse functions.
 
   - **dplyr:**
       - `arrange()`, `filter()`, `slice()`
@@ -192,16 +192,6 @@ functions.
   - **tidyr**: `gather()`, `spread()`, `nest()`, `unnest()`
   - **tibble:** `glimpse()`, `as_tibble()`/`as.tibble()`
   - **rlang:** `!!`, `!!!`
-
-## Related work
-
-  - [zoo](https://CRAN.R-project.org/package=zoo): regular and irregular
-    time series with methods.
-  - [xts](https://github.com/joshuaulrich/xts): extensible time series.
-  - [tibbletime](https://github.com/business-science/tibbletime):
-    time-aware tibbles.
-  - [padr](https://github.com/EdwinTh/padr): padding of missing records
-    in time series.
 
 -----
 

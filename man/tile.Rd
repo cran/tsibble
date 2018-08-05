@@ -2,7 +2,6 @@
 % Please edit documentation in R/tile.R
 \name{tile}
 \alias{tile}
-\alias{tile}
 \alias{tile_dfr}
 \alias{tile_dfc}
 \title{Tiling window calculation}
@@ -55,11 +54,11 @@ arguments as \code{tile()}, but return vectors of the corresponding type.
 }
 }
 \examples{
-.x <- 1:5
-.lst <- list(x = .x, y = 6:10, z = 11:15)
-tile_dbl(.x, mean, .size = 2)
-tile_lgl(.x, ~ mean(.) > 2, .size = 2)
-tile(.lst, ~ ., .size = 2)
+x <- 1:5
+lst <- list(x = x, y = 6:10, z = 11:15)
+tile_dbl(x, mean, .size = 2)
+tile_lgl(x, ~ mean(.) > 2, .size = 2)
+tile(lst, ~ ., .size = 2)
 }
 \seealso{
 \itemize{

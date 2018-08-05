@@ -2,28 +2,30 @@
 % Please edit documentation in R/slide.R
 \name{slide2}
 \alias{slide2}
-\alias{slide2}
 \alias{slide2_dfr}
 \alias{slide2_dfc}
-\alias{pslide}
 \alias{pslide}
 \alias{pslide_dfr}
 \alias{pslide_dfc}
 \title{Sliding window calculation over multiple inputs simultaneously}
 \usage{
-slide2(.x, .y, .f, ..., .size = 1, .fill = NA, .partial = FALSE)
+slide2(.x, .y, .f, ..., .size = 1, .fill = NA, .partial = FALSE,
+  .align = "right", .bind = FALSE)
 
 slide2_dfr(.x, .y, .f, ..., .size = 1, .fill = NA, .partial = FALSE,
-  .id = NULL)
+  .align = "right", .bind = FALSE, .id = NULL)
 
-slide2_dfc(.x, .y, .f, ..., .size = 1, .fill = NA, .partial = FALSE)
+slide2_dfc(.x, .y, .f, ..., .size = 1, .fill = NA, .partial = FALSE,
+  .align = "right", .bind = FALSE)
 
-pslide(.l, .f, ..., .size = 1, .fill = NA, .partial = FALSE)
+pslide(.l, .f, ..., .size = 1, .fill = NA, .partial = FALSE,
+  .align = "right", .bind = FALSE)
 
 pslide_dfr(.l, .f, ..., .size = 1, .fill = NA, .partial = FALSE,
-  .id = NULL)
+  .align = "right", .bind = FALSE, .id = NULL)
 
-pslide_dfc(.l, .f, ..., .size = 1, .fill = NA, .partial = FALSE)
+pslide_dfc(.l, .f, ..., .size = 1, .fill = NA, .partial = FALSE,
+  .align = "right", .bind = FALSE)
 }
 \arguments{
 \item{.x, .y}{Objects to slide over simultaneously.}
@@ -54,9 +56,16 @@ to extract named attributes. If a component is not present, the value of
 \item{.size}{An integer for window size. If positive, moving forward from left
 to right; if negative, moving backward (from right to left).}
 
-\item{.fill}{A single value or data frame to replace \code{NA}.}
+\item{.fill}{A value to fill at the left of the data range (\code{NA} by default).
+\code{NULL} means no filling.}
 
 \item{.partial}{if \code{TRUE}, partial sliding.}
+
+\item{.align}{Align index at the "\strong{r}ight", "\strong{c}entre"/"center", or "\strong{l}eft"
+of the window. If \code{.size} is even for center alignment, "centre-right" & "centre-left"
+is needed.}
+
+\item{.bind}{If \code{.x} is a list, should \code{.x} be combined before applying \code{.f}?}
 
 \item{.id}{If not \code{NULL} a variable with this name will be created
 giving either the name or the index of the data frame.}
@@ -75,16 +84,16 @@ arguments as \code{slide2()}, but return vectors of the corresponding type.
 }
 }
 \examples{
-.x <- 1:5
-.y <- 6:10
-.z <- 11:15
-.lst <- list(x = .x, y = .y, z = .z)
-.df <- as.data.frame(.lst)
-slide2(.x, .y, sum, .size = 2)
-slide2(.lst, .lst, ~ ., .size = 2)
-slide2(.df, .df, ~ ., .size = 2)
-pslide(.lst, ~ ., size = 1)
-pslide(list(.lst, .lst), ~ ., .size = 2)
+x <- 1:5
+y <- 6:10
+z <- 11:15
+lst <- list(x = x, y = y, z = z)
+df <- as.data.frame(lst)
+slide2(x, y, sum, .size = 2)
+slide2(lst, lst, ~ ., .size = 2)
+slide2(df, df, ~ ., .size = 2)
+pslide(lst, ~ ., .size = 1)
+pslide(list(lst, lst), ~ ., .size = 2)
 ## window over 2 months
 pedestrian \%>\% 
   filter(Sensor == "Southern Cross Station") \%>\% 
@@ -95,7 +104,7 @@ pedestrian \%>\%
 \dontrun{
 my_diag <- function(...) {
   data <- list(...)
-  fit <- lm(data$Count ~ data$Time)
+  fit <- lm(Count ~ Time, data = data)
   tibble::tibble(fitted = fitted(fit), resid = residuals(fit))
 }
 pedestrian \%>\%

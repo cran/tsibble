@@ -2,16 +2,16 @@
 % Please edit documentation in R/stretch.R
 \name{stretch}
 \alias{stretch}
-\alias{stretch}
 \alias{stretch_dfr}
 \alias{stretch_dfc}
 \title{Stretching window calculation}
 \usage{
-stretch(.x, .f, ..., .size = 1, .init = 1)
+stretch(.x, .f, ..., .size = 1, .init = 1, .bind = FALSE)
 
-stretch_dfr(.x, .f, ..., .size = 1, .init = 1, .id = NULL)
+stretch_dfr(.x, .f, ..., .size = 1, .init = 1, .bind = FALSE,
+  .id = NULL)
 
-stretch_dfc(.x, .f, ..., .size = 1, .init = 1)
+stretch_dfc(.x, .f, ..., .size = 1, .init = 1, .bind = FALSE)
 }
 \arguments{
 \item{.x}{An object to slide over.}
@@ -44,6 +44,8 @@ to right; if negative, moving backward (from right to left).}
 
 \item{.init}{A positive integer for an initial window size.}
 
+\item{.bind}{If \code{.x} is a list, should \code{.x} be combined before applying \code{.f}?}
+
 \item{.id}{If not \code{NULL} a variable with this name will be created
 giving either the name or the index of the data frame.}
 }
@@ -57,11 +59,11 @@ arguments as \code{stretch()}, but return vectors of the corresponding type.
 }
 }
 \examples{
-.x <- 1:5
-.lst <- list(x = .x, y = 6:10, z = 11:15)
-stretch_dbl(.x, mean, .size = 2)
-stretch_lgl(.x, ~ mean(.) > 2, .size = 2)
-stretch(.lst, ~ ., .size = 2)
+x <- 1:5
+lst <- list(x = x, y = 6:10, z = 11:15)
+stretch_dbl(x, mean, .size = 2)
+stretch_lgl(x, ~ mean(.) > 2, .size = 2)
+stretch(lst, ~ ., .size = 2)
 }
 \seealso{
 \itemize{

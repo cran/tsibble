@@ -3,37 +3,36 @@
 \name{stretcher}
 \alias{stretcher}
 \alias{pstretcher}
-\title{Splits the input to a list according to the stretching window size.}
+\title{Split the input to a list according to the stretching window size.}
 \usage{
-stretcher(.x, .size = 1, .init = 1)
+stretcher(.x, .size = 1, .init = 1, .bind = FALSE)
 
-pstretcher(..., .size = 1, .init = 1)
+pstretcher(..., .size = 1, .init = 1, .bind = FALSE)
 }
 \arguments{
-\item{.x}{An object to slide over.}
+\item{.x}{An objects to be split.}
 
 \item{.size}{An integer for window size. If positive, moving forward from left
 to right; if negative, moving backward (from right to left).}
 
 \item{.init}{A positive integer for an initial window size.}
 
-\item{...}{Multiple objects to be splitted in parallel.}
+\item{.bind}{If \code{.x} is a list, should \code{.x} be combined before applying \code{.f}?}
 
-\item{x}{An objects to be splitted.}
+\item{...}{Multiple objects to be split in parallel.}
 }
 \description{
-Splits the input to a list according to the stretching window size.
+Split the input to a list according to the stretching window size.
 }
 \examples{
-.x <- 1:5
-.y <- 6:10
-.z <- 11:15
-.lst <- list(x = .x, y = .y, z = .z)
-.df <- as.data.frame(.lst)
+x <- 1:5
+y <- 6:10
+z <- 11:15
+lst <- list(x = x, y = y, z = z)
+df <- as.data.frame(lst)
 
-stretcher(.x, .size = 2)
-stretcher(.lst, .size = 2)
-pstretcher(.lst, .size = 2)
-stretcher(.df, .size = 2)
-pstretcher(.df, .df, .size = 2)
+stretcher(x, .size = 2)
+stretcher(lst, .size = 2)
+stretcher(df, .size = 2)
+pstretcher(df, df, .size = 2)
 }

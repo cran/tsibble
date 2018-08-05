@@ -28,6 +28,16 @@ key.tbl_ts <- function(x) {
   attr(x, "key")
 }
 
+#' @export
+`[[.key` <- function(x, i, j, ..., exact = TRUE) {
+  NextMethod()
+}
+
+#' @export
+`[.key` <- function(x, i, j, drop = FALSE) {
+  NextMethod()
+}
+
 #' @rdname key
 #' @export
 key_vars <- function(x) {
@@ -170,9 +180,16 @@ key_update <- function(.data, ..., validate = TRUE) {
   not_tsibble(.data)
   quos <- enquos(...)
   key <- validate_key(.data, quos)
-  build_tsibble(
+  if (validate) {
+    return(build_tsibble(
+      .data, key = key, index = !! index(.data), index2 = !! index2(.data),
+      groups = groups(.data), regular = is_regular(.data), validate = validate,
+      ordered = is_ordered(.data), interval = interval(.data)
+    ))
+  }
+  build_tsibble_meta(
     .data, key = key, index = !! index(.data), index2 = !! index2(.data),
-    groups = groups(.data), regular = is_regular(.data), validate = validate,
+    groups = groups(.data), regular = is_regular(.data),
     ordered = is_ordered(.data), interval = interval(.data)
   )
 }
@@ -228,6 +245,7 @@ grp_rename <- function(
 # it also handles `-` and `:` and `c`
 # return: a list of symbols (if (is_nest) a list of list)
 validate_key <- function(data, key) {
+  if (inherits(key, "key")) return(key)
   col_names <- colnames(data)
   keys <- parse_key(key)
   if (is_empty(keys)) {

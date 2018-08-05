@@ -2,10 +2,8 @@
 % Please edit documentation in R/tile.R
 \name{tile2}
 \alias{tile2}
-\alias{tile2}
 \alias{tile2_dfr}
 \alias{tile2_dfc}
-\alias{ptile}
 \alias{ptile}
 \alias{ptile_dfr}
 \alias{ptile_dfc}
@@ -71,16 +69,16 @@ arguments as \code{tile2()}, but return vectors of the corresponding type.
 }
 }
 \examples{
-.x <- 1:5
-.y <- 6:10
-.z <- 11:15
-.lst <- list(x = .x, y = .y, z = .z)
-.df <- as.data.frame(.lst)
-tile2(.x, .y, sum, .size = 2)
-tile2(.lst, .lst, ~ ., .size = 2)
-tile2(.df, .df, ~ ., .size = 2)
-ptile(.lst, sum, size = 1)
-ptile(list(.lst, .lst), ~ ., .size = 2)
+x <- 1:5
+y <- 6:10
+z <- 11:15
+lst <- list(x = x, y = y, z = z)
+df <- as.data.frame(lst)
+tile2(x, y, sum, .size = 2)
+tile2(lst, lst, ~ ., .size = 2)
+tile2(df, df, ~ ., .size = 2)
+ptile(lst, sum, .size = 1)
+ptile(list(lst, lst), ~ ., .size = 2)
 }
 \seealso{
 \itemize{

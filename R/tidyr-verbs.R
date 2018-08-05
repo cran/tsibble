@@ -1,10 +1,6 @@
-#' Gather columns into key-value pairs.
-#'
-#' @param data A `tbl_ts`.
 #' @inheritParams tidyr::gather
 #'
-#' @seealso [tidyr::gather]
-#' @rdname gather
+#' @rdname tidyverse
 #' @export
 #' @examples
 #' # example from tidyr
@@ -31,21 +27,16 @@ gather.tbl_ts <- function(data, key = "key", value = "value", ...,
     as_tibble(data), key = !! key, value = !! value, !!! quos,
     na.rm = na.rm, convert = convert, factor_key = factor_key
   )
-  build_tsibble(
+  build_tsibble_meta(
     tbl, key = new_key, index = !! index(data), 
     index2 = !! index2_update(data, vars),
     groups = grp_update(data, vars), regular = is_regular(data), 
-    validate = FALSE, ordered = is_ordered(data), interval = interval(data)
+    ordered = is_ordered(data), interval = interval(data)
   )
 }
 
-#' Spread a key-value pair across multiple columns.
-#'
-#' @param data A `tbl_ts`.
 #' @inheritParams tidyr::spread
-#'
-#' @seealso [tidyr::spread]
-#' @rdname spread
+#' @rdname tidyverse
 #' @export
 #' @examples
 #' # example from tidyr
@@ -57,7 +48,6 @@ gather.tbl_ts <- function(data, key = "key", value = "value", ...,
 #' )
 #' stocksm <- stocks %>% gather(stock, price, -time)
 #' stocksm %>% spread(stock, price)
-#' @export
 spread.tbl_ts <- function(data, key, value, fill = NA, convert = FALSE,
   drop = TRUE, sep = NULL) {
   key <- enexpr(key)
@@ -74,22 +64,16 @@ spread.tbl_ts <- function(data, key, value, fill = NA, convert = FALSE,
     convert = convert, drop = drop, sep = sep
   )
   vars <- names(tbl)
-  build_tsibble(
+  build_tsibble_meta(
     tbl, key = new_key, index = !! index(data), 
     index2 = !! index2_update(data, vars), groups = grp_update(data, vars),
-    regular = is_regular(data), validate = FALSE, ordered = is_ordered(data),
+    regular = is_regular(data), ordered = is_ordered(data),
     interval = interval(data)
   )
 }
 
-#' Nest repeated values in a list-variable.
-#'
-#' @param data A `tbl_ts`.
 #' @inheritParams tidyr::nest
-#'
-#' @return A tibble containing a list column of `tbl_ts`.
-#' @seealso [tidyr::nest], [unnest.lst_ts] for the inverse operation.
-#' @rdname nest
+#' @rdname tidyverse
 #' @export
 #' @examples
 #' pedestrian %>% 
@@ -129,15 +113,10 @@ nest.tbl_ts <- function(data, ..., .key = "data") {
   as_lst_ts(out)
 }
 
-#' Unnest a list column.
-#'
-#' @param data A `lst_ts`.
 #' @param key Unquoted variables to create the key (via [id]) after unnesting.
 #' @inheritParams tidyr::unnest
 #'
-#' @return A `tbl_ts`.
-#' @seealso [tidyr::unnest], [nest.tbl_ts] for the inverse operation.
-#' @rdname unnest
+#' @rdname tidyverse
 #' @export
 #' @examples
 #' nested_ped <- pedestrian %>% 
@@ -243,5 +222,11 @@ anti_join.lst_ts <- function(x, y, by = NULL, copy = FALSE, ...) {
 semi_join.lst_ts <- anti_join.lst_ts
 
 as_lst_ts <- function(x) {
-  tibble::new_tibble(x, subclass = "lst_ts")
+  grped_df <- dplyr::is_grouped_df(x)
+  if (grped_df) {
+    return(structure(
+      x, class = c("lst_ts", "grouped_df", "tbl_df", "tbl", "data.frame")
+    ))
+  }
+  structure(x, class = c("lst_ts", "tbl_df", "tbl", "data.frame"))
 }

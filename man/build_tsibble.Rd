@@ -2,10 +2,14 @@
 % Please edit documentation in R/as-tsibble.R
 \name{build_tsibble}
 \alias{build_tsibble}
-\title{Construct a tsibble object}
+\alias{build_tsibble_meta}
+\title{Construct a tsibble object for extension}
 \usage{
 build_tsibble(x, key, index, index2, groups = id(), regular = TRUE,
   validate = TRUE, ordered = NULL, interval = NULL)
+
+build_tsibble_meta(x, key, index, index2 = index, groups = id(),
+  regular = TRUE, ordered = NULL, interval = NULL)
 }
 \arguments{
 \item{x}{A \code{data.frame}, \code{tbl_df}, \code{tbl_ts}, or other tabular objects.}
@@ -21,8 +25,9 @@ simply call \code{id()}. See below for details.}
 
 \item{groups}{Grouping variable(s) when \link{group_by.tbl_ts}.}
 
-\item{regular}{Regular time interval (\code{TRUE}) or irregular (\code{FALSE}). \code{TRUE}
-finds the greatest common divisor of positive time distances as the interval.}
+\item{regular}{Regular time interval (\code{TRUE}) or irregular (\code{FALSE}). The
+interval is determined by the greatest common divisor of positive time distances,
+if \code{TRUE}.}
 
 \item{validate}{\code{TRUE} suggests to verify that each key or each combination
 of key variables lead to unique time indices (i.e. a valid tsibble). It will
@@ -38,9 +43,13 @@ the correct order. \code{FALSE} also skips the ordering but gives a warning inst
 is, if an class of \code{interval} is supplied.}
 }
 \description{
-A relatively more controllable function to create a \code{tbl_ts} object. It is useful
+\itemize{
+\item \code{build_tsibble()} creates a \code{tbl_ts} object with more controls. It is useful
 for creating a \code{tbl_ts} internally inside a function, and it allows users to
 determine if the time needs ordering and the interval needs calculating.
+\item \code{build_tsibble_meta()} assigns the attributes to an object, assuming this
+object is a valid tsibble.
+}
 }
 \examples{
 # Prepare `pedestrian` to use a new index `Date` ----
