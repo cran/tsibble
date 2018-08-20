@@ -65,7 +65,8 @@ to right; if negative, moving backward (from right to left).}
 of the window. If \code{.size} is even for center alignment, "centre-right" & "centre-left"
 is needed.}
 
-\item{.bind}{If \code{.x} is a list, should \code{.x} be combined before applying \code{.f}?}
+\item{.bind}{If \code{.x} is a list, should \code{.x} be combined before applying \code{.f}?
+If \code{.x} is a list of data frames, row binding is carried out.}
 
 \item{.id}{If not \code{NULL} a variable with this name will be created
 giving either the name or the index of the data frame.}
@@ -94,6 +95,28 @@ slide2(lst, lst, ~ ., .size = 2)
 slide2(df, df, ~ ., .size = 2)
 pslide(lst, ~ ., .size = 1)
 pslide(list(lst, lst), ~ ., .size = 2)
+
+###
+# row-wise sliding over data frame
+###
+
+my_df <- data.frame(
+  group = rep(letters[1:2], each = 8),
+  x = c(1:8, 8:1),
+  y = 2 * c(1:8, 8:1) + rnorm(16),
+  date = rep(as.Date("2016-06-01") + 0:7, 2)
+)
+
+slope <- function(...) {
+  data <- list(...)
+  fm <- lm(y ~ x, data = data)
+  coef(fm)[[2]]
+}
+
+my_df \%>\% 
+  nest(-group) \%>\% 
+  mutate(slope = purrr::map(data, ~ pslide_dbl(., slope, .size = 2))) \%>\% 
+  unnest()
 ## window over 2 months
 pedestrian \%>\% 
   filter(Sensor == "Southern Cross Station") \%>\% 

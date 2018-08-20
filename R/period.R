@@ -83,9 +83,9 @@ diff.yearweek <- function(x, lag = 1, differences = 1, ...) {
     abort("binary `+` is not defined for `yearweek` objects")
   }
   if (e1_yrwk) {
-    return(yearweek(as_date(e1) + e2 * 7))
+    yearweek(as_date(e1) + e2 * 7)
   } else {
-    return(yearweek(e1 * 7 + as_date(e2)))
+    yearweek(e1 * 7 + as_date(e2))
   }
 }
 
@@ -190,7 +190,6 @@ is_vector_s3.yearweek <- function(x) {
   TRUE
 }
 
-#' @export
 pillar_shaft.yearweek <- function(x, ...) {
   out <- format(x)
   pillar::new_pillar_shaft_simple(out, align = "right", min_width = 10)
@@ -237,9 +236,9 @@ diff.yearmonth <- function(x, lag = 1, differences = 1, ...) {
     abort("binary `+` is not defined for `yearmonth` objects")
   }
   if (e1_yrmth) {
-    return(yearmonth(as_date(e1) + lubridate::period(e2, units = "month")))
+    yearmonth(as_date(e1) + lubridate::period(months = e2))
   } else {
-    return(yearmonth(lubridate::period(e1, units = "month") + as_date(e2)))
+    yearmonth(lubridate::period(months = e1) + as_date(e2))
   }
 }
 
@@ -251,7 +250,7 @@ diff.yearmonth <- function(x, lag = 1, differences = 1, ...) {
   if (e1_yrmth && e2_yrmth) {
     abort("binary `-` is not defined for `yearmonth` objects")
   }
-  yearmonth(as_date(e1) - lubridate::period(e2, units = "month"))
+  yearmonth(as_date(e1) - lubridate::period(months = e2, units = "month"))
 }
 
 is_yearmonth <- function(x) {
@@ -314,7 +313,6 @@ obj_sum.yearmonth <- function(x) {
 #' @export
 is_vector_s3.yearmonth <- is_vector_s3.yearweek
 
-#' @export
 pillar_shaft.yearmonth <- pillar_shaft.yearweek
 
 #' @rdname period
@@ -358,9 +356,9 @@ diff.yearquarter <- function(x, lag = 1, differences = 1, ...) {
     abort("binary `+` is not defined for `yearquarter` objects")
   }
   if (e1_yrqtr) {
-    return(yearquarter(as_date(e1) + lubridate::period(e2 * 3, units = "month")))
+    yearquarter(as_date(e1) + lubridate::period(months = e2 * 3))
   } else {
-    return(yearquarter(lubridate::period(e1 * 3, units = "month") + as_date(e2)))
+    yearquarter(lubridate::period(months = e1 * 3) + as_date(e2))
   }
 }
 
@@ -372,7 +370,7 @@ diff.yearquarter <- function(x, lag = 1, differences = 1, ...) {
   if (e1_yrqtr && e2_yrqtr) {
     abort("binary `-` is not defined for `yearquarter` objects")
   }
-  yearquarter(as_date(e1) - lubridate::period(e2 * 3, units = "month"))
+  yearquarter(as_date(e1) - lubridate::period(months = e2 * 3))
 }
 
 is_yearquarter <- function(x) {
@@ -475,7 +473,6 @@ obj_sum.yearquarter <- function(x) {
 #' @export
 is_vector_s3.yearquarter <- is_vector_s3.yearweek
 
-#' @export
 pillar_shaft.yearquarter <- pillar_shaft.yearweek
 
 #' @export
@@ -515,18 +512,18 @@ seq.yearquarter <- function(
 }
 
 #' @export
-`[.yearweek` <- function(x, i) {
-  yearweek(as_date(x)[i])
+`[.yearweek` <- function(x, ..., drop = FALSE) {
+  yearweek(NextMethod())
 }
 
 #' @export
-`[.yearmonth` <- function(x, i) {
-  yearmonth(as_date(x)[i])
+`[.yearmonth` <- function(x, ..., drop = FALSE) {
+  yearmonth(NextMethod())
 }
 
 #' @export
-`[.yearquarter` <- function(x, i) {
-  yearquarter(as_date(x)[i])
+`[.yearquarter` <- function(x, ..., drop = FALSE) {
+  yearquarter(NextMethod())
 }
 
 #' @export

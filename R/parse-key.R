@@ -65,7 +65,7 @@ unkey.tbl_ts <- function(x) {
   nkey <- n_keys(x)
   if (nkey < 2 || nkey == nrow(x)) {
     attr(x, "key") <- structure(id(), class = "key")
-    return(x)
+    x
   } else {
     abort("`unkey()` must not be applied to a `tbl_ts` of more than 1 key size.")
   }
@@ -90,9 +90,10 @@ key_size <- function(x) {
 key_size.tbl_ts <- function(x) {
   key_indices <- key_indices(x)
   if (is_empty(key_indices)) {
-    return(NROW(x))
+    NROW(x)
+  } else {
+    vapply(key_indices, length, integer(1))
   }
-  vapply(key_indices, length, integer(1))
 }
 
 #' @rdname key-size
@@ -105,9 +106,10 @@ n_keys <- function(x) {
 n_keys.tbl_ts <- function(x) {
   key <- key_vars(x)
   if (is_empty(key)) {
-    return(1L)
+    1L
+  } else {
+    NROW(distinct(ungroup(as_tibble(x)), !!! syms(key)))
   }
-  NROW(distinct(ungroup(as_tibble(x)), !!! syms(key)))
 }
 
 #' @rdname key-size
@@ -124,16 +126,8 @@ key_indices.tbl_ts <- function(x) {
 }
 
 key_distinct <- function(x) { # x = a list of keys (symbols)
-  if (is_empty(x)) {
-    return(x)
-  }
-  nest_lgl <- is_nest(x)
-  comb_keys <- x[!nest_lgl]
-  if (any(nest_lgl)) {
-    nest_keys <- purrr::map(x[nest_lgl], ~ .[[1]])
-    comb_keys <- c(nest_keys, comb_keys)
-  }
-  unname(comb_keys)
+  if (is_empty(x)) return(x)
+  reconstruct_key(x, ~ purrr::map(., ~ .[[1]]), ~ .)
 }
 
 grp_drop <- function(x, index2 = NULL) {
@@ -141,7 +135,7 @@ grp_drop <- function(x, index2 = NULL) {
   len <- length(x)
   new_grps <- x[-len] # drop one grouping level
   if (is_empty(new_grps)) {
-    return(id())
+    id()
   } else {
     syms(new_grps)
   }
@@ -150,9 +144,10 @@ grp_drop <- function(x, index2 = NULL) {
 grp_update <- function(x, .vars) {
   chr <- intersect(group_vars(x), .vars)
   if (is_empty(chr)) {
-    return(id())
+    id()
+  } else {
+    syms(chr)
   }
-  syms(chr)
 }
 
 # this returns a vector of groups/key characters
@@ -181,21 +176,22 @@ key_update <- function(.data, ..., validate = TRUE) {
   quos <- enquos(...)
   key <- validate_key(.data, quos)
   if (validate) {
-    return(build_tsibble(
+    build_tsibble(
       .data, key = key, index = !! index(.data), index2 = !! index2(.data),
       groups = groups(.data), regular = is_regular(.data), validate = validate,
       ordered = is_ordered(.data), interval = interval(.data)
-    ))
+    )
+  } else {
+    build_tsibble_meta(
+      .data, key = key, index = !! index(.data), index2 = !! index2(.data),
+      groups = groups(.data), regular = is_regular(.data),
+      ordered = is_ordered(.data), interval = interval(.data)
+    )
   }
-  build_tsibble_meta(
-    .data, key = key, index = !! index(.data), index2 = !! index2(.data),
-    groups = groups(.data), regular = is_regular(.data),
-    ordered = is_ordered(.data), interval = interval(.data)
-  )
 }
 
-# drop some keys
-key_reduce <- function(.data, .vars, validate = TRUE) {
+# remove some variables from the key
+key_remove <- function(.data, .vars, validate = TRUE) {
   old_key <- key(.data)
   old_chr <- key_flatten(old_key)
   key_idx <- which(.vars %in% old_chr)
@@ -206,38 +202,39 @@ key_reduce <- function(.data, .vars, validate = TRUE) {
   }
   new_lgl <- old_lgl[match(key_vars, old_chr)]
 
-  new_key <- syms(key_vars[!new_lgl])
-  if (any(new_lgl)) {
-    new_key <- c(list(syms(key_vars[new_lgl])), new_key)
-  }
+  new_nest_key <- syms(key_vars[new_lgl])
+  new_cross_key <- syms(key_vars[!new_lgl])
+  new_key <- reconstruct_key(
+    old_key,
+    ~ purrr::map(., ~ .[flatten(.) %in% new_nest_key]),
+    ~ .[. %in% new_cross_key]
+  )
   key_update(.data, !!! new_key, validate = validate)
 }
 
-key_rename <- function(
-  .data, .vars, names1 = names(.data), names2 = names(.vars)
-) {
+key_rename <- function(.data, .vars) {
   # key (key of the same size (bf & af))
   old_key <- key(.data)
+  if (is_empty(old_key)) return(id())
   old_chr <- key_flatten(old_key)
-  new_chr <- names2[.vars %in% old_chr]
+  names <- names(.vars)
+  new_chr <- names[.vars %in% old_chr]
   lgl <- FALSE
   if (!is_empty(old_key)) {
     lgl <- rep(is_nest(old_key), purrr::map(old_key, length))
   }
-  new_key <- syms(new_chr[!lgl])
-  if (is_empty(new_chr)) {
-    new_key <- id()
-  } else if (any(lgl)) {
-    new_key <- c(list(syms(new_chr[lgl])), new_key)
-  }
-  new_key
+  new_nest_key <- syms(new_chr[lgl])
+  reconstruct_key(
+    old_key,
+    ~ `[<-`(., list(new_nest_key)),
+    ~ `[<-`(., syms(new_chr[!lgl]))
+  )
 }
 
-grp_rename <- function(
-  .data, .vars, names1 = names(.data), names2 = names(.vars)
-) {
+grp_rename <- function(.data, .vars) {
+  names <- names(.vars)
   old_grp_chr <- group_vars(.data)
-  new_grp_chr <- names2[.vars %in% old_grp_chr]
+  new_grp_chr <- names[.vars %in% old_grp_chr]
   syms(new_grp_chr)
 }
 
@@ -246,36 +243,53 @@ grp_rename <- function(
 # return: a list of symbols (if (is_nest) a list of list)
 validate_key <- function(data, key) {
   if (inherits(key, "key")) return(key)
-  col_names <- colnames(data)
+  cn <- names(data)
   keys <- parse_key(key)
-  if (is_empty(keys)) {
-    return(keys)
-  }
-  nest_lgl <- is_nest(keys)
-  valid_keys <- syms(validate_vars(keys[!nest_lgl], col_names))
+  if (is_empty(keys)) return(keys)
+
+  reconstruct_key(
+    keys, 
+    ~ purrr::map(., ~ syms(validate_vars(flatten(.), cn))),
+    ~ syms(validate_vars(., cn))
+  )
+}
+
+reconstruct_key <- function(key, nesting, crossing) {
+  nest_lgl <- is_nest(key)
+  crossing_fun <- as_function(crossing)
+  cross_vars <- crossing_fun(key[!nest_lgl])
+  ttl_len <- length(cross_vars) + sum(nest_lgl)
+  valid_key <- vector(mode = "list", length = ttl_len)
+  cross_idx <- seq_len(ttl_len)
   if (any(nest_lgl)) {
-    nest_keys <- purrr::map(
-      keys[nest_lgl],
-      ~ syms(validate_vars(flatten(.), col_names))
-    )
-    valid_keys <- c(nest_keys, valid_keys)
+    nest_idx <- which(nest_lgl)
+    nesting_fun <- as_function(nesting)
+    nest_vars <- nesting_fun(key[nest_lgl])
+    valid_key[nest_idx] <- nest_vars
+    cross_idx <- cross_idx[-nest_idx]
   }
-  unname(valid_keys)
+  valid_key[cross_idx] <- cross_vars
+  # if there's only one variable in nesting lists --> flatten
+  len_1 <- purrr::map_lgl(valid_key, ~ is_list(.) && has_length(., 1))
+  valid_key[len_1] <- flatten(valid_key[len_1])
+  purrr::compact(valid_key)
 }
 
 is_nest <- function(lst_syms) {
   if (is_empty(lst_syms)) {
-    return(FALSE)
+    FALSE
+  } else {
+    unname(purrr::map_lgl(lst_syms, is_list)) # expected to be a list not call
   }
-  unname(purrr::map_lgl(lst_syms, is_list)) # expected to be a list not call
 }
 
 parse_key <- function(x) {
   if (is_empty(x)) {
-    return(id())
+    id()
+  } else {
+    # purrr::map(x, ~ flatten_nest(.[[-1]]))
+    purrr::map(x, flatten_nest)
   }
-  # purrr::map(x, ~ flatten_nest(.[[-1]]))
-  purrr::map(x, flatten_nest)
 }
 
 # interpret a nested calls A | B | C

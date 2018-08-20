@@ -43,8 +43,8 @@ my_diag <- function(...) {
   fit <- lm(Count ~ Time, data = data)
   list(fitted = fitted(fit), resid = residuals(fit))
 }
-pedestrian_full %>%
-  filter(Date <= as.Date("2015-03-31")) %>%
+pedestrian %>%
+  filter(Date_Time < as.Date("2015-04-01")) %>%
   nest(-Sensor) %>%
   mutate(diag = purrr::map(data, ~ pslide_dfr(., my_diag, .size = 24 * 7)))
 

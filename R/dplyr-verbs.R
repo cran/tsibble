@@ -6,6 +6,7 @@
 #' be issued.
 #' * `select()`: keeps the variables you mention as well as the index. 
 #' * `transmute()`: keeps the variable you operate on, as well as the index and key.
+#' * `summarise()` will not collapse on the index variable.
 #' * The column-wise verbs, including `select()`, `transmute()`, `summarise()`, 
 #' `mutate()` & `transmute()`, have an additional argument of `.drop = FALSE` for 
 #' tsibble. The index variable cannot be dropped for a tsibble. If any key variable 
@@ -96,6 +97,7 @@ slice.tbl_ts <- function(.data, ...) {
     abort("`slice()` only accepts one expression.")
   }
   pos_eval <- eval_tidy(expr(!! dplyr::first(pos)))
+  exceed_rows(.data, max(pos_eval))
   ascending <- row_validate(pos_eval)
   int <- NULL
   if (is_min_gap_one(pos_eval)) int <- interval(.data)
@@ -165,8 +167,6 @@ transmute.tbl_ts <- function(.data, ..., .drop = FALSE) {
 }
 
 #' @rdname tidyverse
-#' @details
-#' * `summarise()` will not collapse on the index variable.
 #' @export
 #' @examples
 #' # Sum over sensors ----
@@ -188,7 +188,8 @@ summarise.tbl_ts <- function(.data, ..., .drop = FALSE) {
 
   lst_quos <- enquos(..., .named = TRUE)
   idx2_chr <- quo_name(idx2)
-  nonkey <- setdiff(names(lst_quos), 
+  nonkey <- setdiff(
+    names(lst_quos), 
     squash(c(key(.data), quo_name(idx), idx2_chr))
   )
   nonkey_quos <- lst_quos[nonkey]
@@ -203,11 +204,15 @@ summarise.tbl_ts <- function(.data, ..., .drop = FALSE) {
     reg <- TRUE
   }
   grps <- group_vars(.data)
-  new_key <- key(key_reduce(.data, grps, validate = FALSE))
+  # mostly attempt to preserve the nesting structure
+  key_less <- key(key_remove(.data, grps, validate = FALSE))
+  flat_key <- key_flatten(key_less)
+  # currently no way to set up nesting in `group_by()`
+  add_key <- setdiff(grps, c(flat_key, idx2_chr))
+  new_key <- c(key_less, add_key) 
 
-  build_tsibble(
-    sum_data, key = new_key, index = !! idx2,
-    groups = grp_drop(grps, idx2_chr), validate = FALSE, 
+  build_tsibble_meta(
+    sum_data, key = new_key, index = !! idx2, groups = grp_drop(grps, idx2_chr), 
     regular = reg, ordered = TRUE, interval = int
   )
 }
@@ -226,9 +231,9 @@ summarize.tbl_ts <- summarise.tbl_ts
 #'   summarise(geo_trips = sum(Trips))
 group_by.tbl_ts <- function(.data, ..., add = FALSE) {
   grped_tbl <- group_by(as_tibble(.data), ..., add = add)
-  build_tsibble(
+  build_tsibble_meta(
     grped_tbl, key = key(.data), index = !! index(.data), 
-    index2 = !! index2(.data), groups = groups(grped_tbl), validate = FALSE, 
+    index2 = !! index2(.data), groups = groups(grped_tbl),
     regular = is_regular(.data), ordered = is_ordered(.data), 
     interval = interval(.data)
   )
@@ -249,10 +254,9 @@ group_by_key <- function(.tbl, .funs = list(), ...) {
 #' @rdname tidyverse
 #' @export
 ungroup.grouped_ts <- function(x, ...) {
-  build_tsibble(
+  build_tsibble_meta(
     x, key = key(x), index = !! index(x), groups = id(),
-    validate = FALSE, regular = is_regular(x), ordered = is_ordered(x),
-    interval = interval(x)
+    regular = is_regular(x), ordered = is_ordered(x), interval = interval(x)
   )
 }
 

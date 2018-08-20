@@ -24,7 +24,7 @@
       lgl_i <- has_index(i, x) && has_distinct_key(i, x)
       result <- .subset(x, i)
       attr(result, "row.names") <- .set_row_names(nr)
-      x <- key_reduce(x, i, validate = FALSE)
+      x <- key_remove(x, i, validate = FALSE)
       if (is_false(lgl_i)) {
         return(as_tibble(result))
       } else {
@@ -52,7 +52,7 @@
       return(NextMethod())
     }
     result <- .subset(x, j)
-    x <- key_reduce(x, chr_j, validate = FALSE)
+    x <- key_remove(x, chr_j, validate = FALSE)
   } else {
     result <- x
   }
@@ -61,6 +61,7 @@
   ordered <- is_ordered(x)
   if (!missing(i)) {
     # ordered <- row_validate(i)
+    exceed_rows(result, max(i))
     result <- purrr::map(result, `[`, i)
     nr <- length(result[[1]])
     if (!is_min_gap_one(i)) int <- NULL
@@ -74,7 +75,7 @@
     }
   }
 
-  attr(result, "row.names") <- .set_row_names(nr)
+  # attr(result, "row.names") <- .set_row_names(nr)
   build_tsibble_meta(
     result, key = key(x), index = !! index(x), index2 = !! index2(x),
     groups = groups(x), regular = is_regular(x), ordered = ordered, 

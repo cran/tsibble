@@ -1,3 +1,30 @@
+# tsibble 0.5.1
+
+## New features
+
+* `tile()` gained a new argument `.bind = FALSE`.
+* Vectorised arithmetic operators (`+` & `-`) for yearweek, yearmonth, and yearquarter.
+* `new_interval()` creates an "interval" object with the specified values.
+
+## Improvements
+
+* Faster performance in `fill_na()` for replacing values when `group_by()`.
+* Speed improvement when subsetting yearweek, yearmonth and yearquarter using `[`.
+
+## Bug fixes
+
+* Fixed key updating via `group_by()` + `summarise()`. (#47)
+* Respected the ordering of input variables while creating the key.
+* Fixed "attempt to select less than one element in integerOneIndex" error message in `unnest.lst_ts()`.
+* Fixed incorrect interval when doing join operations for custom index class. (#52)
+* Avoided warnings when character input for key and value in `gather.tbl_ts()`. (#54)
+
+## Misc
+
+* `slide()` & `stretch()` use the same coercion rules as `dplyr::combine()` now, if `.bind = TRUE`.
+* Avoid strong dependency on `pillar`.
+* Setting row names on a tsibble is deprecated, which is consistent with `tibble`. 
+
 # tsibble 0.5.0
 
 This release introduced the breaking changes to the "interval" class to make tsibble better support finer time resolution (e.g. millisecond, microsecond, and nanosecond). The "interval" format changes from upper case to short hand. To support new time index class, only `index_valid()` and `pull_interval()` need to be defined now.
@@ -9,12 +36,12 @@ This release introduced the breaking changes to the "interval" class to make tsi
 * `slide()` gained a new argument `.align = "right"` to align at "right", "center", or "left". If window size is even for center alignment, either "center-right" or "center-left" is needed.
 * Defined arithmetic operators (`+` & `-`) for yearweek, yearmonth, and yearquarter.
 * `slide()` and `stretch()` gained a new argument `.bind = FALSE`.
+* A new vignette on window functions.
 
 ## Improvements
 
 * Speed improvement for internals when it's a known valid tsibble. (#43)
 * Better support "millisecond" and "microsecond".
-* A new vignette on window functions.
 
 ## Internal changes
 

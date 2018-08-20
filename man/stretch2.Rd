@@ -53,7 +53,8 @@ to extract named attributes. If a component is not present, the value of
 
 \item{.size, .init}{An integer for moving and initial window size.}
 
-\item{.bind}{If \code{.x} is a list, should \code{.x} be combined before applying \code{.f}?}
+\item{.bind}{If \code{.x} is a list, should \code{.x} be combined before applying \code{.f}?
+If \code{.x} is a list of data frames, row binding is carried out.}
 
 \item{.id}{If not \code{NULL} a variable with this name will be created
 giving either the name or the index of the data frame.}
@@ -82,6 +83,17 @@ stretch2(lst, lst, ~ ., .size = 2)
 stretch2(df, df, ~ ., .size = 2)
 pstretch(lst, sum, .size = 1)
 pstretch(list(lst, lst), ~ ., .size = 2)
+
+###
+# row-wise stretching over data frame
+###
+
+x <- as.Date("2017-01-01") + 0:364
+df <- data.frame(x = x, y = seq_along(x))
+
+tibble::tibble(
+  data = pstretch(df, function(...) as_tibble(list(...)), .init = 10)
+)
 }
 \seealso{
 \itemize{
