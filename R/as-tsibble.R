@@ -48,7 +48,7 @@ tsibble <- function(..., key = id(), index, regular = TRUE) {
   if (has_length(dots, 1) && is.data.frame(dots[[1]])) {
     abort("Must not be a data frame, do you want `as_tsibble()`?")
   }
-  tbl <- tibble::tibble(!!! dots)
+  tbl <- tibble(!!! dots)
   index <- enquo(index)
   build_tsibble(tbl, key = !! enquo(key), index = !! index, regular = regular)
 }
@@ -71,7 +71,7 @@ tsibble <- function(..., key = id(), index, regular = TRUE) {
 #'
 #' @examples
 #' # coerce tibble to tsibble w/o a key ----
-#' tbl1 <- tibble::tibble(
+#' tbl1 <- tibble(
 #'   date = seq(as.Date("2017-01-01"), as.Date("2017-01-10"), by = 1),
 #'   value = rnorm(10)
 #' )
@@ -81,7 +81,7 @@ tsibble <- function(..., key = id(), index, regular = TRUE) {
 #'
 #' # coerce tibble to tsibble with one key ----
 #' # "date" is automatically considered as the index var, and "group" is the key
-#' tbl2 <- tibble::tibble(
+#' tbl2 <- tibble(
 #'   mth = rep(yearmonth(seq(2017, 2017 + 9 / 12, by = 1 / 12)), 3),
 #'   group = rep(c("x", "y", "z"), each = 10),
 #'   value = rnorm(30)
@@ -175,7 +175,7 @@ group_vars.grouped_ts <- function(x) {
 
 #' @export
 group_size.grouped_ts <- function(x) {
-  vapply(attr(x, "indices"), length, integer(1))
+  attr(x, "group_sizes")
 }
 
 #' @export
@@ -185,7 +185,13 @@ n_groups.tbl_ts <- function(x) {
 
 #' @export
 group_indices.grouped_ts <- function(.data, ...) {
-  attr(.data, "indices")
+  idx <- attr(.data, "indices")
+  nr_idx <- seq_len(NROW(.data))
+  for (i in seq_along(idx)) {
+    tmp <- idx[[i]] + 1L
+    nr_idx[tmp] <- rep_len(i, length(nr_idx[tmp]))
+  }
+  nr_idx
 }
 
 #' Return measured variables
@@ -279,7 +285,7 @@ not_tsibble <- function(x) {
 #' @aliases is.tsibble
 #' @examples
 #' # A tibble is not a tsibble ----
-#' tbl <- tibble::tibble(
+#' tbl <- tibble(
 #'   date = seq(as.Date("2017-10-01"), as.Date("2017-10-31"), by = 1),
 #'   value = rnorm(31)
 #' )
@@ -355,7 +361,7 @@ build_tsibble <- function(
 
   # x is lst, data.frame, tbl_df, use ungroup()
   # x is tbl_ts, use as_tibble(ungroup = TRUE)
-  tbl <- ungroup(as_tibble(x, validate = validate))
+  tbl <- ungroup(as_tibble(x))
   # extract or pass the index var
   qindex <- enquo(index)
   index <- validate_index(tbl, qindex)
@@ -376,7 +382,7 @@ build_tsibble <- function(
   idx_chr <- c(quo_text(index), quo_text(index2))
   is_index_in_keys <- intersect(idx_chr, flat_keys)
   if (is_false(is_empty(is_index_in_keys))) {
-    abort(sprintf("`%s` can't be `index`, as it's used as `key`.", idx_chr))
+    abort(sprintf("`%s` can't be `index`, as it's used as `key`.", idx_chr[[1]]))
   }
   # validate tbl_ts
   if (validate) {
@@ -574,7 +580,6 @@ validate_tsibble <- function(data, key, index) {
 #'
 #' @param x A `tbl_ts`.
 #' @param ... Ignored.
-#' @inheritParams tibble::as_tibble
 #' @inheritParams base::as.data.frame
 #'
 #' @rdname as-tibble
@@ -585,10 +590,10 @@ validate_tsibble <- function(data, key, index) {
 #' # a grouped tbl_ts -----
 #' grped_ped <- pedestrian %>% group_by(Sensor)
 #' as_tibble(grped_ped)
-as_tibble.tbl_ts <- function(x, ..., rownames = NULL) {
+as_tibble.tbl_ts <- function(x, ...) {
   x <- remove_tsibble_attrs(x)
   class(x) <- c("tbl_df", "tbl", "data.frame")
-  as_tibble(x, ..., rownames = rownames)
+  as_tibble(x, ...)
 }
 
 #' @export
@@ -602,12 +607,6 @@ as_tibble.lst_ts <- function(x, ...) {
   structure(x, class = c("tbl_df", "tbl", "data.frame"))
 }
 
-#' @export
-as.tibble.tbl_ts <- as_tibble.tbl_ts
-
-#' @export
-as.tibble.grouped_ts <- as_tibble.grouped_ts
-
 #' @rdname as-tibble
 #' @export
 as.data.frame.tbl_ts <- function(x, row.names = NULL, optional = FALSE, ...) {
@@ -618,10 +617,18 @@ as.data.frame.tbl_ts <- function(x, row.names = NULL, optional = FALSE, ...) {
 use_id <- function(x, key) {
   key <- enquo(key)
   if (quo_is_call(key)) {
-    if (call_name(key) == "key") return(eval_tidy(key)) # key(x)
+    call_fn <- call_name(key)
+    if (call_fn == "key") return(eval_tidy(key)) # key(x)
+    if (call_fn != "id") {
+      abort(sprintf("Please use `key = id(...)`, not `%s(...)`.", call_fn))
+    } # vars(x)
+  }
+  key_expr <- get_expr(key)
+  if (is_string(key_expr)) {
+    abort(suggest_key(key_expr))
   }
   safe_key <- purrr::safely(eval_tidy)(
-    get_expr(key), 
+    key_expr, 
     env = child_env(get_env(key), id = id)
   )
   if (is_null(safe_key$error)) {
@@ -631,7 +638,7 @@ use_id <- function(x, key) {
     lgl <- fn(safe_key$result)
     if (lgl) return(safe_key$result)
   }
-  abort("Have you forgotten `id()` to create the `key`?")
+  abort(suggest_key(quo_text(key_expr)))
 }
 
 #' Find duplication of key and index variables
@@ -694,3 +701,8 @@ remove_tsibble_attrs <- function(x) {
   }
   NextMethod()
 }
+
+suggest_key <- function(x) {
+  sprintf("Can't create/coerce to a tsibble.\nDid you mean `key = id(%s)`?", x)
+}
+

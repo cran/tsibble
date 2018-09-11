@@ -29,7 +29,10 @@ paste_comma <- function(...) {
 }
 
 first_arg <- function(x) {
-  purrr::compact(purrr::map(x, ~ dplyr::first(call_args(.))))
+  lst_env <- purrr::map(x, get_env)
+  purrr::compact(
+    purrr::map2(x, lst_env, ~ new_quosure(dplyr::first(call_args(.x)), .y))
+  )
 }
 
 # regular time interval is obtained from the greatest common divisor of positive
@@ -86,4 +89,19 @@ is_even <- function(x) {
 exceed_rows <- function(x, n = 1L) {
   nr <- NROW(x)
   if (n > nr) abort(sprintf("Must not exceed the rows (%i).", nr))
+}
+
+# inlined from https://github.com/r-lib/cli/blob/master/R/utf8.R
+is_utf8_output <- function() {
+  opt <- getOption("cli.unicode", NULL)
+  if (! is.null(opt)) {
+    isTRUE(opt)
+  } else {
+    l10n_info()$`UTF-8` && !is_latex_output()
+  }
+}
+
+is_latex_output <- function() {
+  if (!("knitr" %in% loadedNamespaces())) return(FALSE)
+  get("is_latex_output", asNamespace("knitr"))()
 }

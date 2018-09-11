@@ -1,10 +1,10 @@
 # nocov start
 replace_fn_names <- function(fn, replace = list()){
   rec_fn <- function(cl) {
-    if (!is_call(cl)) {
+    if (!rlang::is_call(cl)) {
       return(cl)
     }
-    if (any(repl_fn <- names(replace) %in% call_name(cl))) {
+    if (any(repl_fn <- names(replace) %in% rlang::call_name(cl))) {
       cl[[1]] <- replace[[repl_fn]]
     }
     as.call(append(cl[[1]], purrr::map(as.list(cl[-1]), rec_fn)))
@@ -43,8 +43,7 @@ replace_fn_names <- function(fn, replace = list()){
 #' * [stretch] for expanding more observations
 #' @details The `slide()` function attempts to tackle more general problems using
 #' the purrr-like syntax. For some specialist functions like `mean` and `sum`,
-#' you may like to check out for
-#' [RcppRoll](https://CRAN.R-project.org/package=RcppRoll) for faster performance.
+#' you may like to check out for **RcppRoll** for faster performance.
 #'
 #' `slide()` is intended to work with list (and column-wise data frame). To
 #' perform row-wise sliding window on data frame, please check out [pslide()].
@@ -76,7 +75,7 @@ slide <- function(
 for(type in c("lgl", "chr", "int", "dbl")){
   assign(
     paste0("slide_", type),
-    replace_fn_names(slide, list(map = sym(paste0("map_", type))))
+    replace_fn_names(slide, list(map = rlang::sym(paste0("map_", type))))
   )
 }
 
@@ -180,7 +179,7 @@ slide2 <- function(
 for(type in c("lgl", "chr", "int", "dbl")){
   assign(
     paste0("slide2_", type),
-    replace_fn_names(slide2, list(map2 = sym(paste0("map2_", type))))
+    replace_fn_names(slide2, list(map2 = rlang::sym(paste0("map2_", type))))
   )
 }
 
@@ -235,7 +234,7 @@ pslide <- function(
 for(type in c("lgl", "chr", "int", "dbl")){
   assign(
     paste0("pslide_", type),
-    replace_fn_names(pslide, list(pmap = sym(paste0("pmap_", type))))
+    replace_fn_names(pslide, list(pmap = rlang::sym(paste0("pmap_", type))))
   )
 }
 
@@ -261,13 +260,13 @@ pslide_dfr <- function(
 #'   filter(Sensor == "Southern Cross Station") %>% 
 #'   index_by(yrmth = yearmonth(Date_Time)) %>% 
 #'   nest(-yrmth) %>% 
-#'   mutate(ma = slide_dbl(data, ~ mean(do.call(rbind, .)$Count), .size = 2))
+#'   mutate(ma = slide_dbl(data, ~ mean(.$Count), .size = 2, .bind = TRUE))
 #' # row-oriented workflow
 #' \dontrun{
 #' my_diag <- function(...) {
 #'   data <- list(...)
 #'   fit <- lm(Count ~ Time, data = data)
-#'   tibble::tibble(fitted = fitted(fit), resid = residuals(fit))
+#'   tibble(fitted = fitted(fit), resid = residuals(fit))
 #' }
 #' pedestrian %>%
 #'   filter(Date <= as.Date("2015-01-31")) %>%

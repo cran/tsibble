@@ -101,15 +101,18 @@ nest.tbl_ts <- function(data, ..., .key = "data") {
   }
   data <- ungroup(data)
   if (is_empty(grp_vars)) {
-    return(as_lst_ts(tibble::tibble(!! key_var := list(data))))
+    return(as_lst_ts(tibble(!! key_var := list(data))))
   }
   nest_vars <- setdiff(nest_vars, grp_vars)
   grp <- syms(grp_vars)
-  nest_df <- split_by(data, !!! grp)
-  out <- distinct(data, !!! grp)
-  out[[key_var]] <- purrr::map(
-    nest_df, ~ tsibble_select(., !!! nest_vars, validate = FALSE)
-  )
+
+  out <- select(data, !!! grp, .drop = TRUE)
+  idx <- group_indices(data, !!! grp)
+  representatives <- which(!duplicated(idx))
+  out <- slice(out, representatives)
+  tsb_sel <- data %>% 
+    tsibble_select(!!! nest_vars, validate = FALSE)
+  out[[key_var]] <- unname(split(tsb_sel, idx))[unique(idx)]
   as_lst_ts(out)
 }
 
@@ -164,7 +167,8 @@ unnest.lst_ts <- function(data, ..., key = id(),
   class(out[[idx_chr]]) <- class(tsbl[[idx_chr]])
   build_tsibble(
     out, key = key, index = !! idx, validate = validate, 
-    regular = is_regular(tsbl), interval = interval(tsbl)
+    ordered = is_ordered(tsbl), regular = is_regular(tsbl), 
+    interval = interval(tsbl)
   )
 }
 
