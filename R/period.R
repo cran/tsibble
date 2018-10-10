@@ -29,20 +29,18 @@
 #' yearmonth("201807")
 #' yearquarter(x)
 #'
-#' # coerce numerics to yearmonth, yearquarter ----
-#' yearmonth(seq(2010, 2017, by = 1 / 12))
-#' yearquarter(seq(2010, 2017, by = 1 / 4))
-#'
 #' # coerce yearmonths to yearquarter ----
 #' y <- yearmonth(x)
 #' yearquarter(y)
 #'
-#' # S3 method seq() ----
-#' wk1 <- yearweek(as.Date("2017-11-01"))
-#' wk2 <- yearweek(as.Date("2018-04-29"))
+#' # seq() and binary operaters ----
+#' wk1 <- yearweek("2017-11-01")
+#' wk2 <- yearweek("2018-04-29")
 #' seq(from = wk1, to = wk2, by = 2) # by two weeks
-#' mth <- yearmonth(as.Date("2017-11-01"))
+#' wk1 + 0:9
+#' mth <- yearmonth("2017-11-01")
 #' seq(mth, length.out = 5, by = 1) # by 1 month
+#' mth + 0:9
 #' seq(yearquarter(mth), length.out = 5, by = 1) # by 1 quarter
 yearweek <- function(x) {
   UseMethod("yearweek")
@@ -80,7 +78,7 @@ diff.yearweek <- function(x, lag = 1, differences = 1, ...) {
   e1_yrwk <- is_yearweek(e1)
   e2_yrwk <- is_yearweek(e2)
   if (e1_yrwk && e2_yrwk) {
-    abort("binary `+` is not defined for `yearweek` objects")
+    abort("Binary `+` is not defined for class yearweek.")
   }
   if (e1_yrwk) {
     yearweek(as_date(e1) + e2 * 7)
@@ -95,7 +93,7 @@ diff.yearweek <- function(x, lag = 1, differences = 1, ...) {
   e1_yrwk <- is_yearweek(e1)
   e2_yrwk <- is_yearweek(e2)
   if (e1_yrwk && e2_yrwk) {
-    abort("binary `-` is not defined for `yearweek` objects")
+    abort("Binary `-` is not defined for class yearweek.")
   }
   yearweek(as_date(e1) - e2 * 7)
 }
@@ -151,8 +149,8 @@ format.yearweek <- function(x, format = "%Y W%V", ...) {
     year_sym <- "%C"
   }
   wk <- strftime(x, format = "%V")
-  wk_sub <- purrr::map_chr(wk, ~ gsub("%V", ., x = format))
-  year_sub <- purrr::map2_chr(yrs, wk_sub, ~ gsub(year_sym, .x, x = .y))
+  wk_sub <- map_chr(wk, ~ gsub("%V", ., x = format))
+  year_sub <- map2_chr(yrs, wk_sub, ~ gsub(year_sym, .x, x = .y))
   year_sub
 }
 
@@ -164,8 +162,8 @@ format.yearweek <- function(x, format = "%Y W%V", ...) {
 #' is_53weeks(2015:2016)
 is_53weeks <- function(year) {
   if (is_empty(year)) return(FALSE)
-  if (!is_bare_numeric(year) || year < 1) {
-    abort("`year` must be positive integers.")
+  if (!is_integerish(year) || year < 1) {
+    abort("Argument `year` must be positive integers.")
   }
   pre_year <- year - 1
   p_year <- function(year) {
@@ -231,7 +229,7 @@ diff.yearmonth <- function(x, lag = 1, differences = 1, ...) {
   e1_yrmth <- is_yearmonth(e1)
   e2_yrmth <- is_yearmonth(e2)
   if (e1_yrmth && e2_yrmth) {
-    abort("binary `+` is not defined for `yearmonth` objects")
+    abort("Binary `+` is not defined for class yearmonth.")
   }
   if (e1_yrmth) {
     yearmonth(as_date(e1) + lubridate::period(months = e2))
@@ -246,7 +244,7 @@ diff.yearmonth <- function(x, lag = 1, differences = 1, ...) {
   e1_yrmth <- is_yearmonth(e1)
   e2_yrmth <- is_yearmonth(e2)
   if (e1_yrmth && e2_yrmth) {
-    abort("binary `-` is not defined for `yearmonth` objects")
+    abort("Binary `-` is not defined for class yearmonth.")
   }
   yearmonth(as_date(e1) - lubridate::period(months = e2, units = "month"))
 }
@@ -349,7 +347,7 @@ diff.yearquarter <- function(x, lag = 1, differences = 1, ...) {
   e1_yrqtr <- is_yearquarter(e1)
   e2_yrqtr <- is_yearquarter(e2)
   if (e1_yrqtr && e2_yrqtr) {
-    abort("binary `+` is not defined for `yearquarter` objects")
+    abort("Binary `+` is not defined for class yearquarter.")
   }
   if (e1_yrqtr) {
     yearquarter(as_date(e1) + lubridate::period(months = e2 * 3))
@@ -364,7 +362,7 @@ diff.yearquarter <- function(x, lag = 1, differences = 1, ...) {
   e1_yrqtr <- is_yearquarter(e1)
   e2_yrqtr <- is_yearquarter(e2)
   if (e1_yrqtr && e2_yrqtr) {
-    abort("binary `-` is not defined for `yearquarter` objects")
+    abort("Binary `-` is not defined for class yearquarter.")
   }
   yearquarter(as_date(e1) - lubridate::period(months = e2 * 3))
 }
@@ -450,8 +448,8 @@ format.yearquarter <- function(x, format = "%Y Q%q", ...) {
     year_sym <- "%C"
   }
   qtr <- lubridate::quarter(x)
-  qtr_sub <- purrr::map_chr(qtr, ~ gsub("%q", ., x = format))
-  year_sub <- purrr::map2_chr(year, qtr_sub, ~ gsub(year_sym, .x, x = .y))
+  qtr_sub <- map_chr(qtr, ~ gsub("%q", ., x = format))
+  year_sub <- map2_chr(year, qtr_sub, ~ gsub(year_sym, .x, x = .y))
   year_sub
 }
 

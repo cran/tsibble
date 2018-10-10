@@ -70,7 +70,7 @@ test_that("some S3 methods for yearweek, yearmonth & yearquarter", {
 })
 
 test_that("unsupported class for index functions", {
-  expect_error(yearweek(seq(2010, 2012, by = 1 / 52)), "coerce the `numeric`")
+  expect_error(yearweek(seq(2010, 2012, by = 1 / 52)), "coerce the numeric")
 })
 
 xx <- make_datetime(2018, 1, 1, 0)
@@ -82,7 +82,7 @@ test_that("POSIXct", {
 })
 
 test_that("character", {
-  skip_on_cran()
+  skip_on_os("solaris")
   expect_equal(format(yearweek(as.character(xx))), "2018 W01")
   expect_equal(format(yearmonth(as.character(xx))), "2018 Jan")
   expect_equal(format(yearmonth("201801")), "2018 Jan")

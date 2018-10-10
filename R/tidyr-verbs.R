@@ -16,15 +16,15 @@ gather.tbl_ts <- function(data, key = "key", value = "value", ...,
   key <- sym(enexpr(key))
   new_key <- c(key(data), key)
   value <- enexpr(value)
-  quos <- enquos(...)
-  if (is_empty(quos)) {
-    quos <- setdiff(names(data), 
+  exprs <- enexprs(...)
+  if (is_empty(exprs)) {
+    exprs <- setdiff(names(data), 
       c(quo_name(key), quo_name(value), quo_name(index(data)))
     )
   }
-  vars <- validate_vars(quos, names(data))
+  vars <- validate_vars(exprs, names(data))
   tbl <- gather(
-    as_tibble(data), key = !! key, value = !! value, !!! quos,
+    as_tibble(data), key = !! key, value = !! value, !!! exprs,
     na.rm = na.rm, convert = convert, factor_key = factor_key
   )
   build_tsibble_meta(
@@ -54,7 +54,10 @@ spread.tbl_ts <- function(data, key, value, fill = NA, convert = FALSE,
   value <- enexpr(value)
   key_var <- tidyselect::vars_pull(names(data), !! key)
   if (has_index(key_var, data)) {
-    abort(sprintf("`key` must not be `%s`, as it's the `index`.", key_var))
+    abort(sprintf(
+      "Column `%s` (index) can't be spread.\nPlease use `as_tibble()` to coerce.", 
+      key_var
+    ))
   }
   key_left <- setdiff(key_vars(data), key_var)
   new_key <- key(key_remove(data, .vars = key_left, validate = FALSE))
@@ -82,16 +85,19 @@ spread.tbl_ts <- function(data, key, value, fill = NA, convert = FALSE,
 #'   group_by(Sensor) %>% 
 #'   nest()
 nest.tbl_ts <- function(data, ..., .key = "data") {
-  nest_quos <- enquos(...)
-  key_var <- quo_name(enexpr(.key))
+  nest_exprs <- enexprs(...)
+  key_var <- expr_name(enexpr(.key))
   cn <- names(data)
-  if (is_empty(nest_quos)) {
+  if (is_empty(nest_exprs)) {
     nest_vars <- cn
   } else {
-    nest_vars <- tidyselect::vars_select(cn, !!! nest_quos)
+    nest_vars <- tidyselect::vars_select(cn, !!! nest_exprs)
   }
   if (is_false(has_index(nest_vars, data))) {
-    abort("`nest.tbl_ts()` must nest the `index` in the list-column.")
+    abort(sprintf(
+      "Column `%s` (index) must be nested in the list-column", 
+      as_string(index(data))
+    ))
   }
   tbl <- as_tibble(data)
   if (is_grouped_ts(data)) {
@@ -135,15 +141,15 @@ unnest.lst_ts <- function(data, ..., key = id(),
 ) {
   key <- use_id(data, !! enquo(key))
   preserve <- tidyselect::vars_select(names(data), !!! enquo(.preserve))
-  quos <- enquos(...)
-  if (is_empty(quos)) {
+  exprs <- enexprs(...)
+  if (is_empty(exprs)) {
     list_cols <- names(data)[purrr::map_lgl(data, is_list)]
     list_cols <- setdiff(list_cols, preserve)
-    quos <- syms(list_cols)
+    exprs <- syms(list_cols)
   }
-  if (length(quos) == 0) return(data)
+  if (length(exprs) == 0) return(data)
 
-  nested <- transmute(ungroup(data), !!! quos)
+  nested <- transmute(ungroup(data), !!! exprs)
 
   # checking if the nested columns has `tbl_ts` class (only for the first row)
   first_nested <- slice(nested, 1)
@@ -155,7 +161,7 @@ unnest.lst_ts <- function(data, ..., key = id(),
     abort("Only accepts a list-column of `tbl_ts` to be unnested.")
   }
   out <- as_tibble(data) %>% 
-    unnest(!!! quos, .drop = .drop, .id = .id, .sep = .sep, .preserve = .preserve)
+    unnest(!!! exprs, .drop = .drop, .id = .id, .sep = .sep, .preserve = .preserve)
   tsbl <- eval_df[is_tsbl][[1L]]
   idx <- index(tsbl)
   validate <- FALSE
@@ -223,12 +229,12 @@ anti_join.lst_ts <- function(x, y, by = NULL, copy = FALSE, ...) {
 semi_join.lst_ts <- anti_join.lst_ts
 
 as_lst_ts <- function(x) {
+  cls <- c("tbl_df", "tbl", "data.frame")
   grped_df <- dplyr::is_grouped_df(x)
   if (grped_df) {
-    structure(
-      x, class = c("lst_ts", "grouped_df", "tbl_df", "tbl", "data.frame")
-    )
+    class(x) <- c("lst_ts", "grouped_df", cls)
   } else {
-    structure(x, class = c("lst_ts", "tbl_df", "tbl", "data.frame"))
+    class(x) <- c("lst_ts", cls)
   }
+  x
 }

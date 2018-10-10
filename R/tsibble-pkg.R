@@ -36,6 +36,8 @@
 #' `Region` is the lower level than `State` in Australia; in other words, `Region`
 #' is nested into `State`, which naturally forms a hierarchy. A vertical bar (`|`)
 #' is used to describe this nesting relationship, and thus `Region` | `State`. 
+#' Alternatively, a forward slash (`/`) expresses the equivalent hierarchy but 
+#' in a reverse order, for example `State` / `Region`. 
 #' In theory, nesting can involve infinite levels, so is `tsibble`.
 #' * Crossed variables: a crossing of one variable with another. For example,
 #' the geographical locations are crossed with the purpose of visiting (`Purpose`)
@@ -78,20 +80,17 @@
 #' @import rlang
 #' @examples
 #' # create a tsibble w/o a key ----
-#' tsbl1 <- tsibble(
-#'   date = seq(as.Date("2017-01-01"), as.Date("2017-01-10"), by = 1),
-#'   value = rnorm(10),
-#'   key = id(), index = date
+#' tsibble(
+#'   date = as.Date("2017-01-01") + 0:9,
+#'   value = rnorm(10)
 #' )
-#' tsbl1
 #'
 #' # create a tsibble with one key ----
-#' tsbl2 <- tsibble(
-#'   qtr = rep(yearquarter(seq(2010, 2012.25, by = 1 / 4)), 3),
+#' tsibble(
+#'   qtr = rep(yearquarter("201001") + 0:9, 3),
 #'   group = rep(c("x", "y", "z"), each = 10),
 #'   value = rnorm(30),
-#'   key = id(group), index = qtr
+#'   key = id(group)
 #' )
-#' tsbl2
 "_PACKAGE"
 

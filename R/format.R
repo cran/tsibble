@@ -15,10 +15,9 @@ glimpse.tbl_ts <- function(x, width = NULL, ...) {
   idx <- index(x)
   t_span <- paste(range(dplyr::pull(x, !! idx), na.rm = TRUE), collapse = " ~ ")
   cat_line(t_span)
-  build_tsibble(
+  build_tsibble_meta(
     NextMethod(), key = key(x), index = !! idx, index2 = !! index2(x), 
-    groups = groups(x), validate = FALSE, ordered = is_ordered(x), 
-    regular = is_regular(x)
+    groups = groups(x), ordered = is_ordered(x), regular = is_regular(x)
   )
   invisible(x)
 }
@@ -34,8 +33,8 @@ format.key <- function(x, ...) {
   if (is_empty(x)) return(list())
   reconstruct_key(
     x, 
-    ~ purrr::map(purrr::map(., as.character), paste, collapse = " | "),
-    ~ purrr::map(., as.character)
+    ~ map(map(., as.character), paste, collapse = " | "),
+    ~ map(., as_string)
   )
 }
 
@@ -48,7 +47,7 @@ print.interval <- function(x, digits = NULL, ...) {
 #' @export
 format.interval <- function(x, digits = NULL, ...) {
   if (is_empty(x)) return("!")
-  not_zero <- !purrr::map_lgl(x, function(x) x == 0)
+  not_zero <- !map_lgl(x, function(x) x == 0)
   # if output contains all the zeros
   if (sum(not_zero) == 0) return("?")
   x <- translate_interval(x)

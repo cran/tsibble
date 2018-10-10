@@ -3,6 +3,7 @@
 #' @param x A data frame.
 #' @param ... A list of unquoted variables, separated by commas, to split a dataset.
 #' @rdname split-by
+#' @keywords internal
 #' @export
 #' @examples
 #' pedestrian %>% 
@@ -18,9 +19,8 @@ split_by.tbl_ts <- function(x, ...) {
 
   vars_split <- validate_vars(quos, names(x))
   grped_df <- grouped_df(x, vars = vars_split)
-  idx <- attr(grped_df, "indices")
-  uni_idx <- unique(group_indices(grped_df))
-  lapply(idx, function(idx) x[idx + 1, , drop = FALSE])[uni_idx]
+  res <- split(x, group_indices(grped_df))
+  unname(res)
 }
 
 #' @export

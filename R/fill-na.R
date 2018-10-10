@@ -63,7 +63,7 @@ fill_na.tbl_ts <- function(.data, ..., .full = FALSE) {
   not_regular(.data)
   unknown_interval(interval(.data))
   idx <- index(.data)
-  idx_chr <- quo_text(idx)
+  idx_chr <- as_string(idx)
   key <- key(.data)
   flat_key <- key_flatten(key)
   tbl <- as_tibble(.data)
@@ -87,19 +87,19 @@ fill_na.tbl_ts <- function(.data, ..., .full = FALSE) {
     left_join(.data, by = c(flat_key, idx_chr))
 
   cn <- names(.data)
-  lst_quos <- enquos(..., .named = TRUE)
-  if (!is_empty(lst_quos)) {
-    lhs <- names(lst_quos)
+  lst_exprs <- exprs(..., .named = TRUE)
+  if (!is_empty(lst_exprs)) {
+    lhs <- names(lst_exprs)
     check_names <- lhs %in% cn
     if (is_false(all(check_names))) {
       bad_names <- paste_comma(lhs[which(!check_names)])
       abort(sprintf("Can't find column `%s` in `.data`.", bad_names))
     }
     replaced_df <- tbl %>% 
-      summarise(!!! lst_quos) %>% 
+      summarise(!!! lst_exprs) %>% 
       ungroup() %>% 
       select(!!! lhs)
-    full_data <- replace_na2(full_data, replaced_df)
+    full_data <- replace_na2(full_data, replaced_df, group_vars(tbl))
   }
   if (!identical(cn, names(full_data))) {
     full_data <- full_data %>%
@@ -186,8 +186,7 @@ count_gaps.grouped_ts <- function(.data, .full = FALSE, ...) {
 }
 
 #' @rdname gaps
-#' @param x,y A vector of numbers, dates, or date-times. The length of `y` must
-#' be greater than the length of `x`.
+#' @param x,y Atomic vectors. The length of `y` must be greater than the length of `x`.
 #' @export
 #' @examples
 #' # Vectors ----
@@ -197,7 +196,7 @@ gaps <- function(x, y) {
   len_y <- length(y)
   if (len_y < len_x) {
     msg <- sprintf(
-      "The length of `x` (%d) must not be greater than the length of `y` (%d).",
+      "`length(x)` (%d) must not be greater than `length(y)` (%d).",
       len_x, len_y
     )
     abort(msg)
@@ -244,7 +243,7 @@ seq_generator <- function(x) {
     min_x + seq.int(0, as.double(max_x - min_x), tunit),
     error = function(e) {
       e$call <- NULL
-      e$message <- sprintf("Neither `+` nor `seq()` are defined for class `%s`", class(x))
+      e$message <- sprintf("Neither `+` nor `seq()` are defined for class %s", class(x)[1L])
       stop(e)
     }
   )
@@ -257,6 +256,7 @@ seq_generator <- function(x) {
 #'
 #' @export
 #' @seealso [dplyr::case_when]
+#' @keywords internal
 #' @examples
 #' x <- rnorm(10)
 #' x[c(3, 7)] <- NA_real_
@@ -270,8 +270,8 @@ case_na <- function(formula) {
 }
 
 restore_index_class <- function(new, old) {
-  old_idx <- quo_text(index(old))
-  new_idx <- quo_text(index(new))
+  old_idx <- as_string(index(old))
+  new_idx <- as_string(index(new))
   class(new[[new_idx]]) <- class(old[[old_idx]])
   if (!identical(interval(new), interval(old))) {
     attr(new, "interval") <- pull_interval(new[[new_idx]])
@@ -279,16 +279,13 @@ restore_index_class <- function(new, old) {
   new
 }
 
-not_regular <- function(x) {
-  if (!is_regular(x)) {
-    abort("Can't handle `tbl_ts` of irregular interval.")
-  }
-}
-
-replace_na2 <- function(.data, replace = list()) {
+replace_na2 <- function(.data, replace = list(), grp_vars = character(0)) {
   replace_vars <- intersect(names(replace), names(.data))
-  for (var in replace_vars) {
-    .data[[var]][is.na(.data[[var]])] <- replace[[var]]
+  split_data <- split(.data, group_indices(dplyr::grouped_df(.data, grp_vars)))
+  for (i in seq_along(split_data)) {
+    for (var in replace_vars) {
+      split_data[[i]][[var]][is.na(split_data[[i]][[var]])] <- replace[[var]][i]
+    }
   }
-  .data
+  dplyr::bind_rows(split_data)
 }

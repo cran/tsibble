@@ -20,7 +20,7 @@ key <- function(x) {
 
 #' @export
 key.default <- function(x) {
-  abort(sprintf("Can't find the `key` in `%s`", class(x)[1]))
+  abort(sprintf("Can't find the attribute key in class %s", class(x)[1]))
 }
 
 #' @export
@@ -63,11 +63,11 @@ unkey <- function(x) {
 #' @export
 unkey.tbl_ts <- function(x) {
   nkey <- n_keys(x)
-  if (nkey < 2 || nkey == nrow(x)) {
+  if (nkey < 2 || nkey == NROW(x)) {
     attr(x, "key") <- structure(id(), class = "key")
     x
   } else {
-    abort("`unkey()` must not be applied to a `tbl_ts` of more than 1 key size.")
+    abort("Can't apply to a tsibble of more than 1 key size.")
   }
 }
 
@@ -121,14 +121,14 @@ key_indices <- function(x) {
 
 #' @export
 key_indices.tbl_ts <- function(x) {
-  flat_keys <- key_flatten(key(x))
-  grped_key <- grouped_df(x, flat_keys)
+  key_vars <- key_vars(x)
+  grped_key <- grouped_df(x, key_vars)
   group_indices(grped_key)
 }
 
 key_distinct <- function(x) { # x = a list of keys (symbols)
   if (is_empty(x)) return(x)
-  reconstruct_key(x, ~ purrr::map(., ~ .[[1]]), ~ .)
+  reconstruct_key(x, ~ map(., ~ .[[1]]), ~ .)
 }
 
 grp_drop <- function(x, index2 = NULL) {
@@ -156,7 +156,7 @@ key_flatten <- function(x) {
   if (is.null(x)) {
     x <- id()
   }
-  unname(purrr::map_chr(flatten(x), quo_text))
+  unname(map_chr(flatten(x), as_string))
 }
 
 #' Change/update key variables for a given `tbl_ts`
@@ -174,7 +174,7 @@ key_flatten <- function(x) {
 #' @export
 key_update <- function(.data, ..., validate = TRUE) {
   not_tsibble(.data)
-  quos <- enquos(...)
+  quos <- enexprs(...)
   key <- validate_key(.data, quos)
   if (validate) {
     build_tsibble(
@@ -199,7 +199,7 @@ key_remove <- function(.data, .vars, validate = TRUE) {
   key_vars <- .vars[key_idx]
   old_lgl <- FALSE
   if (!is_empty(old_key)) {
-    old_lgl <- rep(is_nest(old_key), purrr::map(old_key, length))
+    old_lgl <- rep(is_nest(old_key), map(old_key, length))
   }
   new_lgl <- old_lgl[match(key_vars, old_chr)]
 
@@ -207,7 +207,7 @@ key_remove <- function(.data, .vars, validate = TRUE) {
   new_cross_key <- syms(key_vars[!new_lgl])
   new_key <- reconstruct_key(
     old_key,
-    ~ purrr::map(., ~ .[flatten(.) %in% new_nest_key]),
+    ~ map(., ~ .[flatten(.) %in% new_nest_key]),
     ~ .[. %in% new_cross_key]
   )
   key_update(.data, !!! new_key, validate = validate)
@@ -218,11 +218,12 @@ key_rename <- function(.data, .vars) {
   old_key <- key(.data)
   if (is_empty(old_key)) return(id())
   old_chr <- key_flatten(old_key)
+  .vars <- .vars[match(old_chr, .vars)]
   names <- names(.vars)
   new_chr <- names[.vars %in% old_chr]
   lgl <- FALSE
   if (!is_empty(old_key)) {
-    lgl <- rep(is_nest(old_key), purrr::map(old_key, length))
+    lgl <- rep(is_nest(old_key), map(old_key, length))
   }
   new_nest_key <- syms(new_chr[lgl])
   reconstruct_key(
@@ -249,8 +250,8 @@ validate_key <- function(data, key) {
   if (is_empty(keys)) return(keys)
 
   reconstruct_key(
-    keys, 
-    ~ purrr::map(., ~ syms(validate_vars(flatten(.), cn))),
+    keys,
+    ~ map(., ~ syms(validate_vars(flatten(.), cn))),
     ~ syms(validate_vars(., cn))
   )
 }
@@ -271,7 +272,7 @@ reconstruct_key <- function(key, nesting, crossing) {
   }
   valid_key[cross_idx] <- cross_vars
   # if there's only one variable in nesting lists --> flatten
-  len_1 <- purrr::map_lgl(valid_key, ~ is_list(.) && has_length(., 1))
+  len_1 <- map_lgl(valid_key, ~ is_list(.) && has_length(., 1))
   valid_key[len_1] <- flatten(valid_key[len_1])
   purrr::compact(valid_key)
 }
@@ -280,7 +281,7 @@ is_nest <- function(lst_syms) {
   if (is_empty(lst_syms)) {
     FALSE
   } else {
-    unname(purrr::map_lgl(lst_syms, is_list)) # expected to be a list not call
+    unname(map_lgl(lst_syms, is_list)) # expected to be a list not call
   }
 }
 
@@ -288,8 +289,7 @@ parse_key <- function(x) {
   if (is_empty(x)) {
     id()
   } else {
-    # purrr::map(x, ~ flatten_nest(.[[-1]]))
-    purrr::map(x, flatten_nest)
+    map(x, flatten_nest)
   }
 }
 
@@ -305,6 +305,8 @@ flatten_nest <- function(key) { # call
   y <- key[[3]]
   if (op == sym("|")) {
     c(flatten_nest(x), flatten_nest(y))
+  } else if (op == sym("/")) {
+    c(flatten_nest(y), flatten_nest(x))
   } else if (op == sym("-")) {
     c(flatten_nest(x), expr(-flatten_nest(y)))
   } else {

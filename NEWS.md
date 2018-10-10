@@ -1,3 +1,20 @@
+# tsibble 0.5.3
+
+## New features
+
+* Added `append_row()` for easily appending new observations to a tsibble. (#59)
+* Nesting structure can be specified using `/`, consistent with `lm`. (#64)
+
+## Bug fixes
+
+* Fixed warning in `fill_na()` for multiple replacements when using with `group_by()`, introduced in v0.5.1.
+* `as_tsibble.grouped_df()` respected its existing groups and removed argument `group`. (#60)
+* Preserve the ordering of key specification in `select.tbl_ts()`. (#63)
+
+## Misc
+
+* Soft-deprecated `case_na()` & `split_by()`.
+
 # tsibble 0.5.2
 
 ## Bug fixes
