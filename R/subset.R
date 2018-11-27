@@ -3,6 +3,14 @@
   NextMethod()
 }
 
+# #' @export
+# `$<-.tbl_ts` <- function(x, name, value) {
+#   exceed_rows(x, length(value))
+#   name <- tidyselect::vars_select(union(names(x), name), name)
+#   lst_i <- map(name, ~ (.x = value))
+#   mutate(x, !!! lst_i)
+# }
+
 #' @export
 `[[.tbl_ts` <- function(x, i, j, ..., exact = TRUE) {
   NextMethod()
@@ -10,8 +18,6 @@
 
 #' @export
 `[.tbl_ts` <- function(x, i, j, drop = FALSE) {
-  nr <- NROW(x)
-
   n_args <- nargs() - !missing(drop)
 
   if (n_args <= 2) { # only column subsetting
@@ -19,52 +25,50 @@
       warn("`drop` is ignored.")
     }
 
+    ordered <- is_ordered(x)
     if (!missing(i)) { # x[1:2]
-      i <- validate_vars(i, names(x))
-      lgl_i <- has_index(i, x) && has_distinct_key(i, x)
+      i <- tidyselect::vars_select(names(x), i)
+      lgl_i <- has_index(i, x) && (n_keys(x) < 2 || has_any_key(i, x))
       result <- .subset(x, i)
-      attr(result, "row.names") <- .set_row_names(nr)
-      x <- key_remove(x, i, validate = FALSE)
+      x <- remove_key(x, i)
       if (is_false(lgl_i)) {
         return(as_tibble(result))
       } else {
         return(build_tsibble_meta(
           result, key = key(x), index = !! index(x), index2 = !! index2(x),
-          groups = groups(x), regular = is_regular(x), ordered = ordered
+          regular = is_regular(x), ordered = ordered
         ))
       }
     } else { # e.g. x[]
       result <- x
-      attr(result, "row.names") <- .set_row_names(nr)
       return(build_tsibble_meta(
         result, key = key(x), index = !! index(x), index2 = !! index2(x),
-        groups = groups(x), regular = is_regular(x), ordered = ordered,
-        interval = interval(x)
+        regular = is_regular(x), ordered = ordered, interval = interval(x)
       ))
     }
   }
 
   # subset by columns
   if (!missing(j)) {
-    chr_j <- validate_vars(j, colnames(x))
-    lgl_j <- has_index(chr_j, x) && has_distinct_key(chr_j, x)
+    chr_j <- tidyselect::vars_select(names(x), j)
+    lgl_j <- has_index(chr_j, x) && (n_keys(x) < 2 || has_any_key(chr_j, x))
     if (is_false(lgl_j)) {
       return(NextMethod())
     }
     result <- .subset(x, j)
-    x <- key_remove(x, chr_j, validate = FALSE)
+    x <- remove_key(x, chr_j)
   } else {
     result <- x
   }
-  int <- interval(x)
 
   ordered <- is_ordered(x)
   if (!missing(i)) {
     # ordered <- row_validate(i)
-    exceed_rows(result, max(i))
+    if (any(i > NROW(x))) {
+      return(as_tibble(NextMethod()))
+    }
     result <- purrr::map(result, `[`, i)
     nr <- length(result[[1]])
-    if (!is_min_gap_one(i)) int <- NULL
   }
 
   if (drop) {
@@ -75,16 +79,54 @@
     }
   }
 
-  # attr(result, "row.names") <- .set_row_names(nr)
   build_tsibble_meta(
     result, key = key(x), index = !! index(x), index2 = !! index2(x),
-    groups = groups(x), regular = is_regular(x), ordered = ordered, 
-    interval = int
+    regular = is_regular(x), ordered = ordered, interval = NULL
   )
 }
 
-is_index_null <- function(x) {
-  if (is.null(index(x))) {
-    abort("The `index` has been dropped somehow. Please reconstruct the `tbl_ts`.")
-  }
-}
+# #' @export
+# `[<-.tbl_ts` <- function(x, i, j, value) {
+#   if (missing(i) && missing(j)) {
+#     abort("Oops! Do you need tsibble?")
+#   }
+#
+#   n_args <- nargs()
+#   x <- ungroup(x)
+#   exceed_rows(x, length(value))
+#
+#   if (n_args <= 3 && !missing(i)) { # x, i/j, value
+#     # x[i] <- 
+#     # x[, j] <- 
+#     if (i > NCOL(x)) {
+#       i <- as.character(i)
+#       i <- tidyselect::vars_select(union(i, names(x)), i)
+#     } else {
+#       i <- tidyselect::vars_select(names(x), i)
+#     }
+#     lst_i <- map(i, ~ (.x = value))
+#     mutate(x, !!! lst_i)
+#   } else { # x[i, j] <- 
+#     if (missing(i)) {
+#       i <- seq_len(NROW(x))
+#       res <- x
+#     } else {
+#       exceed_rows(x, max(i))
+#       res <- x[i, ]
+#     }
+#     if (j > NCOL(x)) { # character always greater than numbers
+#       j <- as.character(j)
+#       j <- tidyselect::vars_select(union(j, names(x)), j)
+#     } else {
+#       j <- tidyselect::vars_select(names(x), j)
+#     }
+#     lst_j <- map(j, ~ (.x = value))
+#     out <- rbind.data.frame(mutate(res, !!! lst_j), x[-i, ])
+#     full_seq <- seq_len(NROW(x))
+#     orig_idx <- order(c(i, full_seq[-i]))
+#     build_tsibble_meta(
+#       out[orig_idx, ], key = key(x), index = !! index(x), index2 = !! index2(x),
+#       regular = is_regular(x), ordered = is_ordered(x)
+#     )
+#   }
+# }

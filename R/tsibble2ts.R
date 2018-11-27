@@ -22,7 +22,7 @@
 as.ts.tbl_ts <- function(x, value, frequency = NULL, fill = NA, ...) {
   value <- enquo(value)
   key_vars <- key(x)
-  if (any(is_nest(key_vars)) || length(key_vars) > 1) {
+  if (length(key_vars) > 1) {
     abort("Can't proceed with the key of multiple variables.")
   }
   mvars <- measured_vars(x)
@@ -41,7 +41,7 @@ as.ts.tbl_ts <- function(x, value, frequency = NULL, fill = NA, ...) {
   idx <- index(x)
   tsbl_sel <- x %>% 
     arrange(!!! key_vars, !! idx) %>% 
-    tsibble_select(!! idx, !!! key_vars, !! value_var, validate = FALSE)
+    select_tsibble(!! idx, !!! key_vars, !! value_var)
   if (is_empty(key_vars)) {
     finalise_ts(tsbl_sel, index = index(x), frequency = frequency)
   } else {
@@ -53,11 +53,11 @@ as.ts.tbl_ts <- function(x, value, frequency = NULL, fill = NA, ...) {
 
 finalise_ts <- function(data, index, frequency = NULL) {
   idx_time <- time(dplyr::pull(data, !! index))
-  out <- select(data, - !! index, .drop = TRUE)
+  out <- select(as_tibble(data), - !! index)
   if (NCOL(out) == 1) {
     out <- out[[1]]
   }
-  if (is.null(frequency)) {
+  if (is_null(frequency)) {
     frequency <- stats::frequency(idx_time)
   }
   stats::ts(out, stats::start(idx_time), frequency = frequency)

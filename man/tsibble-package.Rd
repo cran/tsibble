@@ -7,8 +7,8 @@
 \description{
 \if{html}{\figure{logo.png}{options: align='right'}}
 The \strong{tsibble} package provides a data class of \code{tbl_ts} to represent tidy
-temporal-context data. A tsibble consists of a time index, key, and other
-measured variables in a data-centric format, which is built on top of the tibble.
+temporal data. A tsibble consists of a time index, key, and other measured
+variables in a data-centric format, which is built on top of the tibble.
 }
 \section{Index}{
 
@@ -17,11 +17,11 @@ instead of implicit attribute (for example, the \code{tsp} attribute in a \code{
 few index classes, such as \code{Date}, \code{POSIXct}, and \code{difftime}, forms the basis of
 the tsibble, with new additions \link{yearweek}, \link{yearmonth}, and \link{yearquarter}
 representing year-week, year-month, and year-quarter respectively. Any arbitrary
-index class are also supported, including \code{zoo::yearmth}, \code{zoo::yearqtr}, and
+index class are also supported, including \code{zoo::yearmon}, \code{zoo::yearqtr}, and
 \code{nanotime}.
 For a \code{tbl_ts} of regular interval,
 a choice of index representation has to be made. For example, a monthly data
-should correspond to time index created by \link{yearmonth} or \code{zoo::yearmth},
+should correspond to time index created by \link{yearmonth} or \code{zoo::yearmon},
 instead of \code{Date} or \code{POSIXct}. Because months in a year ensures the regularity,
 12 months every year. However, if using \code{Date}, a month contains days ranging
 from 28 to 31 days, which results in irregular time space. This is also applicable
@@ -33,30 +33,14 @@ vector or a list, a \code{tbl_ts} doesn't accept \code{POSIXlt} and \code{timeDa
 
 \section{Key}{
 
-Key variable(s) together with the index uniquely identifies each record. And
-the key also imposes the structure on a tsibble, which can be created via the
-\link{id} function as identifiers:
+Key variable(s) together with the index uniquely identifies each record, which
+can be created via the \link{id} function as identifiers:
 \itemize{
-\item None: an implicit variable \code{id()} resulting a univariate time series.
-\item A single variable: an explicit variable. For example, \code{data(pedestrian)}
-uses the \code{id(Sensor)} column as the key.
-\item Nested variables: a nesting of one variable under another. For example,
-\code{data(tourism)} contains two geographical locations: \code{Region} and \code{State}.
-\code{Region} is the lower level than \code{State} in Australia; in other words, \code{Region}
-is nested into \code{State}, which naturally forms a hierarchy. A vertical bar (\code{|})
-is used to describe this nesting relationship, and thus \code{Region} | \code{State}.
-Alternatively, a forward slash (\code{/}) expresses the equivalent hierarchy but
-in a reverse order, for example \code{State} / \code{Region}.
-In theory, nesting can involve infinite levels, so is \code{tsibble}.
-\item Crossed variables: a crossing of one variable with another. For example,
-the geographical locations are crossed with the purpose of visiting (\code{Purpose})
-in the \code{data(tourism)}. A comma (\code{,}) is used to indicate this crossing
-relationship. Nested and crossed variables can be combined, such as
-\code{data(tourism)} using \code{id(Region | State, Purpose)}.
+\item Empty: an implicit variable \code{id()} resulting in a univariate time series.
+\item One or more variables: explicit variables. For example, \code{data(pedestrian)}
+and \code{data(tourism)} use the \code{id(Sensor)} & \code{id(Region, State, Purpose)} as
+the key respectively.
 }
-
-These key variables describe the data structure, which will prove useful in
-data visualisation and statistical modelling.
 }
 
 \section{Interval}{
@@ -84,6 +68,12 @@ An interval is obtained based on the corresponding index representation:
 }
 }
 
+\section{Time zone}{
+
+Time zone corresponding to index will be displayed if index is \code{POSIXct}.
+\code{?} means that the obtained time zone is a zero-length character "".
+}
+
 \section{Print options}{
 
 The tsibble package fully utilises the \code{print} method from the tibble. Please
@@ -99,7 +89,7 @@ tsibble(
 
 # create a tsibble with one key ----
 tsibble(
-  qtr = rep(yearquarter("201001") + 0:9, 3),
+  qtr = rep(yearquarter("2010-01") + 0:9, 3),
   group = rep(c("x", "y", "z"), each = 10),
   value = rnorm(30),
   key = id(group)

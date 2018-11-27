@@ -1,3 +1,46 @@
+# tsibble 0.6.0
+
+This release simplifies the "key" structure. The nesting and crossing definition has been removed from the "key" specification. One or more variables forming the "key", are required to identify observational units over time, but no longer assume the relationship between these variables. The nesting and crossing structure will be dealt with visualisation and forecasting reconciliation in downstream packages.
+
+## Breaking changes
+
+* `count_gaps.tbl_ts()` returns a tibble containing gaps for each key value rather than an overall gap, which is consistent with the rest of tsibble methods. And all output column names that are not supplied by users gain a prefixed ".".
+* `time_unit()` accepts `interval` input instead of time vectors to avoid overheads, also marked as internal function.
+* Separate partial sliding from `slider()` and `pslider()` as new functions `partial_slider()` and `partial_pslider()`. Argument `.partial` is removed from `slider()` and `pslider()` to feature a simpler interface.
+* Removed argument `group` from `build_tsibble()`. In order to construct a grouped tsibble, `x` requires a grouped df.
+
+## New features
+
+* Added S3 generic `has_gaps()` to quickly check if there are implicit time gaps for each key in a tsibble.
+* Added S3 generic `new_data()` to produce the future of a tsibble.
+* A shorthand `filter_index()` to filter time window for a tsibble.
+* New S3 generic `time_in()` to check if time falls in the ranges in compact expression, with no need for time zone specification.
+* An empty tsibble is now valid and will not raise an error, which makes it easier to programme with.
+* New vignettes on handling implicit missingness and FAQ.
+* `new_tsibble()` creates a subclass of a tsibble.
+* Renamed `fill_na()` to `fill_gaps()`, for more expressive function name and consistency to `has_gaps()` and `count_gaps()`. Soft-deprecated `fill_na()`. (#71)
+* Added `is_duplicated()`, `are_duplicated()` and `duplicates()`.
+* If `POSIXct`, time zone will be displayed in the header via `print()`.
+* Added index support for ordered factors.
+
+## Bug fixes
+
+* Fixed unexpected error message for `holiday_aus()` that requires package "timeDate".
+* Fixed `summarise.tbl_ts()`, `select.tbl_ts()` & `fill_na.tbl_ts()` scoping issue (#67).
+* `slice.tbl_ts()` correctly handles logical `NA`.
+* `fill_na()` will only replace implicit time gaps by values and functions, and leave originally explicit `NA` intact. 
+* `tidyr::fill()` gained support for class "grouped_ts", and it is re-exported again. (#73)
+
+## Misc
+
+* Soft-deprecated `fill_na()`, in favour of `fill_gaps()`.
+* Soft-deprecated `find_duplicates()`, in favour of `are_duplicated()`.
+* Deprecated `case_na()`, and will be defunct in next release.
+* Deprecated `split_by()`, which is under development as S3 generic in **dplyr**.
+* Soft-deprecated `as.tsibble()`, following `as.tibble()` in **tibble**.
+* Deprecated `.drop` argument in column-wise verbs, and suggested to use `as_tibble()`.
+* If `select()` doesn't select index, it will inform users and automatically select it.
+
 # tsibble 0.5.3
 
 ## New features

@@ -22,16 +22,16 @@ gather.tbl_ts <- function(data, key = "key", value = "value", ...,
       c(quo_name(key), quo_name(value), quo_name(index(data)))
     )
   }
-  vars <- validate_vars(exprs, names(data))
+  vars <- tidyselect::vars_select(names(data), !!! exprs)
+  data <- mutate_index2(data, vars)
   tbl <- gather(
     as_tibble(data), key = !! key, value = !! value, !!! exprs,
     na.rm = na.rm, convert = convert, factor_key = factor_key
   )
   build_tsibble_meta(
-    tbl, key = new_key, index = !! index(data), 
-    index2 = !! index2_update(data, vars),
-    groups = grp_update(data, vars), regular = is_regular(data), 
-    ordered = is_ordered(data), interval = interval(data)
+    tbl, key = new_key, index = !! index(data), index2 = !! index2(data), 
+    regular = is_regular(data), ordered = is_ordered(data), 
+    interval = interval(data)
   )
 }
 
@@ -60,17 +60,18 @@ spread.tbl_ts <- function(data, key, value, fill = NA, convert = FALSE,
     ))
   }
   key_left <- setdiff(key_vars(data), key_var)
-  new_key <- key(key_remove(data, .vars = key_left, validate = FALSE))
+  new_key <- key(remove_key(data, .vars = key_left))
 
   tbl <- spread(
     as_tibble(data), key = !! key, value = !! value, fill = fill, 
     convert = convert, drop = drop, sep = sep
   )
   vars <- names(tbl)
+  data <- mutate_index2(data, vars)
+
   build_tsibble_meta(
-    tbl, key = new_key, index = !! index(data), 
-    index2 = !! index2_update(data, vars), groups = grp_update(data, vars),
-    regular = is_regular(data), ordered = is_ordered(data),
+    tbl, key = new_key, index = !! index(data), index2 = !! index2(data), 
+    regular = is_regular(data), ordered = is_ordered(data), 
     interval = interval(data)
   )
 }
@@ -79,10 +80,10 @@ spread.tbl_ts <- function(data, key, value, fill = NA, convert = FALSE,
 #' @rdname tidyverse
 #' @export
 #' @examples
-#' pedestrian %>% 
-#'   nest(-Sensor)
-#' pedestrian %>% 
-#'   group_by(Sensor) %>% 
+#' nested_stock <- stocksm %>% 
+#'   nest(-stock)
+#' stocksm %>% 
+#'   group_by(stock) %>% 
 #'   nest()
 nest.tbl_ts <- function(data, ..., .key = "data") {
   nest_exprs <- enexprs(...)
@@ -96,7 +97,7 @@ nest.tbl_ts <- function(data, ..., .key = "data") {
   if (is_false(has_index(nest_vars, data))) {
     abort(sprintf(
       "Column `%s` (index) must be nested in the list-column", 
-      as_string(index(data))
+      index_var(data)
     ))
   }
   tbl <- as_tibble(data)
@@ -112,12 +113,11 @@ nest.tbl_ts <- function(data, ..., .key = "data") {
   nest_vars <- setdiff(nest_vars, grp_vars)
   grp <- syms(grp_vars)
 
-  out <- select(data, !!! grp, .drop = TRUE)
+  out <- select(ungroup(tbl), !!! grp)
   idx <- group_indices(data, !!! grp)
   representatives <- which(!duplicated(idx))
   out <- slice(out, representatives)
-  tsb_sel <- data %>% 
-    tsibble_select(!!! nest_vars, validate = FALSE)
+  tsb_sel <- select_tsibble(data, !!! nest_vars, validate = FALSE)
   out[[key_var]] <- unname(split(tsb_sel, idx))[unique(idx)]
   as_lst_ts(out)
 }
@@ -128,20 +128,14 @@ nest.tbl_ts <- function(data, ..., .key = "data") {
 #' @rdname tidyverse
 #' @export
 #' @examples
-#' nested_ped <- pedestrian %>% 
-#'   nest(-Sensor)
-#' nested_ped %>% 
-#'   unnest(key = id(Sensor))
-#' nested_tourism <- tourism %>% 
-#'   nest(-Region, -State)
-#' nested_tourism %>% 
-#'   unnest(key = id(Region | State))
+#' nested_stock %>% 
+#'   unnest(key = id(stock))
 unnest.lst_ts <- function(data, ..., key = id(),
   .drop = NA, .id = NULL, .sep = NULL, .preserve = NULL
 ) {
   key <- use_id(data, !! enquo(key))
-  preserve <- tidyselect::vars_select(names(data), !!! enquo(.preserve))
-  exprs <- enexprs(...)
+  preserve <- tidyselect::vars_select(names(data), !! enquo(.preserve))
+  exprs <- enquos(...)
   if (is_empty(exprs)) {
     list_cols <- names(data)[purrr::map_lgl(data, is_list)]
     list_cols <- setdiff(list_cols, preserve)
@@ -164,18 +158,68 @@ unnest.lst_ts <- function(data, ..., key = id(),
     unnest(!!! exprs, .drop = .drop, .id = .id, .sep = .sep, .preserve = .preserve)
   tsbl <- eval_df[is_tsbl][[1L]]
   idx <- index(tsbl)
-  validate <- FALSE
-  if (is_empty(key)) validate <- TRUE
-
   key <- c(key(tsbl), key)
-  idx_chr <- quo_text(idx)
+  out <- unnest_tsibble(out, key, idx)
+
+  idx_chr <- as_string(idx)
   # restore the index class, as it's dropped by NextMethod()
   class(out[[idx_chr]]) <- class(tsbl[[idx_chr]])
-  build_tsibble(
-    out, key = key, index = !! idx, validate = validate, 
+  build_tsibble_meta(
+    out, key = key, index = !! idx, index2 = !! index2(tsbl),
     ordered = is_ordered(tsbl), regular = is_regular(tsbl), 
     interval = interval(tsbl)
   )
+}
+
+#' @rdname tidyverse
+#' @export
+#' @examples
+#' stock_qtl <- stocksm %>% 
+#'   group_by(stock) %>% 
+#'   index_by(day3 = lubridate::floor_date(time, unit = "3 day")) %>% 
+#'   summarise(
+#'     value = list(quantile(price)), 
+#'     qtl = list(c("0%", "25%", "50%", "75%", "100%"))
+#'   )
+#' unnest(stock_qtl, key = id(qtl))
+unnest.tbl_ts <- function(data, ..., key = id(),
+  .drop = NA, .id = NULL, .sep = NULL, .preserve = NULL
+) {
+  key <- use_id(data, !! enquo(key))
+  tbl <- as_tibble(data) %>% 
+    unnest(..., .drop = .drop, .id = .id, .sep = .sep, .preserve = .preserve)
+  key <- c(key(data), key)
+  idx <- index(data)
+  tbl <- unnest_tsibble(tbl, key, idx)
+
+  idx_chr <- as_string(idx)
+  class(tbl[[idx_chr]]) <- class(data[[idx_chr]])
+  build_tsibble_meta(
+    tbl, key = key, index = !! idx, index2 = !! index2(data), 
+    ordered = is_ordered(data), regular = is_regular(data), 
+    interval = interval(data)
+  )
+}
+
+# used for unnest() to check if the tsibble holds
+unnest_tsibble <- function(data, key, index) {
+  is_dup <- duplicated_key_index(data, key, index)
+  if (is_dup) {
+    header <- "The result is not a valid tsibble.\n"
+    hint <- "Do you forget argument `key = id(...)` in `unnest()` to create the key?."
+    abort(paste0(header, hint))
+  }
+  data
+}
+
+#' @inheritParams tidyr::fill
+#' @rdname tidyverse
+#' @export
+fill.grouped_ts <- function(data, ..., .direction = c("down", "up")) {
+  grped_df <- as_grouped_df(data)
+  res <- fill(grped_df, ..., .direction = .direction)
+  update_tsibble(res, data, ordered = is_ordered(data), 
+    interval = interval(data))
 }
 
 #' @export

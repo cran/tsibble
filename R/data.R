@@ -16,7 +16,7 @@
 #' @examples
 #' data(pedestrian)
 #' # make implicit missingness to be explicit ----
-#' pedestrian %>% fill_na()
+#' pedestrian %>% fill_gaps()
 #' # compute daily maximum counts across sensors ----
 #' pedestrian %>% 
 #'   group_by(Sensor) %>% 
@@ -42,19 +42,12 @@
 #'   - "Business" 
 #'   - "Other reason"
 #' * **Trips**: Overnight trips in thousands
-#' @details This data gives an example of nested and crossed time series
-#' structure. *Region* and *State* together form a geographical hierarchy.
-#' In other words, *Region* is nested into *State*. These two geographical
-#' variables are crossed with *Purpose* of visit. The resulting structure is 
-#' `Region` | `State`, `Purpose`.
 #' @references [Tourism Research Australia](https://www.tra.gov.au)
 #' @docType data
 #' @name tourism
 #' @usage tourism
 #' @examples
 #' data(tourism)
-#' # nesting and crossed structure
-#' key(tourism)
 #' # Total trips over geographical regions
 #' tourism %>% 
 #'   group_by(Region, State) %>% 

@@ -2,8 +2,8 @@
 #'
 #' \if{html}{\figure{logo.png}{options: align='right'}}
 #' The **tsibble** package provides a data class of `tbl_ts` to represent tidy 
-#' temporal-context data. A tsibble consists of a time index, key, and other 
-#' measured variables in a data-centric format, which is built on top of the tibble. 
+#' temporal data. A tsibble consists of a time index, key, and other measured 
+#' variables in a data-centric format, which is built on top of the tibble. 
 #'
 #' @section Index:
 #' The time indices are preserved as the essential data component of the tsibble,
@@ -11,11 +11,11 @@
 #' few index classes, such as `Date`, `POSIXct`, and `difftime`, forms the basis of 
 #' the tsibble, with new additions [yearweek], [yearmonth], and [yearquarter] 
 #' representing year-week, year-month, and year-quarter respectively. Any arbitrary
-#' index class are also supported, including `zoo::yearmth`, `zoo::yearqtr`, and
+#' index class are also supported, including `zoo::yearmon`, `zoo::yearqtr`, and
 #' `nanotime`. 
 #' For a `tbl_ts` of regular interval,
 #' a choice of index representation has to be made. For example, a monthly data 
-#' should correspond to time index created by [yearmonth] or `zoo::yearmth`, 
+#' should correspond to time index created by [yearmonth] or `zoo::yearmon`, 
 #' instead of `Date` or `POSIXct`. Because months in a year ensures the regularity,
 #' 12 months every year. However, if using `Date`, a month contains days ranging
 #' from 28 to 31 days, which results in irregular time space. This is also applicable
@@ -25,28 +25,12 @@
 #' vector or a list, a `tbl_ts` doesn't accept `POSIXlt` and `timeDate` columns.
 #'
 #' @section Key:
-#' Key variable(s) together with the index uniquely identifies each record. And
-#' the key also imposes the structure on a tsibble, which can be created via the
-#' [id] function as identifiers:
-#' * None: an implicit variable `id()` resulting a univariate time series.
-#' * A single variable: an explicit variable. For example, `data(pedestrian)`
-#' uses the `id(Sensor)` column as the key.
-#' * Nested variables: a nesting of one variable under another. For example, 
-#' `data(tourism)` contains two geographical locations: `Region` and `State`.
-#' `Region` is the lower level than `State` in Australia; in other words, `Region`
-#' is nested into `State`, which naturally forms a hierarchy. A vertical bar (`|`)
-#' is used to describe this nesting relationship, and thus `Region` | `State`. 
-#' Alternatively, a forward slash (`/`) expresses the equivalent hierarchy but 
-#' in a reverse order, for example `State` / `Region`. 
-#' In theory, nesting can involve infinite levels, so is `tsibble`.
-#' * Crossed variables: a crossing of one variable with another. For example,
-#' the geographical locations are crossed with the purpose of visiting (`Purpose`)
-#' in the `data(tourism)`. A comma (`,`) is used to indicate this crossing
-#' relationship. Nested and crossed variables can be combined, such as 
-#' `data(tourism)` using `id(Region | State, Purpose)`.
-#'
-#' These key variables describe the data structure, which will prove useful in
-#' data visualisation and statistical modelling.
+#' Key variable(s) together with the index uniquely identifies each record, which 
+#' can be created via the [id] function as identifiers:
+#' * Empty: an implicit variable `id()` resulting in a univariate time series.
+#' * One or more variables: explicit variables. For example, `data(pedestrian)`
+#' and `data(tourism)` use the `id(Sensor)` & `id(Region, State, Purpose)` as 
+#' the key respectively.
 #'
 #' @section Interval:
 #' The [interval] function returns the interval associated with the tsibble.
@@ -66,6 +50,10 @@
 #' * `Date`: "day"
 #' * `POSIXct`: "hour", "minute", "second", "millisecond", "microsecond"
 #' * `nanotime`: "nanosecond"
+#'
+#' @section Time zone:
+#' Time zone corresponding to index will be displayed if index is `POSIXct`.
+#' `?` means that the obtained time zone is a zero-length character "".
 #'
 #' @section Print options:
 #' The tsibble package fully utilises the `print` method from the tibble. Please
@@ -87,7 +75,7 @@
 #'
 #' # create a tsibble with one key ----
 #' tsibble(
-#'   qtr = rep(yearquarter("201001") + 0:9, 3),
+#'   qtr = rep(yearquarter("2010-01") + 0:9, 3),
 #'   group = rep(c("x", "y", "z"), each = 10),
 #'   value = rnorm(30),
 #'   key = id(group)

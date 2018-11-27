@@ -36,23 +36,24 @@ then use \link{mutate}.
 }
 \section{Index functions}{
 
-The tsibble \code{yearmonth()} and \code{yearquarter()} function preserve the time zone of
+The tsibble \code{yearmonth()} and \code{yearquarter()} function respects time zones of
 the input \code{x}, contrasting to their zoo counterparts.
 }
 
 \examples{
-# coerce POSIXct/Dates to yearweek, yearmonth, yearquarter ----
+# coerce POSIXct/Dates to yearweek, yearmonth, yearquarter
 x <- seq(as.Date("2016-01-01"), as.Date("2016-12-31"), by = "1 month")
 yearweek(x)
-yearmonth(yearweek(x)); yearmonth(x)
-yearmonth("201807")
+yearmonth(x)
+yearmonth(yearweek(x))
+yearmonth("2018-07")
 yearquarter(x)
 
-# coerce yearmonths to yearquarter ----
+# coerce yearmonths to yearquarter
 y <- yearmonth(x)
 yearquarter(y)
 
-# seq() and binary operaters ----
+# seq() and binary operaters
 wk1 <- yearweek("2017-11-01")
 wk2 <- yearweek("2018-04-29")
 seq(from = wk1, to = wk2, by = 2) # by two weeks
@@ -61,6 +62,11 @@ mth <- yearmonth("2017-11-01")
 seq(mth, length.out = 5, by = 1) # by 1 month
 mth + 0:9
 seq(yearquarter(mth), length.out = 5, by = 1) # by 1 quarter
+
+# different formats
+format(c(wk1, wk2), format = "\%V/\%Y")
+format(y, format = "\%y \%m")
+format(yearquarter(mth), format = "\%y Qtr\%q")
 is_53weeks(2015:2016)
 }
 \seealso{

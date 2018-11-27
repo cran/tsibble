@@ -24,6 +24,8 @@
 \alias{spread.tbl_ts}
 \alias{nest.tbl_ts}
 \alias{unnest.lst_ts}
+\alias{unnest.tbl_ts}
+\alias{fill.grouped_ts}
 \title{Tidyverse methods for tsibble}
 \usage{
 \method{arrange}{tbl_ts}(.data, ...)
@@ -76,6 +78,11 @@
 
 \method{unnest}{lst_ts}(data, ..., key = id(), .drop = NA,
   .id = NULL, .sep = NULL, .preserve = NULL)
+
+\method{unnest}{tbl_ts}(data, ..., key = id(), .drop = NA,
+  .id = NULL, .sep = NULL, .preserve = NULL)
+
+\method{fill}{grouped_ts}(data, ..., .direction = c("down", "up"))
 }
 \arguments{
 \item{.data}{A \code{tbl_ts}.}
@@ -85,8 +92,9 @@
 \item{.by_group}{If \code{TRUE}, will sort first by grouping variable. Applies to
 grouped data frames only.}
 
-\item{.drop}{\code{FALSE} returns a tsibble object as the input. \code{TRUE} drops a
-tsibble and returns a tibble.}
+\item{.drop}{Deprecated, please use \code{as_tibble()} for \code{.drop = TRUE} instead.
+\code{FALSE} returns a tsibble object as the input. \code{TRUE} drops a tsibble and
+returns a tibble.}
 
 \item{add}{When \code{add = FALSE}, the default, \code{group_by()} will
 override existing groups. To add to the existing groups, use
@@ -125,7 +133,7 @@ symbols.
 This argument is passed by expression and supports
 \link[rlang:quasiquotation]{quasiquotation} (you can unquote strings
 and symbols). The name is captured from the expression with
-\code{\link[rlang:quo_name]{rlang::quo_name()}} (note that this kind of interface where
+\code{\link[rlang:ensym]{rlang::ensym()}} (note that this kind of interface where
 symbols do not represent actual objects is now discouraged in the
 tidyverse; we support it here for backward compatibility).}
 
@@ -134,7 +142,7 @@ value column in \code{NA}.}
 
 \item{convert}{If \code{TRUE} will automatically run
 \code{\link[=type.convert]{type.convert()}} on the key column. This is useful if the column
-names are actually numeric, integer, or logical.}
+types are actually numeric, integer, or logical.}
 
 \item{factor_key}{If \code{FALSE}, the default, the key values will be
 stored as a character vector. If \code{TRUE}, will be stored as a factor,
@@ -157,7 +165,7 @@ by "<key_name><sep><key_value>".}
 This argument is passed by expression and supports
 \link[rlang:quasiquotation]{quasiquotation} (you can unquote strings
 and symbols). The name is captured from the expression with
-\code{\link[rlang:quo_name]{rlang::quo_name()}} (note that this kind of interface where
+\code{\link[rlang:ensym]{rlang::ensym()}} (note that this kind of interface where
 symbols do not represent actual objects is now discouraged in the
 tidyverse; we support it here for backward compatibility).}
 
@@ -173,6 +181,9 @@ nested data frame, separated by \code{.sep}.}
 will be duplicated in the same way as atomic vectors. This has
 \link[dplyr:select]{dplyr::select} semantics so you can preserve multiple variables with
 \code{.preserve = c(x, y)} or \code{.preserve = starts_with("list")}.}
+
+\item{.direction}{Direction in which to fill missing values. Currently
+either "down" (the default) or "up".}
 }
 \description{
 \itemize{
@@ -183,27 +194,22 @@ be issued.
 \item \code{select()}: keeps the variables you mention as well as the index.
 \item \code{transmute()}: keeps the variable you operate on, as well as the index and key.
 \item \code{summarise()} will not collapse on the index variable.
-\item The column-wise verbs, including \code{select()}, \code{transmute()}, \code{summarise()},
-\code{mutate()} & \code{transmute()}, have an additional argument of \code{.drop = FALSE} for
-tsibble. The index variable cannot be dropped for a tsibble. If any key variable
-is changed, it will validate whether it's a tsibble internally. Turning
-\code{.drop = TRUE} converts to a tibble first and then do the operations.
+\item Column-wise verbs, including \code{select()}, \code{transmute()}, \code{summarise()},
+\code{mutate()} & \code{transmute()}, keep the time context hanging around. That is,
+the index variable cannot be dropped for a tsibble. If any key variable
+is changed, it will validate whether it's a tsibble internally. Use \code{as_tibble()}
+to leave off the time context.
+\item \code{unnest()} requires argument \code{key = id()} to get back to a tsibble.
 }
 }
 \examples{
 # Sum over sensors ----
 pedestrian \%>\%
   summarise(Total = sum(Count))
-# Sum over sensors by days ----
+# Back to tibble
 pedestrian \%>\%
-  index_by(Date) \%>\%
+  as_tibble() \%>\% 
   summarise(Total = sum(Count))
-## .drop = TRUE ----
-pedestrian \%>\%
-  summarise(Total = sum(Count), .drop = TRUE)
-tourism \%>\%
-  group_by(Region, State) \%>\%
-  summarise(geo_trips = sum(Trips))
 # example from tidyr
 stocks <- tsibble(
   time = as.Date('2009-01-01') + 0:9,
@@ -221,17 +227,19 @@ stocks <- tsibble(
 )
 stocksm <- stocks \%>\% gather(stock, price, -time)
 stocksm \%>\% spread(stock, price)
-pedestrian \%>\% 
-  nest(-Sensor)
-pedestrian \%>\% 
-  group_by(Sensor) \%>\% 
+nested_stock <- stocksm \%>\% 
+  nest(-stock)
+stocksm \%>\% 
+  group_by(stock) \%>\% 
   nest()
-nested_ped <- pedestrian \%>\% 
-  nest(-Sensor)
-nested_ped \%>\% 
-  unnest(key = id(Sensor))
-nested_tourism <- tourism \%>\% 
-  nest(-Region, -State)
-nested_tourism \%>\% 
-  unnest(key = id(Region | State))
+nested_stock \%>\% 
+  unnest(key = id(stock))
+stock_qtl <- stocksm \%>\% 
+  group_by(stock) \%>\% 
+  index_by(day3 = lubridate::floor_date(time, unit = "3 day")) \%>\% 
+  summarise(
+    value = list(quantile(price)), 
+    qtl = list(c("0\%", "25\%", "50\%", "75\%", "100\%"))
+  )
+unnest(stock_qtl, key = id(qtl))
 }

@@ -26,25 +26,15 @@ weather_tsbl %>%
     temp_low = min(temp, na.rm = TRUE)
   )
 
-## ----tourism-------------------------------------------------------------
-as_tsibble(tourism, key = id(Region | State, Purpose), index = Quarter)
-
-## ----tourism-sum---------------------------------------------------------
-tourism %>%
-  group_by(Region, State) %>%
-  summarise(Geo_Trips = sum(Trips))
-
 ## ----flights-------------------------------------------------------------
 flights <- nycflights13::flights %>%
-  mutate(
-    sched_dep_datetime = make_datetime(year, month, day, hour, minute, 0),
-    flight_num = paste0(carrier, flight)
-  )
+  mutate(sched_dep_datetime = 
+    make_datetime(year, month, day, hour, minute, tz = "America/New_York"))
 
 ## ----flights-ts----------------------------------------------------------
 flights_tsbl <- flights %>%
   as_tsibble(
-    key = id(flight_num), 
+    key = id(carrier, flight), 
     index = sched_dep_datetime, 
     regular = FALSE
   )

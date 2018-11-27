@@ -26,7 +26,7 @@ test_that("right_join()", {
 
   grped_right <- x %>% group_by(grp) %>% right_join(y_key)
   expect_is(grped_right, "grouped_ts")
-  expect_equal(n_groups(grped_right), 1)
+  expect_equal(n_groups(grped_right), 0)
   expect_equal(group_size(grped_right), 2)
 })
 
@@ -60,5 +60,5 @@ test_that("anti_join()", {
   expect_equal(dim(anti), c(2, 2))
   expect_identical(key(x), key(anti))
   expect_identical(index(x), index(anti))
-  expect_error(x %>% anti_join(z), "empty")
+  expect_identical(x %>% anti_join(z), x[0, ])
 })

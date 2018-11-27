@@ -31,11 +31,11 @@ test_that("slider() & pslider()", {
   expect_equal(slider(x, .size = 2), list(1:2, 2:3, 3:4, 4:5))
   expect_equal(slider(x, .size = -2), list(5:4, 4:3, 3:2, 2:1))
   expect_equal(
-    slider(x, .size = 2, .partial = TRUE),
+    partial_slider(x, .size = 2),
     list(c(NA, 1), 1:2, 2:3, 3:4, 4:5)
   )
   expect_equal(
-    slider(x, .size = -2, .partial = TRUE),
+    partial_slider(x, .size = -2),
     list(c(NA, 5), 5:4, 4:3, 3:2, 2:1)
   )
   expect_equal(
@@ -71,7 +71,7 @@ test_that("slider() & pslider()", {
     bind_rows(df, df)
   )
   expect_equal(
-    unname(slider(lst, .size = 2, .partial = TRUE, .bind = TRUE, .fill = NA_integer_)[[1]]),
+    unname(partial_slider(lst, .size = 2, .bind = TRUE, .fill = NA_integer_)[[1]]),
     c(NA, 1:5)
   )
   expect_equal(
@@ -180,11 +180,11 @@ test_that("pslide() and its variants", {
   }
   expect_equal(
     pslide_dfr(df, my_sum2, .size = 2),
-    tibble::tibble(x = c(NA, 3L, 5L, 7L, 9L))
+    tibble(x = c(NA, 3L, 5L, 7L, 9L))
   )
   expect_equal(
     pslide_dfc(df, my_sum2, .size = 2),
-    tibble::tibble(x = NA, x1 = 3L, x2 = 5L, x3 = 7L, x4 = 9L)
+    tibble(x = NA, x1 = 3L, x2 = 5L, x3 = 7L, x4 = 9L)
   )
 })
 

@@ -20,27 +20,6 @@ gcd_interval <- function(x) {
   }
 }
 
-validate_vars <- function(j, x) { # j = quos/chr/dbl
-  tidyselect::vars_select(.vars = x, !!! j)
-}
-
-# this function usually follows validate_vars()
-has_index <- function(j, x) {
-  is_index_null(x)
-  index <- c(quo_name(index(x)), quo_name(index2(x)))
-  any(index %in% j)
-}
-
-has_distinct_key <- function(j, x) {
-  key_vars <- key_flatten(key_distinct(key(x)))
-  all(key_vars %in% j)
-}
-
-has_any_key <- function(j, x) {
-  key_vars <- key_flatten(key(x))
-  any(key_vars %in% j)
-}
-
 min0 <- function(...) {
   min(..., na.rm = TRUE)
 }
@@ -51,4 +30,18 @@ max0 <- function(...) {
 
 is_even <- function(x) {
   (abs(x) %% 2) == 0
+}
+
+list_is_named <- function(x) {
+  nms <- names(x)
+  map_lgl(nms, ~ . != "")
+}
+
+has_tz <- function(x) {
+  tz <- attr(x, "tzone")[[1]]
+  if (is_null(tz) && !inherits(x, "POSIXct")) {
+    FALSE
+  } else {
+    TRUE
+  }
 }

@@ -2,38 +2,25 @@
 % Please edit documentation in R/as-tsibble.R
 \name{build_tsibble}
 \alias{build_tsibble}
-\alias{build_tsibble_meta}
-\title{Low-level construction of a tsibble object}
+\title{Low-level constructor for a tsibble object}
 \usage{
-build_tsibble(x, key, index, index2, groups = id(), regular = TRUE,
-  validate = TRUE, ordered = NULL, interval = NULL)
-
-build_tsibble_meta(x, key, index, index2, groups = id(),
-  regular = TRUE, ordered = NULL, interval = NULL)
+build_tsibble(x, key, index, index2, regular = TRUE, ordered = NULL,
+  interval = NULL, validate = TRUE)
 }
 \arguments{
 \item{x}{A \code{data.frame}, \code{tbl_df}, \code{tbl_ts}, or other tabular objects.}
 
-\item{key}{Structural variable(s) that define unique time indices, used with
-the helper \link{id}. If a univariate time series (without an explicit key),
-simply call \code{id()}. See below for details.}
+\item{key}{Variable(s) that define unique time indices, used in conjunction
+with the helper \code{\link[=id]{id()}}. If a univariate time series (without an explicit key),
+simply call \code{id()}.}
 
 \item{index}{A bare (or unquoted) variable to specify the time index variable.}
 
 \item{index2}{A candidate of \code{index} to update the index to a new one when
 \link{index_by}. By default, it's identical to \code{index}.}
 
-\item{groups}{Grouping variable(s) when \link{group_by.tbl_ts}.}
-
 \item{regular}{Regular time interval (\code{TRUE}) or irregular (\code{FALSE}). The
-interval is determined by the greatest common divisor of positive time distances,
-if \code{TRUE}.}
-
-\item{validate}{\code{TRUE} suggests to verify that each key or each combination
-of key variables lead to unique time indices (i.e. a valid tsibble). It will
-also make sure that the nested variables are arranged from lower level to
-higher, if nested variables are passed to \code{key}. If you are sure that it's a
-valid input, specify \code{FALSE} to skip the checks.}
+interval is determined by the greatest common divisor of index column, if \code{TRUE}.}
 
 \item{ordered}{The default of \code{NULL} arranges the key variable(s) first and
 then index from past to future. \code{TRUE} suggests to skip the ordering as \code{x} in
@@ -41,15 +28,15 @@ the correct order. \code{FALSE} also skips the ordering but gives a warning inst
 
 \item{interval}{\code{NULL} computes the interval. Use the specified interval via
 \code{\link[=new_interval]{new_interval()}} as is, if an class of \code{interval} is supplied.}
+
+\item{validate}{\code{TRUE} suggests to verify that each key or each combination
+of key variables leads to unique time indices (i.e. a valid tsibble). If you
+are sure that it's a valid input, specify \code{FALSE} to skip the checks.}
 }
 \description{
-\itemize{
-\item \code{build_tsibble()} creates a \code{tbl_ts} object with more controls. It is useful
-for creating a \code{tbl_ts} internally inside a function, and it allows users to
+\code{build_tsibble()} creates a \code{tbl_ts} object with more controls. It is useful
+for creating a \code{tbl_ts} internally inside a function, and it allows developers to
 determine if the time needs ordering and the interval needs calculating.
-\item \code{build_tsibble_meta()} assigns the attributes to an object, assuming this
-object is a valid tsibble.
-}
 }
 \examples{
 # Prepare `pedestrian` to use a new index `Date` ----

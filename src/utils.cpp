@@ -77,10 +77,11 @@ bool any_not_equal_to_c(NumericVector x, double c) {
 
 // [[Rcpp::export]]
 bool is_descending(IntegerVector x) {
-  int prev = x[0];
+  IntegerVector y = wrap(na_omit(x));
+  int prev = y[0];
 
   IntegerVector::iterator it;
-  for (it = x.begin() + 1; it != x.end(); ++it) {
+  for (it = y.begin() + 1; it != y.end(); ++it) {
     if (prev >= *it) {
       prev = *it;
     } else {
@@ -94,10 +95,11 @@ bool is_descending(IntegerVector x) {
 
 // [[Rcpp::export]]
 bool is_ascending(IntegerVector x) {
-  int prev = x[0];
+  IntegerVector y = wrap(na_omit(x));
+  int prev = y[0];
 
   IntegerVector::iterator it;
-  for (it = x.begin() + 1; it != x.end(); ++it) {
+  for (it = y.begin() + 1; it != y.end(); ++it) {
     if (prev < *it) {
       prev = *it;
     } else {
@@ -105,21 +107,4 @@ bool is_ascending(IntegerVector x) {
     }
   };
   return true;
-}
-
-// If the minimal difference of  x is one
-// whether needs updating interval
-
-// [[Rcpp::export]]
-bool is_min_gap_one(NumericVector x) {
-  std::sort(x.begin(), x.end());
-  NumericVector y = diff(x);
-  NumericVector::iterator it;
-
-  for (it = y.begin(); it != y.end(); ++it) {
-    if (*it == 1) {
-      return true;
-    }
-  };
-  return false;
 }

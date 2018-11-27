@@ -7,13 +7,9 @@
 time_unit(x)
 }
 \arguments{
-\item{x}{A vector of \code{POSIXt}, \code{Date}, \code{yearmonth}, \code{yearquarter}, \code{difftime},
-\code{hms}, \code{integer}, \code{numeric}.}
+\item{x}{An interval.}
 }
 \description{
 Extract time unit from a vector
 }
-\examples{
-x <- yearmonth(seq(2016, 2018, by = 0.5))
-time_unit(x)
-}
+\keyword{internal}

@@ -9,7 +9,7 @@ options(tibble.print_min = 5)
 library(tsibble)
 library(dplyr)
 pedestrian_full <- pedestrian %>% 
-  fill_na(.full = TRUE)
+  fill_gaps(.full = TRUE)
 pedestrian_full
 
 ## ----daily-mv------------------------------------------------------------
@@ -44,7 +44,7 @@ my_diag <- function(...) {
   list(fitted = fitted(fit), resid = residuals(fit))
 }
 pedestrian %>%
-  filter(Date_Time < yearmonth("201504")) %>%
+  filter_index(~ "2015-03") %>%
   nest(-Sensor) %>%
   mutate(diag = purrr::map(data, ~ pslide_dfr(., my_diag, .size = 24 * 7)))
 

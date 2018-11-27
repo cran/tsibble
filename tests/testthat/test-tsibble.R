@@ -10,8 +10,8 @@ dat_x <- tibble(
   value = rnorm(5)
 )
 
-test_that("A tsibble cannot be empty", {
-  expect_error(tsibble(), "empty")
+test_that("A tsibble cannot be NULL or without index", {
+  expect_error(tsibble(), "Can't determine the index")
   expect_error(as_tsibble(), "NULL")
 })
 
@@ -42,7 +42,7 @@ df <- data.frame(time = x, value = rnorm(length(x)))
 tsbl <- as_tsibble(df, index = time)
 
 test_that("POSIXct with 10 milliseconds interval", {
-  expect_output(print(tsbl), "A tsibble: 20 x 2 \\[5ms\\]")
+  expect_output(print(tsbl), "A tsibble: 20 x 2 \\[5ms\\] <UTC>")
 })
 
 x <- ISOdatetime(2011,8,2,0,0,0) + c(34201881660:34201881669)*1e-6
@@ -50,7 +50,7 @@ df <- data.frame(time = x, value = rnorm(10))
 tsbl <- as_tsibble(df, index = time)
 
 test_that("POSIXct with 1 microseconds interval", {
-  expect_output(print(tsbl), cat("A tsibble: 10 x 2 [10\U00B5s]"))
+  expect_output(print(tsbl), cat("A tsibble: 10 x 2 [10\U00B5s] <?>"))
 })
 
 library(nanotime)
@@ -70,8 +70,8 @@ test_that("POSIXt with 1 second interval", {
   expect_is(tsbl, "tbl_ts")
   expect_is(index(tsbl), "name")
   expect_identical(quo_text(index(tsbl)), "date_time")
-  expect_identical(time_unit(tsbl$date_time), 1)
-  expect_identical(format(key(tsbl)), list())
+  expect_identical(time_unit(pull_interval(tsbl$date_time)), 1)
+  expect_identical(key(tsbl), list())
   expect_identical(format(groups(tsbl)), "NULL")
   expect_identical(format(interval(tsbl)), "1s")
   expect_output(print(interval(tsbl)), "1s")
@@ -93,7 +93,9 @@ test_that("Duplicated time index", {
   expect_error(as_tsibble(dat_y, index = date_time), "A valid tsibble")
 
   y <- c(FALSE, TRUE, rep(FALSE, 3))
-  expect_identical(find_duplicates(dat_y, index = date_time), y)
+  expect_identical(is_duplicated(dat_y, index = date_time), TRUE)
+  expect_identical(are_duplicated(dat_y, index = date_time), y)
+  expect_identical(duplicates(dat_y, index = date_time), dat_x[c(1, 1), ])
 })
 
 test_that("POSIXt with an unrecognisable interval", {
@@ -123,7 +125,7 @@ dat_x <- tibble(
 test_that("POSIXt with 2 minutes interval", {
   tsbl <- as_tsibble(dat_x)
   expect_identical(format(interval(tsbl)), "2m")
-  expect_identical(time_unit(tsbl$date_time), 120)
+  expect_identical(time_unit(pull_interval(tsbl$date_time)), 120)
 })
 
 idx_hour <- seq.POSIXt(
@@ -138,7 +140,7 @@ dat_x <- tibble(
 test_that("POSIXt with 3 hours interval", {
   tsbl <- as_tsibble(dat_x)
   expect_identical(format(interval(tsbl)), "3h")
-  expect_identical(time_unit(tsbl$date_time), 3 * 60 * 60)
+  expect_identical(time_unit(pull_interval(tsbl$date_time)), 3 * 60 * 60)
 })
 
 idx_day <- seq.Date(ymd("2017-01-01"), ymd("2017-01-20"), by = 4)
@@ -153,7 +155,7 @@ test_that("Date with 4 days interval", {
   expect_message(tsbl <- as_tsibble(dat_x))
   expect_is(tsbl, "tbl_ts")
   expect_identical(format(interval(tsbl)), "4D")
-  expect_identical(time_unit(tsbl$date), 4)
+  expect_identical(time_unit(pull_interval(tsbl$date)), 4)
 })
 
 idx_week <- seq(yearweek(ymd("2017-02-01")), length.out = 5, by = 1)
@@ -165,7 +167,7 @@ test_that("Year week with 1 week interval", {
   expect_output(print(tsbl), "A tsibble: 5 x 2 \\[1W\\]")
   expect_is(tsbl, "tbl_ts")
   expect_identical(format(interval(tsbl)), "1W")
-  expect_identical(time_unit(tsbl$yrwk), 1)
+  expect_identical(time_unit(pull_interval(tsbl$yrwk)), 1)
 })
 
 idx_month <- seq(
@@ -181,8 +183,9 @@ test_that("Year month with 1 month interval", {
   expect_message(tsbl <- as_tsibble(dat_x))
   expect_output(print(tsbl), "A tsibble: 5 x 2 \\[1M\\]")
   expect_is(tsbl, "tbl_ts")
+  expect_is(as_tsibble(tsbl, validate = TRUE), "tbl_ts")
   expect_identical(format(interval(tsbl)), "1M")
-  expect_identical(time_unit(tsbl$yrmth), 1)
+  expect_identical(time_unit(pull_interval(tsbl$yrmth)), 1)
 })
 
 idx_qtr <- seq(
@@ -198,7 +201,7 @@ test_that("Year quarter with 1 quarter interval", {
   expect_message(tsbl <- as_tsibble(dat_x))
   expect_is(tsbl, "tbl_ts")
   expect_identical(format(interval(tsbl)), "1Q")
-  expect_identical(time_unit(tsbl$yrqtr), 1)
+  expect_identical(time_unit(pull_interval(tsbl$yrqtr)), 1)
 })
 
 idx_year <- seq.int(1970, 2010, by = 10)
@@ -213,7 +216,7 @@ test_that("Year with 10 years interval", {
   tsbl <- as_tsibble(dat_x, index = year)
   expect_is(tsbl, "tbl_ts")
   expect_identical(format(interval(tsbl)), "10Y")
-  expect_identical(time_unit(tsbl$year), 10)
+  expect_identical(time_unit(pull_interval(tsbl$year)), 10)
 })
 
 library(hms)
@@ -225,6 +228,18 @@ test_that("Difftime with 1 minute interval", {
   expect_message(tsbl <- as_tsibble(dat_x))
   expect_is(tsbl, "tbl_ts")
   expect_identical(format(interval(tsbl)), "1m")
+  expect_identical(fill_gaps(tsbl[-2, ], value = tsbl$value[2]), tsbl)
+})
+
+idx_time <- factor(c(1, 3, 5), levels = 1:5, ordered = TRUE)
+dat_x <- tibble(time = idx_time, value = rnorm(3))
+
+test_that("ordered factor with 2 unit interval", {
+  expect_identical(index_valid(dat_x$time), TRUE)
+  expect_message(tsbl <- as_tsibble(dat_x))
+  expect_is(tsbl, "tbl_ts")
+  expect_identical(format(interval(tsbl)), "2")
+  expect_identical(fill_gaps(tsbl), tsbl)
 })
 
 context("as_tsibble() with a single key for data of long form")
@@ -241,8 +256,6 @@ test_that("A single key", {
   expect_error(as_tsibble(dat_x, key = "group", index = date), "Key must be created")
   tsbl <- as_tsibble(dat_x, key = id(group), index = date)
   expect_output(print(tsbl), "A tsibble: 10 x 3 \\[1D\\]")
-  expect_is(key(tsbl), "key")
-  expect_identical(format(key(tsbl))[[1]], "group")
   expect_identical(format(groups(tsbl)), "NULL")
   expect_equal(key_size(tsbl), c(5, 5))
   expect_equal(n_keys(tsbl), 2)
@@ -264,23 +277,6 @@ test_that("validate = FALSE", {
   expect_is(tsbl, "tbl_ts")
 })
 
-dat_x <- tibble(
-  date = rep(idx_day, 2),
-  group = rep(letters[1:2], each = 5),
-  level = rep("z", 10),
-  value = rnorm(10)
-)
-
-test_that("2 nested variables", {
-  expect_error(as_tsibble(dat_x, key = id(level | group), index = date))
-  tsbl <- as_tsibble(dat_x, key = id(group | level), index = date)
-  expect_identical(length(key(tsbl)), 1L)
-  expect_identical(length(key(tsbl)[[1]]), 2L)
-  expect_identical(format(key(tsbl))[[1]], "group | level")
-  expect_output(print(key(tsbl)), "group | level")
-  expect_identical(tsbl, as_tsibble(dat_x, key = id(level / group), index = date))
-})
-
 dat_x <- tribble(
   ~ date, ~ group1, ~ group2, ~ value,
   ymd("2017-10-01"), "a", "x", 1,
@@ -291,7 +287,7 @@ dat_x <- tribble(
   ymd("2017-10-02"), "b", "y", 2
 )
 
-test_that("2 crossed variable", {
+test_that("multiple variables", {
   expect_error(as_tsibble(dat_x, key = id(group1), index = date))
   expect_error(as_tsibble(dat_x, key = id(group2), index = date))
   tsbl <- as_tsibble(dat_x, key = id(group1, group2), index = date)
@@ -303,58 +299,6 @@ test_that("Use '-' and ':' in key vars", {
   expect_identical(length(key(tsbl1)), 2L)
   tsbl2 <- as_tsibble(dat_x, key = id(group1:group2), index = date)
   expect_identical(length(key(tsbl2)), 2L)
-})
-
-dat_x <- tribble(
-  ~ date, ~ bottom, ~ group1, ~ group2, ~ value,
-  ymd("2017-10-01"), 1, "a", "x", 1,
-  ymd("2017-10-02"), 1, "a", "x", 1,
-  ymd("2017-10-01"), 2, "a", "x", 1,
-  ymd("2017-10-02"), 2, "a", "x", 1,
-  ymd("2017-10-01"), 1, "a", "y", 1,
-  ymd("2017-10-02"), 1, "a", "y", 1,
-  ymd("2017-10-01"), 2, "a", "y", 1,
-  ymd("2017-10-02"), 2, "a", "y", 1,
-  ymd("2017-10-01"), 3, "b", "y", 3,
-  ymd("2017-10-02"), 3, "b", "y", 3,
-  ymd("2017-10-01"), 3, "b", "x", 3,
-  ymd("2017-10-02"), 3, "b", "x", 3,
-  ymd("2017-10-01"), 4, "b", "y", 3,
-  ymd("2017-10-02"), 4, "b", "y", 3,
-  ymd("2017-10-01"), 4, "b", "x", 3,
-  ymd("2017-10-02"), 4, "b", "x", 3
-)
-
-test_that("2 nested variables crossed with 1 variable", {
-  expect_error(as_tsibble(dat_x, key = id(bottom | group1), index = date))
-  expect_error(as_tsibble(dat_x, key = id(group1, group2), index = date))
-  tsbl <- as_tsibble(dat_x, key = id(bottom | group1, group2), index = date)
-  expect_identical(length(key(tsbl)), 2L)
-  expect_identical(length(key(tsbl))[[1]], 2L)
-  expect_identical(format(key(tsbl))[[1]], "bottom | group1")
-  expect_identical(key_vars(tsbl)[[3]], "group2")
-  tsbl2 <- as_tsibble(dat_x, key = id(group2, bottom | group1), index = date)
-  expect_identical(format(key(tsbl2))[[2]], "bottom | group1")
-  expect_identical(key_vars(tsbl2)[[1]], "group2")
-})
-
-dat_y <- dat_x %>%
-  mutate(top = "z")
-
-test_that("2 nestings, crossed with each other", {
-  tsbl <- as_tsibble(dat_y, key = id(bottom | group1, group2 | top), index = date)
-  expect_identical(format(key(tsbl))[[1]], "bottom | group1")
-  expect_identical(format(key(tsbl))[[2]], "group2 | top")
-})
-
-colnames(dat_x) <- c("1", "Bottom 1", "Group 1", "Group 2", "Value X")
-
-test_that("Spectial characters in column names", {
-  tsbl <- as_tsibble(
-    dat_x, key = id(`Bottom 1` | `Group 1`, `Group 2`), index = `1`
-  )
-  expect_identical(format(key(tsbl))[[1]], "`Bottom 1` | `Group 1`")
-  expect_identical(key_vars(tsbl)[[3]], "Group 2")
 })
 
 tbl <- tibble::tibble(
@@ -370,7 +314,7 @@ test_that("as_tsibble.tbl_ts & as_tsibble.grouped_df", {
   grped_ped <- pedestrian %>% group_by(Date)
   expect_equal(as_tsibble(grped_ped), grped_ped)
   expect_is(as_tsibble(tbl, key = id(group), index = mth), "tbl_ts")
-  expect_is(as_tsibble(tbl, key = id(group), index = mth, groups = id(group)), "grouped_ts")
+  expect_is(as_tsibble(tbl, key = id(group), index = mth), "grouped_ts")
 })
 
 test_that("build_tsibble()", {

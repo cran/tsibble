@@ -13,7 +13,7 @@ test_that("a tbl_df/data.frame", {
 
 test_that("unknown interval", {
   tsbl <- as_tsibble(dat_x[1, ], index = date)
-  expect_error(append_row(tsbl), "data of unknown interval.")
+  expect_error(append_row(tsbl), "tsibble of unknown interval.")
 })
 
 test_that("an irregular tbl_ts", {
@@ -28,9 +28,9 @@ test_that("4 day interval", {
   expect_error(append_row(tsbl, 1:3), "a positive")
 })
 
-tourism <- tourism %>% 
-  group_by_key() %>% 
-  slice(1:3) %>% 
+tourism <- tourism %>%
+  group_by_key() %>%
+  slice(1:3) %>%
   ungroup()
 
 test_that("custom index class", {
@@ -43,6 +43,12 @@ test_that("ordered?", {
   expect_warning(unord_t <- tourism %>% arrange(Trips))
   expect_warning(new_t <- append_row(unord_t))
   expect_equal(
-    new_t[["Trips"]][(NROW(tourism) + 1):NROW(new_t)], 
+    new_t[["Trips"]][(NROW(tourism) + 1):NROW(new_t)],
     rep(NA_real_, n_keys(tourism)))
+})
+
+test_that("`keep_all = TRUE", {
+  expect_equal(interval(new_data(tourism, n = 2)), new_interval(quarter = 1))
+  new_t <- new_data(tourism, keep_all = TRUE)
+  expect_equal(dim(new_t), c(308, 5))
 })

@@ -1,5 +1,5 @@
 # Unlike zoo::yearmon and zoo::yearqtr based on numerics,
-# tsibble::yearmth and tsibble::yearqtr are based on the "Date" class.
+# tsibble::yearmonth and tsibble::yearquarter are based on the "Date" class.
 
 #' Represent year-week (ISO), year-month or year-quarter objects
 #'
@@ -14,7 +14,7 @@
 #' then use [mutate].
 #'
 #' @section Index functions:
-#' The tsibble `yearmonth()` and `yearquarter()` function preserve the time zone of
+#' The tsibble `yearmonth()` and `yearquarter()` function respects time zones of
 #' the input `x`, contrasting to their zoo counterparts.
 #'
 #' @export
@@ -22,18 +22,19 @@
 #' @seealso [pull_interval]
 #'
 #' @examples
-#' # coerce POSIXct/Dates to yearweek, yearmonth, yearquarter ----
+#' # coerce POSIXct/Dates to yearweek, yearmonth, yearquarter
 #' x <- seq(as.Date("2016-01-01"), as.Date("2016-12-31"), by = "1 month")
 #' yearweek(x)
-#' yearmonth(yearweek(x)); yearmonth(x)
-#' yearmonth("201807")
+#' yearmonth(x)
+#' yearmonth(yearweek(x))
+#' yearmonth("2018-07")
 #' yearquarter(x)
 #'
-#' # coerce yearmonths to yearquarter ----
+#' # coerce yearmonths to yearquarter
 #' y <- yearmonth(x)
 #' yearquarter(y)
 #'
-#' # seq() and binary operaters ----
+#' # seq() and binary operaters
 #' wk1 <- yearweek("2017-11-01")
 #' wk2 <- yearweek("2018-04-29")
 #' seq(from = wk1, to = wk2, by = 2) # by two weeks
@@ -42,12 +43,17 @@
 #' seq(mth, length.out = 5, by = 1) # by 1 month
 #' mth + 0:9
 #' seq(yearquarter(mth), length.out = 5, by = 1) # by 1 quarter
+#'
+#' # different formats
+#' format(c(wk1, wk2), format = "%V/%Y")
+#' format(y, format = "%y %m")
+#' format(yearquarter(mth), format = "%y Qtr%q")
 yearweek <- function(x) {
   UseMethod("yearweek")
 }
 
 as_yearweek <- function(x) {
-  structure(x, class = c("yearweek", "Date"))
+  structure(x, tzone = NULL, class = c("yearweek", "Date"))
 }
 
 #' @export
@@ -117,7 +123,8 @@ yearweek.Date <- yearweek.POSIXt
 
 #' @export
 yearweek.character <- function(x) {
-  as_yearweek(as_date(anytime::anytime(x)))
+  anytime::assertDate(x)
+  as_yearweek(anytime::anydate(x))
 }
 
 #' @export
@@ -162,7 +169,7 @@ format.yearweek <- function(x, format = "%Y W%V", ...) {
 #' is_53weeks(2015:2016)
 is_53weeks <- function(year) {
   if (is_empty(year)) return(FALSE)
-  if (!is_integerish(year) || year < 1) {
+  if (!is_integerish(year) || any(year < 1)) {
     abort("Argument `year` must be positive integers.")
   }
   pre_year <- year - 1
@@ -198,7 +205,7 @@ yearmonth <- function(x) {
 }
 
 as_yearmonth <- function(x) {
-  structure(x, class = c("yearmonth", "Date"))
+  structure(x, tz = NULL, class = c("yearmonth", "Date"))
 }
 
 #' @export
@@ -268,7 +275,8 @@ yearmonth.Date <- yearmonth.POSIXt
 
 #' @export
 yearmonth.character <- function(x) {
-  as_yearmonth(as_date(anytime::anytime(x)))
+  anytime::assertDate(x)
+  as_yearmonth(anytime::anydate(x))
 }
 
 #' @export
@@ -288,7 +296,7 @@ yearmonth.numeric <- function(x) {
 }
 
 #' @export
-yearmonth.yearmth <- yearmonth.numeric
+yearmonth.yearmon <- yearmonth.numeric
 
 #' @export
 format.yearmonth <- function(x, format = "%Y %b", ...) {
@@ -316,7 +324,7 @@ yearquarter <- function(x) {
 }
 
 as_yearquarter <- function(x) {
-  structure(x, class = c("yearquarter", "Date"))
+  structure(x, tz = NULL, class = c("yearquarter", "Date"))
 }
 
 #' @export
@@ -386,7 +394,8 @@ yearquarter.Date <- yearquarter.POSIXt
 
 #' @export
 yearquarter.character <- function(x) {
-  as_yearquarter(as_date(anytime::anytime(x)))
+  anytime::assertDate(x)
+  as_yearquarter(anytime::anydate(x))
 }
 
 #' @export
@@ -503,6 +512,15 @@ seq.yearquarter <- function(
   ))
 }
 
+seq.ordered <- function(from, to, by, ...) {
+  bad_by(by)
+  lvls <- levels(from)
+  idx_from <- which(lvls %in% from)
+  idx_to <- which(lvls %in% to)
+  idx <- seq.int(idx_from, idx_to, by = by)
+  ordered(lvls[idx], levels = lvls)
+}
+
 #' @export
 `[.yearweek` <- function(x, ..., drop = FALSE) {
   yearweek(NextMethod())
@@ -539,6 +557,15 @@ as.POSIXlt.yearquarter <- function(x, tz = "", ...) {
 #' units_since(x = yearmonth(2012 + (0:11) / 12))
 units_since <- function(x) {
   UseMethod("units_since")
+}
+
+#' @export
+units_since.numeric <- function(x) {
+  if (min0(x) > 1581 && max0(x) < 2500) { # Input is years
+    x - 1970L
+  } else {
+    x
+  }
 }
 
 #' @export

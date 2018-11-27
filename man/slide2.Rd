@@ -131,18 +131,20 @@ my_diag <- function(...) {
   tibble(fitted = fitted(fit), resid = residuals(fit))
 }
 pedestrian \%>\%
-  filter(Date <= as.Date("2015-01-31")) \%>\%
+  filter_index("2015-01") \%>\%
   nest(-Sensor) \%>\%
   mutate(diag = purrr::map(data, ~ pslide_dfr(., my_diag, .size = 48)))
 }
 }
 \seealso{
 \itemize{
-\item \link{slide}
 \item \link{tile2} for tiling window without overlapping observations
 \item \link{stretch2} for expanding more observations
 }
+
+Other sliding window functions: \code{\link{slide}}
 }
+\concept{sliding window functions}
 \alias{slide2_lgl}
 \alias{slide2_chr}
 \alias{slide2_int}

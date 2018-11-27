@@ -1,19 +1,30 @@
+is_index_null <- function(x) {
+  if (is.null(index(x))) {
+    abort("The `index` has been dropped somehow. Please reconstruct tsibble.")
+  }
+}
+
 dont_know <- function(x, FUN) {
   cls <- class(x)[1]
   msg <- sprintf(
-    "`%s()` doesn't know how to coerce the %s class yet.", FUN, cls
+    "`%s()` doesn't know how to handle the %s class yet.", FUN, cls
   )
   abort(msg)
 }
 
 unknown_interval <- function(x) {
   no_zeros <- !map_lgl(x, function(x) x == 0)
-  if (sum(no_zeros) == 0) abort("Can't proceed with data of unknown interval.")
+  if (sum(no_zeros) == 0) abort("Can't proceed with tsibble of unknown interval.")
 }
 
 exceed_rows <- function(x, n = 1L) {
   nr <- NROW(x)
-  if (n > nr) abort(sprintf("Must not exceed the rows (%i).", nr))
+  if (n > nr) {
+    abort(sprintf(
+      "Must not exceed the number of rows (%i).\nDo you need `append_row()`?", 
+      nr
+    ))
+  }
 }
 
 not_regular <- function(x) {

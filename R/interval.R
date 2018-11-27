@@ -1,10 +1,10 @@
-#' Extract time interval from a vector
+#' Pull time interval from a vector
 #'
 #' Assuming regularly spaced time, the `pull_interval()` returns a list of time
 #' components as the "interval" class.
 #'
 #' @param x A vector of `POSIXt`, `Date`, `yearmonth`, `yearquarter`, `difftime`,
-#' `hms`, `integer`, `numeric`.
+#' `hms`, `ordered`, `integer`, `numeric`.
 #'
 #' @details `index_valid()` and `pull_interval()` make a tsibble extensible to 
 #' support custom time index.
@@ -19,7 +19,7 @@
 #' x <- seq(as.Date("2017-10-01"), as.Date("2017-10-31"), by = 3)
 #' pull_interval(x)
 pull_interval <- function(x) {
-  if (has_length(x, 1)) {
+  if (has_length(x, 1L) || has_length(x, 0L)) {
     return(init_interval())
   }
   UseMethod("pull_interval")
@@ -122,6 +122,11 @@ pull_interval.numeric <- function(x) {
 }
 
 #' @export
+pull_interval.ordered <- function(x) {
+  pull_interval.numeric(as.integer(x))
+}
+
+#' @export
 `[[.interval` <- function(x, i, j, ..., exact = TRUE) {
   NextMethod()
 }
@@ -173,20 +178,24 @@ init_interval <- function(
   ), class = "interval")
 }
 
+irregular <- function() {
+  structure(list(), class = "interval")
+}
+
 #' Extract time unit from a vector
 #'
-#' @inheritParams pull_interval
+#' @param x An interval.
 #' @export
-#' @examples
-#' x <- yearmonth(seq(2016, 2018, by = 0.5))
-#' time_unit(x)
+#' @keywords internal
 time_unit <- function(x) {
-  if (has_length(x, 1)) return(0L)
-  int <- pull_interval(x)
-  int$nanosecond + int$microsecond * 1e-6 + int$millisecond * 1e-3 +
-  int$second + int$minute * 60 + int$hour * 3600 + 
-  int$day + int$week + int$month + int$quarter + 
-  int$year + int$unit
+  if (is_false(inherits(x, "interval"))) {
+    abort("Must be class interval.")
+  }
+  x[["microsecond"]]  <- x[["microsecond"]] * 1e-6
+  x[["millisecond"]] <- x[["millisecond"]] * 1e-3
+  x[["minute"]] <- x[["minute"]] * 60
+  x[["hour"]] <- x[["hour"]] * 3600
+  purrr::reduce(x, `+`)
 }
 
 # from ts time to dates

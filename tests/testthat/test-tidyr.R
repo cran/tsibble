@@ -11,7 +11,7 @@ test_that("spread()", {
   out <- tsbl %>%
     spread(key = group, value = value)
   expect_is(out, "tbl_ts")
-  expect_equal(format(key(out)), list())
+  expect_equal(key(out), list())
   expect_named(out, c("qtr", "x", "y", "z"))
   out_grp <- tsbl %>%
     group_by(group) %>%
@@ -81,17 +81,31 @@ test_that("nest()", {
 nest_t <- tourism %>%
   nest(-Region, -State)
 
-test_that("unnest()", {
+test_that("unnest.lst_ts()", {
   expect_error(nest_t %>% unnest(key = Region), "Key must be created")
-  expect_error(nest_t %>% unnest(), "A valid tsibble")
-  expect_is(nest_t %>% unnest(key = id(Region | State)), "tbl_ts")
-  expect_equal(nest_t %>% unnest(key = id(Region | State)), tourism)
+  expect_error(nest_t %>% unnest(), "is not a valid tsibble.")
+  expect_is(nest_t %>% unnest(key = id(Region, State)), "tbl_ts")
+  expect_equal(nest_t %>% unnest(key = id(Region, State)), tourism)
   expect_is(
     nest_t %>%
       mutate(data2 = lapply(data, as_tibble)) %>%
-      unnest(key = id(Region | State)),
+      unnest(key = id(Region, State)),
     "tbl_ts"
   )
+})
+
+nest2_t <- tourism %>% 
+  group_by_key() %>% 
+  summarise(
+    value = list(quantile(Trips, c(0.3, 0.5, 0.7))),
+    qtl = list(c(3, 5, 7))
+  )
+
+test_that("unnest.tbl_ts()", {
+  expect_error(nest2_t %>% unnest(key = qtl), "Key must be created")
+  expect_error(nest2_t %>% unnest(), "is not a valid tsibble.")
+  expect_is(nest2_t %>% unnest(key = id(qtl)), "tbl_ts")
+  expect_equal(nest2_t %>% unnest(key = id(qtl)) %>% NCOL, 6)
 })
 
 test_that("dplyr verbs for lst_ts", {
@@ -100,7 +114,7 @@ test_that("dplyr verbs for lst_ts", {
     "accepts a list-column of `tbl_ts` to be unnested."
   )
   expect_named(
-    nest_t %>% mutate(data2 = data) %>% unnest(data2, key = id(Region | State)),
+    nest_t %>% mutate(data2 = data) %>% unnest(data2, key = id(Region, State)),
     c("Region", "State", "Quarter", "Purpose", "Trips")
   )
   expect_is(unnest(nest_t %>% mutate(data = 1)), "tbl_df")
@@ -109,5 +123,26 @@ test_that("dplyr verbs for lst_ts", {
   expect_equal(
     nest_t %>% group_by(State) %>% mutate(Value = n()) %>% dplyr::pull(Value),
     as_tibble(nest_t) %>% group_by(State) %>% mutate(Value = n()) %>% dplyr::pull(Value)
+  )
+})
+
+harvest <- tsibble(
+  year = c(2011, 2013, 2014, 2010, 2012, 2014),
+  fruit = rep(c("kiwi", "cherry"), each = 3),
+  kilo = sample(1:10, size = 6),
+  key = id(fruit), index = year
+)
+
+harvest_fill <- fill_gaps(harvest, .full = TRUE)
+
+test_that("fill()", {
+  expect_equal(
+    harvest_fill %>%
+      group_by_key() %>%
+      fill(kilo, .direction = "down"),
+    harvest_fill %>% 
+      as_tibble() %>% 
+      group_by(fruit) %>% 
+      fill(kilo, .direction = "down")
   )
 })

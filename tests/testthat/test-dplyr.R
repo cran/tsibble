@@ -123,16 +123,20 @@ test_that("filter() and slice()", {
     group_by(Purpose) %>%
     slice(1:3)
   expect_identical(dim(tsbl4), c(12L, ncol(tourism)))
+  expect_identical(slice(pedestrian, NA), slice(pedestrian, 0L))
+  expect_identical(slice(pedestrian, c(1, NA)), slice(pedestrian, 1L))
+  expect_identical(slice(pedestrian, c(1, NA, 100000)), slice(pedestrian, 1L))
   expect_warning(slice(pedestrian, 3:1), "Unexpected temporal order.")
   expect_error(slice(pedestrian, c(3, 3)), "Duplicated")
   expect_error(slice(pedestrian, 3, 3), "only accepts one expression.")
 })
 
 test_that("select() and rename()", {
-  expect_error(select(tourism, Quarter), "A valid tsibble")
-  expect_error(select(tourism, Region), "A valid tsibble")
-  expect_is(select(tourism, Region, .drop = TRUE), "tbl_df")
+  expect_error(select(tourism, -Quarter), "can't be removed.")
+  expect_error(select(tourism, Quarter), "is not a valid tsibble.")
+  expect_error(select(tourism, Region), "is not a valid tsibble.")
   expect_is(select(tourism, Region:Purpose), "tbl_ts")
+  expect_message(select(tourism, Region:Purpose), "Selecting index:")
   expect_is(select(tourism, Quarter:Purpose), "tbl_ts")
   expect_equal(
     quo_name(index(select(tourism, Index = Quarter, Region:Purpose))),
@@ -142,22 +146,7 @@ test_that("select() and rename()", {
     quo_name(index(select(tourism, Index = Quarter, Region:Purpose))),
     "Index"
   )
-  expect_equal(
-    format(key(select(tourism, Bottom = Region, Quarter, State:Purpose)))[[1]],
-    "Bottom | State"
-  )
-  expect_equal(
-    format(key(select(tourism, State, Region2 = Region, Purpose, Trips)))[[1]],
-    "Region2 | State"
-  )
-  expect_equal(
-    quo_name(index(rename(tourism, Index = Quarter))),
-    "Index"
-  )
-  expect_equal(
-    format(key(rename(tourism, Bottom = Region)))[[1]],
-    "Bottom | State"
-  )
+  expect_identical(rename(tourism), tourism)
 })
 
 test_that("select() with group_by()", {
@@ -184,10 +173,11 @@ test_that("select() with group_by()", {
 })
 
 test_that("mutate()", {
-  expect_error(mutate(tourism, Quarter = 1), "A valid tsibble")
-  expect_is(mutate(tourism, Quarter = 1, .drop = TRUE), "tbl_df")
-  expect_error(mutate(tourism, Region = State), "A valid tsibble")
+  expect_error(mutate(tourism, Quarter = NULL), "can't be removed.")
+  expect_error(mutate(tourism, Quarter = 1), "is not a valid tsibble.")
+  expect_error(mutate(tourism, Region = State), "is not a valid tsibble.")
   expect_identical(ncol(mutate(tourism, New = 1)), ncol(tourism) + 1L)
+  expect_equal(ncol(mutate(tourism, State = NULL)), 4)
   tsbl <- tourism %>%
     group_by(Region, State, Purpose) %>%
     mutate(New = 1:n())
@@ -216,10 +206,6 @@ test_that("summarise()", {
   expect_identical(nrow(tsbl3), nrow(tourism))
 
   expect_error(pedestrian %>% summarise(month = yearmonth(Date_Time)))
-  tbl_ped <- pedestrian %>%
-    group_by(Date) %>%
-    summarise(DailyCount = mean(Count), .drop = TRUE)
-  expect_is(tbl_ped, "tbl_df")
 })
 
 tsbl <- tsibble(
@@ -232,10 +218,6 @@ tsbl <- tsibble(
 )
 
 test_that("transmute()", {
-  expect_equal(
-    ncol(tourism %>% transmute(Region = paste(Region, State), .drop = TRUE)),
-    1
-  )
   out <- tourism %>% transmute(Region = paste(Region, State))
   expect_equal(ncol(out), 4)
   trans_tsbl <- tsbl %>% transmute(z = a / b)
@@ -305,37 +287,4 @@ test_that("summarise() scoped variants", {
       summarise_at(vars(a:c), sum),
     ref_tsbl
   )
-})
-
-dat_x <- tribble(
-  ~ date, ~ bottom1, ~ group1, ~ bottom2, ~ group2, ~ value,
-  ymd("2017-10-01"), 1, "a", "x", "z", 1,
-  ymd("2017-10-02"), 1, "a", "x", "z", 1,
-  ymd("2017-10-01"), 2, "a", "x", "z", 1,
-  ymd("2017-10-02"), 2, "a", "x", "z", 1,
-  ymd("2017-10-01"), 1, "a", "y", "z", 1,
-  ymd("2017-10-02"), 1, "a", "y", "z", 1,
-  ymd("2017-10-01"), 2, "a", "y", "z", 1,
-  ymd("2017-10-02"), 2, "a", "y", "z", 1,
-  ymd("2017-10-01"), 3, "b", "y", "z", 3,
-  ymd("2017-10-02"), 3, "b", "y", "z", 3,
-  ymd("2017-10-01"), 3, "b", "x", "z", 3,
-  ymd("2017-10-02"), 3, "b", "x", "z", 3,
-  ymd("2017-10-01"), 4, "b", "y", "z", 3,
-  ymd("2017-10-02"), 4, "b", "y", "z", 3,
-  ymd("2017-10-01"), 4, "b", "x", "z", 3,
-  ymd("2017-10-02"), 4, "b", "x", "z", 3
-)
-
-tsbl <- as_tsibble(dat_x, key = id(bottom1 | group1, bottom2 | group2), index = date)
-
-test_that("verbs for 2 nestings", {
-  # key_remove
-  sel_data <- select(tsbl, bottom1, bottom2)
-  expect_named(sel_data, c("bottom1", "bottom2", "date"))
-  expect_equal(unclass(key(sel_data)), rlang::syms(c("bottom1", "bottom2")))
-  # key_rename
-  sel_data2 <- select(tsbl, bot1 = bottom1, bot2 = bottom2)
-  expect_named(sel_data2, c("bot1", "bot2", "date"))
-  expect_equal(unclass(key(sel_data2)), rlang::syms(c("bot1", "bot2")))
 })

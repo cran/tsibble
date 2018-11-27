@@ -43,7 +43,7 @@ as_tsibble.mts <- function(x, tz = "UTC", gather = TRUE, ...) {
   }
 }
 
-#' @rdname as-tsibble
+#' @keywords internal
 #' @export
 as_tsibble.msts <- function(x, tz = "UTC", gather = TRUE, ...) {
   if (NCOL(x) == 1) {
@@ -54,14 +54,7 @@ as_tsibble.msts <- function(x, tz = "UTC", gather = TRUE, ...) {
 }
 
 #' @rdname as-tsibble
-#'
-#' @examples
-#' # coerce hts from the "hts" package to tsibble
-#' if (!requireNamespace("hts", quietly = TRUE)) {
-#'   stop("Please install the hts package to run these following examples.")
-#' }
-#' as_tsibble(hts::htseg1)
-#' as_tsibble(hts::htseg2)
+#' @usage NULL
 #' @export
 as_tsibble.hts <- function(x, tz = "UTC", ...) {
   full_labs <- extract_labels(x)
@@ -69,8 +62,8 @@ as_tsibble.hts <- function(x, tz = "UTC", ...) {
     dplyr::select(index, "value")
   tbl_hts <- dplyr::bind_cols(tbl, full_labs)
   # this would work around the special character issue in headers for parse()
-  lst_key <- list(syms(colnames(tbl_hts)[3:ncol(tbl_hts)]))
-  build_tsibble_meta(tbl_hts, key = lst_key, index = index, ordered = TRUE)
+  key <- syms(colnames(tbl_hts)[3:ncol(tbl_hts)])
+  build_tsibble_meta(tbl_hts, key = key, index = index, ordered = TRUE)
 }
 
 # as_tsibble.gts <- function(x, tz = "UTC", ...) {
@@ -107,9 +100,7 @@ as_tibble.gts <- function(x, ...) {
 }
 
 bind_time <- function(x, tz = "UTC") {
-  dplyr::bind_cols(
-    index = time_to_date(x, tz = tz), as_tibble(x, validate = FALSE)
-  )
+  dplyr::bind_cols(index = time_to_date(x, tz = tz), as_tibble(x))
 }
 
 gather_ts <- function(x, tz = "UTC") {
@@ -146,5 +137,5 @@ extract_labels.hts <- function(x) {
   full_labs <- map(chr_labs, ~ rep(., each = nr))
   full_labs <- c(full_labs, list(rep(btm_labels, each = nr)))
   names(full_labs) <- names(old_labels[-1])
-  rev.default(full_labs)
+  full_labs
 }

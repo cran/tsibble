@@ -8,10 +8,8 @@
 #' `index_by()` with no arguments to remove the index grouping vars.
 #'
 #' @param .data A `tbl_ts`.
-#' @param ... 
-#' * A single name-value pair of expression: a new index on LHS and the current 
-#' index on RHS 
-#' * An existing variable to be used as index
+#' @param ... A single name-value pair of expression: a new index on LHS and the 
+#' current index on RHS. Or an existing variable to be used as index.
 #' The index functions that can be used, but not limited:
 #' * [lubridate::year]: yearly aggregation
 #' * [yearquarter]: quarterly aggregation
@@ -49,6 +47,14 @@
 #'     Min_Count = min(Count)
 #'   )
 #'
+#' # Aggregate to 4-hour interval ---
+#' pedestrian %>% 
+#'   group_by(Sensor) %>% 
+#' # convert to UTC for handling DST in floor_date(), since it does not respect tz
+#'   mutate(Date_Time = lubridate::force_tz(Date_Time, tzone = "UTC")) %>% 
+#'   index_by(Date_Time5 = lubridate::floor_date(Date_Time, "4 hour")) %>%
+#'   summarise(Total_Count = sum(Count))
+#'
 #' # Annual trips by Region and State ----
 #' tourism %>% 
 #'   index_by(Year = lubridate::year(Quarter)) %>% 
@@ -75,34 +81,44 @@ index_by.tbl_ts <- function(.data, ...) {
     abort(sprintf("Column `%s` (index) can't be overwritten.", idx_chr))
   }
   # ungroup() protect the index class
-  tbl <- mutate(ungroup(.data), !!! exprs)
+  tbl <- mutate(ungroup(.data), !!! exprs) %>% 
+    group_by(!!! groups(.data))
   idx2 <- sym(expr_name)
   build_tsibble(
     tbl, key = key(.data), index = !! idx, index2 = !! idx2,
-    groups = groups(.data), regular = is_regular(.data), validate = FALSE,
+    regular = is_regular(.data), validate = FALSE,
     ordered = is_ordered(.data), interval = interval(.data)
   )
 }
 
-index_rename <- function(.data, .vars) {
+rename_index <- function(.data, .vars) {
   names <- names(.vars)
-  idx_chr <- as_string(index(.data))
-  new_idx_chr <- names[idx_chr == .vars]
-  sym(new_idx_chr)
+  idx_chr <- index_var(.data)
+  idx <- idx_chr == .vars
+  if (sum(idx) == 0) return(.data)
+
+  names(.data)[idx] <- new_idx_chr <- names[idx]
+  attr(.data, "index") <- sym(new_idx_chr)
+  .data
 }
 
-index2_rename <- function(.data, .vars) {
+rename_index2 <- function(.data, .vars) {
   names <- names(.vars)
-  idx_chr <- as_string(index2(.data))
-  new_idx_chr <- names[idx_chr == .vars]
-  sym(new_idx_chr)
+  idx2_chr <- index2_var(.data)
+  idx <- idx2_chr == .vars
+  if (sum(idx) == 0) return(.data)
+
+  names(.data)[idx] <- new_idx2_chr <- names[idx]
+  attr(.data, "index2") <- sym(new_idx2_chr)
+  .data
 }
 
-index2_update <- function(.data, .vars) {
-  chr <- intersect(quo_name(index2(.data)), .vars)
+mutate_index2 <- function(.data, .vars) {
+  chr <- intersect(index2_var(.data), .vars)
   if (is_empty(chr)) {
-    index(.data)
+    attr(.data, "index2") <- index(.data)
   } else {
-    sym(chr)
+    attr(.data, "index2") <- sym(chr)
   }
+  .data
 }
