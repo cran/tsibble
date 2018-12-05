@@ -20,11 +20,9 @@ tsibble(mth = yearmonth(mth), index = mth)
 ## ------------------------------------------------------------------------
 x <- ymd_h("2015-04-05 01", tz = "Australia/Melbourne")
 # base arithmetic respect tz
-tsbl1 <- tsibble(time = x + (c(0, 3, 6, 9)) * 60 * 60, index = time) %>% 
-  print()
+tsibble(time = x + (c(0, 3, 6, 9)) * 60 * 60, index = time)
 # lubridate arithmetic doesn't respect tz
-tsbl2 <- tsibble(time = x + hours(c(0, 3, 6, 9)) , index = time) %>% 
-  print()
+tsibble(time = x + hours(c(0, 3, 6, 9)) , index = time)
 
 ## ------------------------------------------------------------------------
 tsbl1 <- tsibble(

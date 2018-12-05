@@ -31,10 +31,14 @@ test_that("class: year*", {
   )
 })
 
+si <- sessionInfo()
+is_fedora <- grepl("Fedora", si$running, ignore.case = TRUE)
+
 y <- c("2016", "2016-10", "2016-12-09", "2016-12-09 10")
 tz <- "Australia/Melbourne"
 
 test_that("class: POSIXct", {
+  skip_if(is_fedora)
   expect_error(start(pedestrian$Date_Time, 2017), "Must be")
   expect_equal(start(pedestrian$Date_Time), ymd("2015-01-01", tz = tz))
   expect_equal(
@@ -65,6 +69,7 @@ test_that("class: hms", {
 })
 
 test_that("filter_index()", {
+  skip_if(is_fedora)
   expect_identical(
     pedestrian %>%
       filter_index(~ "2015-02", "2015-08" ~ "2015-09", "2015-12" ~ .),
@@ -75,6 +80,12 @@ test_that("filter_index()", {
         Date_Time <= ymd_h("2015-02-28 23", tz = tz) |
         Date_Time >= ymd_h("2015-12-01 00", tz = tz)
       )
+  )
+  expect_identical(
+    pedestrian %>%
+      filter_index(~ "2015-02", "2015-08" ~ "2015-09", "2015-12" ~ .),
+    pedestrian %>%
+      filter_index(~ "2015-Feb", "2015-Aug" ~ "2015-Sep", "2015-Dec" ~ .)
   )
   expect_identical(
     pedestrian %>%
