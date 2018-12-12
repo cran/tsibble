@@ -1,6 +1,6 @@
 #' A shorthand for filtering time index for a tsibble
 #'
-#' This shorthand respects time zone and encourages compact expressions.
+#' This shorthand respects time zones and encourages compact expressions.
 #'
 #' @param .data A tsibble.
 #' @param ... Formulas that specify start and end periods (inclusive) or strings.
@@ -9,6 +9,15 @@
 #' * `start ~ .`: from a specified beginning to the very end of the data.
 #' Supported index type: `POSIXct` (to seconds), `Date`, `yearweek`, `yearmonth`/`yearmon`,
 #' `yearquarter`/`yearqtr`, `hms`/`difftime` & `numeric`.
+#'
+#' @section System Time Zone ("Europe/London"): 
+#' There is a known issue of an extra hour gained for a machine setting time 
+#' zone to "Europe/London", regardless of the time zone associated with
+#' the POSIXct inputs. It relates to *anytime* and *Boost*. Use `Sys.timezone()` 
+#' to check if the system time zone is "Europe/London". It would be recommended to
+#' change the global environment "TZ" to other equivalent names: GB, GB-Eire, 
+#' Europe/Belfast, Europe/Guernsey, Europe/Isle_of_Man and Europe/Jersey as
+#' documented in `?Sys.timezone()`, using `Sys.setenv(TZ = "GB")` for example.
 #'
 #' @seealso [time_in] for a vector of time index
 #' @export
@@ -27,7 +36,7 @@
 #'
 #' # entire 2015
 #' pedestrian %>%
-#'   filter_index(~ "2015")
+#'   filter_index("2015")
 #'
 #' # specific
 #' pedestrian %>% 
@@ -49,6 +58,7 @@ filter_index <- function(.data, ...) {
 #' `yearmonth`, `yearquarter`, `hms`/`difftime`, and `numeric`.
 #' @inheritParams filter_index
 #'
+#' @inheritSection filter_index System Time Zone ("Europe/London")
 #' @return logical vector
 #' @seealso [filter_index] for filtering tsibble
 #' @export
@@ -82,6 +92,11 @@ time_in.POSIXct <- function(x, ...) {
   formulas <- list2(...)
   n <- length(formulas)
   if (n == 0) return(!logical(length(x)))
+
+  local_tz <- Sys.timezone()
+  if ("Europe/London" %in% local_tz) {
+    warn("System time zone: \"Europe/London\".\nIt may yield an unexpected output. Please see `?filter_index` for details.")
+  }
 
   lgl <- lhs <- rhs <- vector("list", n)
   for (i in seq_len(n)) {

@@ -1,3 +1,21 @@
+# tsibble 0.6.2
+
+## New features
+
+* `scan_gaps()` joins the family of implicit missing values handlers.
+* The rolling window family gains parallel processing capabilities, prefixed by `future_`. It requires the **furrr** package to be installed. (#66)
+
+## Bug fixes
+
+* Regression bug (since tsibble v0.6.0) for subsetting tsibble using `[.tbl_ts`. (#76)
+* Issue a warning when a system time zone is "Europe/London" for `time_in()` and `filter_index()`.
+
+## Misc
+
+* Defunct `split_by()` and `case_na()`.
+* Deprecated `find_duplicates()`.
+* Continue with soft-deprecation of `fill_na()`.
+
 # tsibble 0.6.1
 
 * Fixed check errors on Fedora.

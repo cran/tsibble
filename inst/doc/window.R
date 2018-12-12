@@ -48,3 +48,11 @@ pedestrian %>%
   nest(-Sensor) %>%
   mutate(diag = purrr::map(data, ~ pslide_dfr(., my_diag, .size = 24 * 7)))
 
+## ----furrr, eval = FALSE-------------------------------------------------
+#  library(furrr)
+#  plan(multiprocess)
+#  pedestrian %>%
+#    filter_index(~ "2015-03") %>%
+#    nest(-Sensor) %>%
+#    mutate(diag = future_map(data, ~ future_pslide_dfr(., my_diag, .size = 24 * 7)))
+
