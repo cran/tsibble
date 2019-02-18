@@ -11,7 +11,7 @@ dat_x <- tibble(
 )
 
 test_that("A tsibble cannot be NULL or without index", {
-  expect_error(tsibble(), "Can't determine the index")
+  expect_error(tsibble(), "Can't determine index")
   expect_error(as_tsibble(), "NULL")
 })
 
@@ -34,6 +34,18 @@ test_that("Coerce to tbl_df and data.frame", {
   tsbl <- as_tsibble(dat_x, index = date_time)
   expect_identical(as_tibble(tsbl), dat_x)
   expect_identical(as.data.frame(tsbl), as.data.frame(dat_x))
+})
+
+stocks <- tsibble(
+  time = seq(0, 1e-11, 1e-12)[1:10],
+  X = rnorm(10, 0, 1),
+  Y = rnorm(10, 0, 2),
+  Z = rnorm(10, 0, 4),
+  index = time
+)
+
+test_that("numeric with fractional intervals", {
+  expect_output(print(stocks), "A tsibble: 10 x 4 \\[1e-12\\]")
 })
 
 start <- as.POSIXct("2010-01-15 13:55:23.975", tz = "UTC")
@@ -64,7 +76,7 @@ test_that("nanotime with 1 nanoseconds interval", {
 
 test_that("POSIXt with 1 second interval", {
   expect_identical(index_valid(dat_x$date_time), TRUE)
-  expect_message(tsbl <- as_tsibble(dat_x))
+  expect_message(tsbl <- as_tsibble(dat_x), "Using `date_time` as index variable.")
   expect_output(print(tsbl), "A tsibble: 5 x 2 \\[1s\\]")
   expect_error(as_tsibble(dat_x, key = id(date_time)))
   expect_is(tsbl, "tbl_ts")
@@ -76,7 +88,7 @@ test_that("POSIXt with 1 second interval", {
   expect_identical(format(interval(tsbl)), "1s")
   expect_output(print(interval(tsbl)), "1s")
   expect_true(is_regular(tsbl))
-  expect_equal(key_size(tsbl), 5)
+  # expect_equal(key_size(tsbl), 5)
   expect_equal(n_keys(tsbl), 1)
   expect_equal(group_size(tsbl), 5)
 })
@@ -253,11 +265,11 @@ dat_x <- tibble(
 
 test_that("A single key", {
   expect_error(as_tsibble(dat_x, index = date), "A valid tsibble")
-  expect_error(as_tsibble(dat_x, key = "group", index = date), "Key must be created")
+  expect_error(as_tsibble(dat_x, key = "group", index = date), "Key can only be created")
   tsbl <- as_tsibble(dat_x, key = id(group), index = date)
   expect_output(print(tsbl), "A tsibble: 10 x 3 \\[1D\\]")
   expect_identical(format(groups(tsbl)), "NULL")
-  expect_equal(key_size(tsbl), c(5, 5))
+  # expect_equal(key_size(tsbl), c(5, 5))
   expect_equal(n_keys(tsbl), 2)
 })
 
@@ -324,7 +336,7 @@ test_that("build_tsibble()", {
   ), "Argument `interval` must be class interval,")
   expect_error(
     build_tsibble(pedestrian, key = Sensor, index = Date_Time),
-    "Key must be created"
+    "Key can only be created"
   )
   expect_error(
     build_tsibble(pedestrian, key = dplyr::vars(Sensor), index = Date_Time),

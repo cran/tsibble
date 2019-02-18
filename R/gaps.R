@@ -1,4 +1,4 @@
-globalVariables(".")
+globalVariables(c(".", ".gaps"))
 
 #' Turn implicit missing values into explicit missing values
 #'
@@ -8,25 +8,12 @@ globalVariables(".")
 #' existing `NA` untouched.
 #' * empty: filled with default `NA`.
 #' * filled by values or functions.
+#' @param .full `FALSE` to insert `NA` for each series within its own period. `TRUE`
+#' to fill `NA` over the entire time span of the data (a.k.a. fully balanced panel).
 #'
 #' @family implicit gaps handling
 #' @seealso [tidyr::fill], [tidyr::replace_na] for handling missing values `NA`.
-#' @rdname fill-gaps
 #' @export
-fill_gaps <- function(.data, ...) {
-  if (NROW(.data) == 0L || NROW(.data) == 1L) return(.data)
-  UseMethod("fill_gaps")
-}
-
-#' @export
-fill_gaps.data.frame <- function(.data, ...) {
-  abort("Do you need `tidyr::complete()` for a `tbl_df`/`data.frame`?")
-}
-
-#' @rdname fill-gaps
-#' @param .full `FALSE` to insert `NA` for each key within its own period. `TRUE`
-#' to fill `NA` over the entire time span of the data (a.k.a. fully balanced panel).
-#'
 #' @examples
 #' harvest <- tsibble(
 #'   year = c(2010, 2011, 2013, 2011, 2012, 2014),
@@ -68,8 +55,19 @@ fill_gaps.data.frame <- function(.data, ...) {
 #' pedestrian %>%
 #'   group_by(Sensor) %>%
 #'   fill_gaps(Count = as.integer(median(Count)))
+fill_gaps <- function(.data, ..., .full = FALSE) {
+  UseMethod("fill_gaps")
+}
+
+#' @export
+fill_gaps.data.frame <- function(.data, ...) {
+  abort("Do you need `tidyr::complete()` for a `tbl_df`/`data.frame`?")
+}
+
 #' @export
 fill_gaps.tbl_ts <- function(.data, ..., .full = FALSE) {
+  if (NROW(.data) == 0L || NROW(.data) == 1L) return(.data)
+
   gap_data <- scan_gaps(.data, .full = .full)
   lst_exprs <- enquos(..., .named = TRUE)
   if (NROW(gap_data) == 0) {
@@ -81,10 +79,9 @@ fill_gaps.tbl_ts <- function(.data, ..., .full = FALSE) {
 
   cn <- names(.data)
   if (!is_empty(lst_exprs)) { # any replacement
-    tidyselect::vars_select(cn, !!! names(lst_exprs)) # error handling
-    replaced_df <- as_grouped_df(.data) %>% 
-      summarise(!!! lst_exprs) %>% 
-      ungroup()
+    # error handling
+    tidyselect::vars_select(measured_vars(.data), !!! names(lst_exprs))
+    replaced_df <- ungroup(summarise(as_grouped_df(.data), !!! lst_exprs))
     by_name <- intersect(names(gap_data), names(replaced_df))
 
     if (NROW(replaced_df) > NROW(gap_data)) {
@@ -98,41 +95,46 @@ fill_gaps.tbl_ts <- function(.data, ..., .full = FALSE) {
       gap_data <- left_join(gap_data, replaced_df, by = by_name)
     }
   }
-  full_data <- dplyr::bind_rows(as_tibble(gap_data), .data)
+  grps <- groups(.data)
+  full_data <- group_by(dplyr::bind_rows(as_tibble(gap_data), .data), !!! grps)
   if (!identical(cn, names(full_data))) {
     full_data <- select(full_data, !!! syms(cn)) # keep the original order
   }
-  update_tsibble(full_data, .data, ordered = NULL, interval = interval(.data))
+  update_meta(full_data, .data, ordered = NULL, interval = interval(.data))
 }
 
 #' Scan a tsibble for implicit missing observations
 #'
 #' @inheritParams count_gaps
 #' @family implicit gaps handling
-#' @rdname scan-gaps
-#' @export
-scan_gaps <- function(.data, ...) {
-  UseMethod("scan_gaps")
-}
-
-#' @rdname scan-gaps
 #' @export
 #' @examples
 #' scan_gaps(pedestrian)
+scan_gaps <- function(.data, .full = FALSE, ...) {
+  UseMethod("scan_gaps")
+}
+
+#' @export
 scan_gaps.tbl_ts <- function(.data, .full = FALSE, ...) {
   not_regular(.data)
   int <- interval(.data)
   idx <- index(.data)
   idx_chr <- as_string(idx)
+  if (unknown_interval(int)) return(.data[0L, c(key_vars(.data), idx_chr)])
+
   key <- key(.data)
-  keyed_tbl <- grped_df_by_key(.data)
+  keyed_tbl <- as_grouped_df(group_by_key(.data))
   if (.full) {
     idx_full <- seq_generator(eval_tidy(idx, data = keyed_tbl), int)
-    sum_data <- keyed_tbl %>% 
-      summarise(!! idx_chr := list2(!! idx_chr := idx_full))
-  } else {
-    sum_data <- keyed_tbl %>% 
+    sum_data <- 
       summarise(
+        keyed_tbl, 
+        !! idx_chr := list2(!! idx_chr := idx_full)
+      )
+  } else {
+    sum_data <- 
+      summarise(
+        keyed_tbl,
         !! idx_chr := list2(!! idx_chr := seq_generator(!! idx, int))
       )
   }
@@ -142,31 +144,24 @@ scan_gaps.tbl_ts <- function(.data, .full = FALSE, ...) {
   }
 
   gap_data <- anti_join(ref_data, .data, by = c(key_vars(.data), idx_chr))
-  update_tsibble(gap_data, .data, ordered = NULL, interval = interval(.data))
+  update_meta(gap_data, .data, ordered = NULL, interval = interval(.data))
 }
 
 #' Count implicit gaps
 #' 
 #' @param .data A `tbl_ts`.
+#' @param .full `FALSE` to find gaps for each series within its own period. 
+#' `TRUE` to find gaps over the entire time span of the data.
 #' @param ... Other arguments passed on to individual methods.
 #'
 #' @family implicit gaps handling
-#' @rdname count-gaps
 #' @export
 #' @return
 #' A tibble contains:
 #' * the "key" of the `tbl_ts`
 #' * ".from": the starting time point of the gap
 #' * ".to": the ending time point of the gap
-#' * ".n": the implicit missing observations during the time period
-count_gaps <- function(.data, ...) {
-  UseMethod("count_gaps")
-}
-
-#' @rdname count-gaps
-#' @param .full `FALSE` to find gaps for each group within its own period. `TRUE`
-#' to find gaps over the entire time span of the data.
-#' @export
+#' * ".n": the number of implicit missing observations during the time period
 #' @examples
 #' ped_gaps <- pedestrian %>% 
 #'   count_gaps(.full = TRUE)
@@ -180,22 +175,35 @@ count_gaps <- function(.data, ...) {
 #'   geom_point(aes(y = .to)) +
 #'   coord_flip() +
 #'   theme(legend.position = "bottom")
+count_gaps <- function(.data, .full = FALSE, ...) {
+  UseMethod("count_gaps")
+}
+
+#' @export
 count_gaps.tbl_ts <- function(.data, .full = FALSE, ...) {
   not_regular(.data)
   int <- interval(.data)
-
   idx <- index(.data)
-  grped_tbl <- grped_df_by_key(.data)
-  if (.full) {
-    idx_full <- seq_generator(eval_tidy(idx, data = .data), int)
-    out <- grped_tbl %>% 
-      summarise(gaps = list2(gaps(!! idx, idx_full))) %>% 
-      unnest(gaps)
-  } else {
-    out <- grped_tbl %>% 
-      summarise(gaps = list2(gaps(!! idx, seq_generator(!! idx, int)))) %>% 
-      unnest(gaps)
+
+  gap_data <- scan_gaps(.data, .full = .full, ...)
+  if (unknown_interval(int) || NROW(gap_data) == 0L) {
+    data_key <- .data[0L, key_vars(.data)] 
+    data_key[[".to"]] <- data_key[[".from"]] <- .data[[as_string(idx)]][0L]
+    data_key[[".n"]] <- integer()
+    return(data_key)
   }
+
+  idx_full <- seq_generator(eval_tidy(idx, data = .data), int)
+  grped_tbl <- as_grouped_df(group_by_key(gap_data))
+  lst_out <- 
+    summarise(
+      grped_tbl,
+      !! ".gaps" := list2(tbl_gaps(!! idx, idx_full))
+    )
+
+  idx_type <- class(lst_out[[".gaps"]][[1]][[".from"]])
+  out <- unnest(lst_out, .gaps)
+  class(out[[".from"]]) <- class(out[[".to"]]) <- idx_type
   tibble(!!! out)
 }
 
@@ -204,7 +212,6 @@ count_gaps.tbl_ts <- function(.data, .full = FALSE, ...) {
 #' @inheritParams count_gaps
 #' @export
 #' @family implicit gaps handling
-#' @rdname has-gaps
 #' @return A tibble contains "key" variables and new column `.gaps` of `TRUE`/`FALSE`.
 #' @examples
 #' harvest <- tsibble(
@@ -215,44 +222,36 @@ count_gaps.tbl_ts <- function(.data, .full = FALSE, ...) {
 #' )
 #' has_gaps(harvest)
 #' has_gaps(harvest, .full = TRUE)
-has_gaps <- function(.data, ...) {
-  if (NROW(.data) == 0L) return(tibble(!! ".gaps" := FALSE))
-    
+has_gaps <- function(.data, .full = FALSE, ...) {
   UseMethod("has_gaps")
 }
 
-#' @rdname has-gaps
 #' @export
 has_gaps.tbl_ts <- function(.data, .full = FALSE, ...) {
+  if (NROW(.data) == 0L) return(tibble(!! ".gaps" := FALSE))
+
   not_regular(.data)
   int <- interval(.data)
   idx <- index(.data)
-  grped_tbl <- grped_df_by_key(.data)
+  grped_tbl <- as_grouped_df(group_by_key(.data))
   if (.full) {
     idx_full <- seq_generator(eval_tidy(idx, data = .data), int)
-    res <- grped_tbl %>% 
-      summarise(!! ".gaps" := (length(idx_full) - length(!! idx)) > 0)
-  } else {
-    res <- grped_tbl %>% 
+    res <- 
       summarise(
+        grped_tbl,
+        !! ".gaps" := (length(idx_full) - length(!! idx)) > 0
+      )
+  } else {
+    res <- 
+      summarise(
+        grped_tbl,
         !! ".gaps" := (length(seq_generator(!! idx, int)) - length(!! idx)) > 0
       )
   }
   tibble(!!! res)
 }
 
-#' Find missing elements in `x` with respect to `y`
-#'
-#' @param x,y Atomic vectors. The length of `y` must be greater than the length of `x`.
-#' @return A tibble of columns `.from`, `.to` and `.n`.
-#' @keywords internal
-#' @export
-#' @examples
-#' gaps(x = c(1:3, 5:6, 9:10), y = 1:10)
-gaps <- function(x, y) {
-  if (is_empty(x) && is_empty(y)) {
-    return(tibble(.from = x, .to = y, .n = integer()))
-  }
+tbl_gaps <- function(x, y) {
   len_x <- length(x)
   len_y <- length(y)
   if (len_y < len_x) {
@@ -263,15 +262,15 @@ gaps <- function(x, y) {
     abort(msg)
   }
   gap_vec <- logical(length = len_y)
-  gap_vec[-match(x, y)] <- TRUE
-  gap_rle <- rle(gap_vec)
-  lgl_rle <- as.logical(gap_rle$values)
+  gap_vec[match(x, y)] <- TRUE
+  gap_rle <- rle_lgl(gap_vec)
+  lgl_rle <- gap_rle$values
   gap_idx <- gap_rle$lengths
   to <- cumsum(gap_idx)
   from <- c(1, to[-length(to)] + 1)
   nobs <- gap_idx[lgl_rle]
   if (is_empty(nobs)) {
-    tibble(.from = NA, .to = NA, .n = 0L)
+    tibble(.from = y[0], .to = y[0], .n = integer())
   } else {
     tibble(
       .from = y[from][lgl_rle],

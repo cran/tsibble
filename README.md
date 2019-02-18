@@ -7,15 +7,18 @@
 
 [![Travis-CI Build
 Status](https://travis-ci.org/tidyverts/tsibble.svg?branch=master)](https://travis-ci.org/tidyverts/tsibble)
+[![AppVeyor Build
+Status](https://ci.appveyor.com/api/projects/status/github/tidyverts/tsibble?branch=master&svg=true)](https://ci.appveyor.com/project/tidyverts/tsibble)
 [![Coverage
-Status](https://img.shields.io/codecov/c/github/tidyverts/tsibble/master.svg)](https://codecov.io/github/tidyverts/tsibble?branch=master)
+Status](https://codecov.io/gh/tidyverts/tsibble/branch/master/graph/badge.svg)](https://codecov.io/github/tidyverts/tsibble?branch=master)
 [![CRAN\_Status\_Badge](http://www.r-pkg.org/badges/version/tsibble)](https://cran.r-project.org/package=tsibble)
 [![Downloads](http://cranlogs.r-pkg.org/badges/tsibble?color=brightgreen)](https://cran.r-project.org/package=tsibble)
+[![lifecycle](https://img.shields.io/badge/lifecycle-stable-brightgreen.svg)](https://www.tidyverse.org/lifecycle/#stable)
 
 The **tsibble** package provides a data class of `tbl_ts` to represent
-tidy temporal data. A *tsibble* consists of a time index, key and other
-measured variables in a data-centric format, which is built on top of
-the *tibble*.
+tidy time series data. A *tsibble* consists of a time index, key and
+other measured variables in a data-centric format, which is built on top
+of the *tibble*.
 
 ## Installation
 
@@ -66,18 +69,18 @@ and
 [`vignette("intro-tsibble")`](http://pkg.earo.me/tsibble/articles/intro-tsibble.html)
 for details.
 
-The *tsibble* internally computes the interval for given time indices
-based on the time representation, ranging from year to nanosecond. The
-`POSIXct` corresponds to sub-daily series, `Date` to daily, `yearweek`
-to weekly, `yearmonth`/`yearmon` to monthly, `yearquarter`/`yearqtr` to
-quarterly, and
+*Tsibble* internally computes the interval for given time indices based
+on the time representation, ranging from year to nanosecond, from
+numerics to ordered factors. The `POSIXct` corresponds to sub-daily
+series, `Date` to daily, `yearweek` to weekly, `yearmonth` to monthly,
+`yearquarter` to quarterly, and
 etc.
 
 ### `fill_gaps()` to turn implicit missing values into explicit missing values
 
-Often there are implicit missing cases in temporal data. If the
+Often there are implicit missing cases in time series. If the
 observations are made at regular time interval, we could turn these
-implicit missings to be explicit simply using `fill_gaps()`, filling
+implicit missingness to be explicit simply using `fill_gaps()`, filling
 gaps in precipitation (`precip`) with 0 in the meanwhile. It is quite
 common to replaces `NA`s with its previous observation for each origin
 in time series analysis, which is easily done using `fill()` from
@@ -102,9 +105,9 @@ full_weather
 #> # … with 2.618e+04 more rows
 ```
 
-`fill_gaps()` also handles filling time gaps by values or functions, and
-respects time zones for date-times. Wanna a quick overview of implicit
-missing values? Check out
+`fill_gaps()` also handles filling in time gaps by values or functions,
+and respects time zones for date-times. Wanna a quick overview of
+implicit missing values? Check out
 [`vignette("implicit-na")`](http://pkg.earo.me/tsibble/articles/implicit-na.html).
 
 ### `index_by()` + `summarise()` to aggregate over calendar periods
@@ -146,9 +149,9 @@ tsibble of irregular time space too.
 
 ### A family of window functions: `slide()`, `tile()`, `stretch()`
 
-Temporal data often involves moving window calculations. Several
-functions in *tsibble* allow for different variations of moving windows
-using purrr-like syntax:
+Time series often involves moving window calculations. Several functions
+in *tsibble* allow for different variations of moving windows using
+purrr-like syntax:
 
   - `slide()`/`slide2()`/`pslide()`: sliding window with overlapping
     observations.
@@ -183,7 +186,7 @@ prefixed with `future_`. More examples can be found at
 
 ## More around tsibble
 
-Tsibble also serves a natural input to forecasting and many other
+Tsibble also serves as a natural input for forecasting and many other
 downstream analytical tasks. Stay tuned for
 [tidyverts.org](http://tidyverts.org).
 

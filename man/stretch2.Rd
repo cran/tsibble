@@ -9,26 +9,30 @@
 \alias{pstretch_dfc}
 \title{Stretching window calculation over multiple simultaneously}
 \usage{
-stretch2(.x, .y, .f, ..., .size = 1, .init = 1, .bind = FALSE)
+stretch2(.x, .y, .f, ..., .step = 1, .init = 1, .fill = NA,
+  .bind = FALSE)
 
-stretch2_dfr(.x, .y, .f, ..., .size = 1, .init = 1, .bind = FALSE,
-  .id = NULL)
+stretch2_dfr(.x, .y, .f, ..., .step = 1, .init = 1, .fill = NA,
+  .bind = FALSE, .id = NULL)
 
-stretch2_dfc(.x, .y, .f, ..., .size = 1, .init = 1, .bind = FALSE)
+stretch2_dfc(.x, .y, .f, ..., .step = 1, .init = 1, .fill = NA,
+  .bind = FALSE)
 
-pstretch(.l, .f, ..., .size = 1, .init = 1, .bind = FALSE)
+pstretch(.l, .f, ..., .step = 1, .init = 1, .fill = NA,
+  .bind = FALSE)
 
-pstretch_dfr(.l, .f, ..., .size = 1, .init = 1, .bind = FALSE,
-  .id = NULL)
+pstretch_dfr(.l, .f, ..., .step = 1, .init = 1, .fill = NA,
+  .bind = FALSE, .id = NULL)
 
-pstretch_dfc(.l, .f, ..., .size = 1, .init = 1, .bind = FALSE)
+pstretch_dfc(.l, .f, ..., .step = 1, .init = 1, .fill = NA,
+  .bind = FALSE)
 }
 \arguments{
 \item{.x}{Objects to slide over simultaneously.}
 
 \item{.y}{Objects to slide over simultaneously.}
 
-\item{.f}{A function, formula, or atomic vector.
+\item{.f}{A function, formula, or vector (not necessarily atomic).
 
 If a \strong{function}, it is used as is.
 
@@ -42,25 +46,34 @@ are three ways to refer to the arguments:
 
 This syntax allows you to create very compact anonymous functions.
 
-If \strong{character vector}, \strong{numeric vector}, or \strong{list}, it
-is converted to an extractor function. Character vectors index by name
-and numeric vectors index by position; use a list to index by position
-and name at different levels. Within a list, wrap strings in \code{\link[=get-attr]{get-attr()}}
-to extract named attributes. If a component is not present, the value of
-\code{.default} will be returned.}
+If \strong{character vector}, \strong{numeric vector}, or \strong{list}, it is
+converted to an extractor function. Character vectors index by
+name and numeric vectors index by position; use a list to index
+by position and name at different levels. If a component is not
+present, the value of \code{.default} will be returned.}
 
-\item{...}{Additional arguments passed on to \code{.f}.}
+\item{...}{Additional arguments passed on to the mapped function.}
 
-\item{.size, .init}{An integer for moving and initial window size.}
+\item{.step}{A positive integer for calculating at every specified step
+instead of every single step.}
+
+\item{.init}{A positive integer for an initial window size.}
+
+\item{.fill}{A value to fill at the left/center/right of the data range depending
+on \code{.align} (\code{NA} by default).  \code{NULL} means no filling.}
 
 \item{.bind}{If \code{.x} is a list, should \code{.x} be combined before applying \code{.f}?
 If \code{.x} is a list of data frames, row binding is carried out.}
 
-\item{.id}{If not \code{NULL} a variable with this name will be created
-giving either the name or the index of the data frame.}
+\item{.id}{Either a string or \code{NULL}. If a string, the output will contain
+a variable with that name, storing either the name (if \code{.x} is named) or
+the index (if \code{.x} is unnamed) of the input. If \code{NULL}, the default, no
+variable will be created.
 
-\item{.l}{A list of lists. The length of \code{.l} determines the
-number of arguments that \code{.f} will be called with. List
+Only applies to \code{_dfr} variant.}
+
+\item{.l}{A list of vectors, such as a data frame. The length of \code{.l}
+determines the number of arguments that \code{.f} will be called with. List
 names will be used if present.}
 }
 \description{
@@ -78,11 +91,11 @@ y <- 6:10
 z <- 11:15
 lst <- list(x = x, y = y, z = z)
 df <- as.data.frame(lst)
-stretch2(x, y, sum, .size = 2)
-stretch2(lst, lst, ~ ., .size = 2)
-stretch2(df, df, ~ ., .size = 2)
-pstretch(lst, sum, .size = 1)
-pstretch(list(lst, lst), ~ ., .size = 2)
+stretch2(x, y, sum, .step = 2)
+stretch2(lst, lst, ~ ., .step = 2)
+stretch2(df, df, ~ ., .step = 2)
+pstretch(lst, sum, .step = 1)
+pstretch(list(lst, lst), ~ ., .step = 2)
 
 ###
 # row-wise stretching over data frame

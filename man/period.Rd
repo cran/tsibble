@@ -5,7 +5,7 @@
 \alias{is_53weeks}
 \alias{yearmonth}
 \alias{yearquarter}
-\title{Represent year-week (ISO), year-month or year-quarter objects}
+\title{Represent year-week (ISO) starting on Monday, year-month or year-quarter objects}
 \usage{
 yearweek(x)
 
@@ -28,11 +28,6 @@ Year-week (\code{yearweek}), year-month (\code{yearmonth}) or year-quarter
 }
 \description{
 Create or coerce using \code{yearweek()}, \code{yearmonth()}, or \code{yearquarter()}
-}
-\details{
-It's a known issue that these attributes will be dropped when using
-\link{group_by} and \link{mutate} together. It is recommended to \link{ungroup} first, and
-then use \link{mutate}.
 }
 \section{Index functions}{
 

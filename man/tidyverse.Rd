@@ -7,9 +7,12 @@
 \alias{filter.tbl_ts}
 \alias{slice.tbl_ts}
 \alias{select.tbl_ts}
+\alias{select.grouped_ts}
 \alias{rename.tbl_ts}
+\alias{rename.grouped_ts}
 \alias{mutate.tbl_ts}
 \alias{transmute.tbl_ts}
+\alias{transmute.grouped_ts}
 \alias{summarise.tbl_ts}
 \alias{summarize.tbl_ts}
 \alias{group_by.tbl_ts}
@@ -25,6 +28,7 @@
 \alias{nest.tbl_ts}
 \alias{unnest.lst_ts}
 \alias{unnest.tbl_ts}
+\alias{fill.tbl_ts}
 \alias{fill.grouped_ts}
 \title{Tidyverse methods for tsibble}
 \usage{
@@ -32,23 +36,29 @@
 
 \method{arrange}{grouped_ts}(.data, ..., .by_group = FALSE)
 
-\method{filter}{tbl_ts}(.data, ...)
+\method{filter}{tbl_ts}(.data, ..., .preserve = FALSE)
 
-\method{slice}{tbl_ts}(.data, ...)
+\method{slice}{tbl_ts}(.data, ..., .preserve = FALSE)
 
-\method{select}{tbl_ts}(.data, ..., .drop = FALSE)
+\method{select}{tbl_ts}(.data, ...)
+
+\method{select}{grouped_ts}(.data, ...)
 
 \method{rename}{tbl_ts}(.data, ...)
 
-\method{mutate}{tbl_ts}(.data, ..., .drop = FALSE)
+\method{rename}{grouped_ts}(.data, ...)
 
-\method{transmute}{tbl_ts}(.data, ..., .drop = FALSE)
+\method{mutate}{tbl_ts}(.data, ...)
 
-\method{summarise}{tbl_ts}(.data, ..., .drop = FALSE)
+\method{transmute}{tbl_ts}(.data, ...)
 
-\method{summarize}{tbl_ts}(.data, ..., .drop = FALSE)
+\method{transmute}{grouped_ts}(.data, ...)
 
-\method{group_by}{tbl_ts}(.data, ..., add = FALSE)
+\method{summarise}{tbl_ts}(.data, ...)
+
+\method{summarize}{tbl_ts}(.data, ...)
+
+\method{group_by}{tbl_ts}(.data, ..., add = FALSE, .drop = FALSE)
 
 \method{ungroup}{grouped_ts}(x, ...)
 
@@ -82,6 +92,8 @@
 \method{unnest}{tbl_ts}(data, ..., key = id(), .drop = NA,
   .id = NULL, .sep = NULL, .preserve = NULL)
 
+\method{fill}{tbl_ts}(data, ..., .direction = c("down", "up"))
+
 \method{fill}{grouped_ts}(data, ..., .direction = c("down", "up"))
 }
 \arguments{
@@ -92,13 +104,16 @@
 \item{.by_group}{If \code{TRUE}, will sort first by grouping variable. Applies to
 grouped data frames only.}
 
-\item{.drop}{Deprecated, please use \code{as_tibble()} for \code{.drop = TRUE} instead.
-\code{FALSE} returns a tsibble object as the input. \code{TRUE} drops a tsibble and
-returns a tibble.}
+\item{.preserve}{Optionally, list-columns to preserve in the output. These
+will be duplicated in the same way as atomic vectors. This has
+\link[dplyr:select]{dplyr::select} semantics so you can preserve multiple variables with
+\code{.preserve = c(x, y)} or \code{.preserve = starts_with("list")}.}
 
 \item{add}{When \code{add = FALSE}, the default, \code{group_by()} will
 override existing groups. To add to the existing groups, use
 \code{add = TRUE}.}
+
+\item{.drop}{When \code{.drop = TRUE}, empty groups are dropped.}
 
 \item{x}{A \code{\link[=tbl]{tbl()}}}
 
@@ -177,11 +192,6 @@ the list column is named.}
 will combine the name of the original list-col with the names from
 nested data frame, separated by \code{.sep}.}
 
-\item{.preserve}{Optionally, list-columns to preserve in the output. These
-will be duplicated in the same way as atomic vectors. This has
-\link[dplyr:select]{dplyr::select} semantics so you can preserve multiple variables with
-\code{.preserve = c(x, y)} or \code{.preserve = starts_with("list")}.}
-
 \item{.direction}{Direction in which to fill missing values. Currently
 either "down" (the default) or "up".}
 }
@@ -193,14 +203,16 @@ likely to be issued.
 be issued.
 \item \code{select()}: keeps the variables you mention as well as the index.
 \item \code{transmute()}: keeps the variable you operate on, as well as the index and key.
-\item \code{summarise()} will not collapse on the index variable.
-\item Column-wise verbs, including \code{select()}, \code{transmute()}, \code{summarise()},
+\item \code{summarise()} reduces a sequence of values over time instead of a single summary.
+\item \code{unnest()} requires argument \code{key = id()} to get back to a tsibble.
+}
+}
+\details{
+Column-wise verbs, including \code{select()}, \code{transmute()}, \code{summarise()},
 \code{mutate()} & \code{transmute()}, keep the time context hanging around. That is,
 the index variable cannot be dropped for a tsibble. If any key variable
 is changed, it will validate whether it's a tsibble internally. Use \code{as_tibble()}
 to leave off the time context.
-\item \code{unnest()} requires argument \code{key = id()} to get back to a tsibble.
-}
 }
 \examples{
 # Sum over sensors ----
@@ -217,15 +229,7 @@ stocks <- tsibble(
   Y = rnorm(10, 0, 2),
   Z = rnorm(10, 0, 4)
 )
-stocks \%>\% gather(stock, price, -time)
-# example from tidyr
-stocks <- tsibble(
-  time = as.Date('2009-01-01') + 0:9,
-  X = rnorm(10, 0, 1),
-  Y = rnorm(10, 0, 2),
-  Z = rnorm(10, 0, 4)
-)
-stocksm <- stocks \%>\% gather(stock, price, -time)
+(stocksm <- stocks \%>\% gather(stock, price, -time))
 stocksm \%>\% spread(stock, price)
 nested_stock <- stocksm \%>\% 
   nest(-stock)

@@ -47,12 +47,10 @@
 #'     Min_Count = min(Count)
 #'   )
 #'
-#' # Aggregate to 4-hour interval ---
+#' # Attempt to aggregate to 4-hour interval, with the effects of DST
 #' pedestrian %>% 
 #'   group_by(Sensor) %>% 
-#' # convert to UTC for handling DST in floor_date(), since it does not respect tz
-#'   mutate(Date_Time = lubridate::force_tz(Date_Time, tzone = "UTC")) %>% 
-#'   index_by(Date_Time5 = lubridate::floor_date(Date_Time, "4 hour")) %>%
+#'   index_by(Date_Time4 = lubridate::floor_date(Date_Time, "4 hour")) %>%
 #'   summarise(Total_Count = sum(Count))
 #'
 #' # Annual trips by Region and State ----
@@ -80,12 +78,14 @@ index_by.tbl_ts <- function(.data, ...) {
   if (identical(idx_chr, expr_name)) {
     abort(sprintf("Column `%s` (index) can't be overwritten.", idx_chr))
   }
-  # ungroup() protect the index class
-  tbl <- mutate(ungroup(.data), !!! exprs) %>% 
-    group_by(!!! groups(.data))
   idx2 <- sym(expr_name)
+  tbl <- 
+    group_by(
+      mutate(ungroup(.data), !!! exprs),
+      !!! groups(.data), !! idx2
+    )
   build_tsibble(
-    tbl, key = key(.data), index = !! idx, index2 = !! idx2,
+    tbl, key = key_data(.data), index = !! idx, index2 = !! idx2,
     regular = is_regular(.data), validate = FALSE,
     ordered = is_ordered(.data), interval = interval(.data)
   )

@@ -12,9 +12,9 @@ dont_know <- function(x, FUN) {
   abort(msg)
 }
 
-unknown_interval <- function(x) {
-  no_zeros <- !map_lgl(x, function(x) x == 0)
-  if (sum(no_zeros) == 0) abort("Can't proceed with tsibble of unknown interval.")
+abort_unknown_interval <- function(x) {
+  if (unknown_interval(x)) 
+    abort("Can't proceed with tsibble of unknown interval.")
 }
 
 not_regular <- function(x) {
@@ -24,7 +24,7 @@ not_regular <- function(x) {
 }
 
 suggest_key <- function(x) {
-  sprintf("Key must be created via `id()`.\nDid you mean `key = id(%s)`?", x)
+  sprintf("Key can only be created via `id()`.\nDid you mean `key = id(%s)`?", x)
 }
 
 not_tsibble <- function(x) {
@@ -36,7 +36,7 @@ not_tsibble <- function(x) {
 check_valid_window <- function(.size, .align) {
   if (is_even(.size) && .align %in% c("c", "centre", "center")) {
     abort(sprintf(
-      "Can't use `.align = %s` for even window `.size`.\nPlease use `.align = 'center-left'` or `.align = 'center-right'`.",
+      "Can't use `.align = %s` for even window `.size`.\nPlease specify `.align = 'center-left'` or `.align = 'center-right'`.",
       .align
     ))
   }
@@ -57,3 +57,8 @@ bad_window_function <- function(.size) {
   }
 }
 
+bad_step_function <- function(.step) {
+  if (.step <= 0 || !is_integerish(.step, n = 1)) {
+    abort("`.step` must be a positive integer.")
+  }
+}

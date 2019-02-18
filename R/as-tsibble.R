@@ -98,13 +98,13 @@ as_tsibble.tbl_df <- function(
 
 #' @rdname as-tsibble
 #' @export
+as_tsibble.data.frame <- as_tsibble.tbl_df
+
+#' @keywords internal
+#' @export
 as_tsibble.tbl_ts <- function(x, ...) {
   x
 }
-
-#' @rdname as-tsibble
-#' @export
-as_tsibble.data.frame <- as_tsibble.tbl_df
 
 #' @keywords internal
 #' @export
@@ -128,9 +128,7 @@ as_tsibble.grouped_df <- function(
 
 #' @keywords internal
 #' @export
-as_tsibble.grouped_ts <- function(x, ...) {
-  ungroup(x)
-}
+as_tsibble.grouped_ts <- as_tsibble.tbl_ts
 
 #' @keywords internal
 #' @export
@@ -142,6 +140,46 @@ as_tsibble.default <- function(x, ...) {
 #' @export
 as_tsibble.NULL <- function(x, ...) {
   abort("A tsibble must not be NULL.")
+}
+
+#' Update key and index for a tsibble
+#'
+#' @param x A tsibble.
+#' @inheritParams as_tsibble
+#' @details
+#' Default `NULL` inherits attributes from `x`.
+#' @export
+#' @examples
+#' pedestrian %>% 
+#'   group_by_key() %>% 
+#'   mutate(Hour_Since = Date_Time - min(Date_Time)) %>% 
+#'   update_tsibble(index = Hour_Since)
+update_tsibble <- function(x, key = NULL, index = NULL, regular = NULL, 
+  validate = TRUE) {
+  key <- enquo(key)
+  if (quo_is_null(key)) {
+    key <- key_data(x)
+  }
+  idx <- enquo(index)
+  if (quo_is_null(idx)) {
+    idx <- x %@% "index"
+  }
+  if (is_null(regular)) {
+    regular <- is_regular(x)
+  }
+
+  is_idx_idx2 <- identical(x %@% "index", index2(x))
+  if (is_idx_idx2) {
+    build_tsibble(
+      as_grouped_df(x), key = !! key, index = !! idx,
+      regular = regular, validate = validate
+    )
+  } else {
+    build_tsibble(
+      as_grouped_df(x), key = !! key, index = !! idx, index2 = !! index2(x),
+      regular = regular, validate = validate
+    )
+  }
 }
 
 #' Return measured variables
@@ -175,7 +213,7 @@ measured_vars <- function(x) {
 measured_vars.tbl_ts <- function(x) {
   all_vars <- dplyr::tbl_vars(x)
   key_vars <- key_vars(x)
-  idx_var <- as_string(index(x))
+  idx_var <- index_var(x)
   setdiff(all_vars, c(key_vars, idx_var))
 }
 
@@ -189,7 +227,7 @@ measured_vars.tbl_ts <- function(x) {
 #' @export
 index <- function(x) {
   not_tsibble(x)
-  attr(x, "index")
+  x %@% "index"
 }
 
 #' @rdname index-rd
@@ -202,7 +240,7 @@ index_var <- function(x) {
 #' @export
 index2 <- function(x) {
   not_tsibble(x)
-  attr(x, "index2")
+  x %@% "index2"
 }
 
 #' @rdname index-rd
@@ -224,7 +262,7 @@ index2_var <- function(x) {
 #' @export
 interval <- function(x) {
   not_tsibble(x)
-  attr(x, "interval")
+  x %@% "interval"
 }
 
 #' @rdname regular
@@ -234,14 +272,14 @@ interval <- function(x) {
 #' @export
 is_regular <- function(x) {
   not_tsibble(x)
-  attr(x, "regular")
+  x %@% "regular"
 }
 
 #' @rdname regular
 #' @export
 is_ordered <- function(x) {
   not_tsibble(x)
-  attr(x, "ordered")
+  x %@% "ordered"
 }
 
 #' If the object is a tsibble
@@ -310,13 +348,19 @@ is.grouped_ts <- is_grouped_ts
 #'     key = key(.), index = !! index(.), index2 = Date, interval = interval(.)
 #'   )
 build_tsibble <- function(
-  x, key, index, index2, regular = TRUE, ordered = NULL, interval = NULL,
+  x, key, index, index2, ordered = NULL, regular = TRUE, interval = NULL,
   validate = TRUE
 ) {
   # if key is quosures
-  key <- use_id(x, !! enquo(key))
+  key_sym <- use_id(x, !! enquo(key))
+  is_key_data <- is.data.frame(key_sym)
+  if (is_key_data) {
+    key_data <- key_sym
+    key_sym <- head(names(key_data), -1L)
+  }
 
-  if (dplyr::is_grouped_df(x)) {
+  is_grped <- dplyr::is_grouped_df(x)
+  if (is_grped) {
     tbl <- x
   } else {
     tbl <- as_tibble(x)
@@ -335,37 +379,45 @@ build_tsibble <- function(
     index2 <- validate_index(tbl, index2)
   }
   # (1) validate and process key vars (from expr to a list of syms)
-  key_vars <- validate_key(tbl, key)
+  key_vars <- validate_key(tbl, key_sym)
   # (2) index cannot be part of the keys
   idx_chr <- c(as_string(index), as_string(index2))
   is_index_in_keys <- intersect(idx_chr, key_vars)
   if (is_false(is_empty(is_index_in_keys))) {
     abort(sprintf("Column `%s` can't be both index and key.", idx_chr[[1]]))
   }
+  # arrange in time order (by key and index)
+  if (is_null(ordered)) { # first time to create a tsibble
+    tbl <- arrange(tbl, !!! key_vars, !! index)
+    ordered <- TRUE
+  } else if (is_false(ordered)) { # false returns a warning
+    msg_header <- "Unexpected temporal ordering. Please sort by %s."
+    idx_txt <- expr_text(index)
+    if (is_empty(key)) {
+      warn(sprintf(msg_header, idx_txt))
+    } else {
+      warn(sprintf(msg_header, paste_comma(c(key_vars, idx_txt))))
+    }
+  } # true do nothing
   # validate tbl_ts
+  if (!is_key_data) {
+    key_vars <- unname(key_vars)
+    key_data <- group_data(group_by(tbl, !!! key_vars))
+  }
   if (validate) {
     tbl <- validate_tsibble(data = tbl, key = key_vars, index = index)
   }
   build_tsibble_meta(
-    tbl, key = key_vars, index = !! index, index2 = !! index2,
+    tbl, key = key_data, index = !! index, index2 = !! index2,
     regular = regular, ordered = ordered, interval = interval
   )
 }
 
-#' Low-level constructor to a tsibble object
-#'
-#' `build_tsibble_meta()` assigns the attributes to an object, assuming this
-#' object is a valid tsibble.
-#'
-#' @inheritParams build_tsibble
-#' @keywords internal
-#' @export
 build_tsibble_meta <- function(
-  x, key, index, index2, regular = TRUE, ordered = NULL, interval = NULL
+  x, key, index, index2, ordered = NULL, regular = TRUE, interval = NULL
 ) {
   if (is_null(regular)) abort("Argument `regular` must not be `NULL`.")
 
-  key <- unname(eval_tidy(enquo(key)))
   index <- get_expr(enquo(index))
   index2 <- enquo(index2)
   if (quo_is_missing(index2)) {
@@ -373,6 +425,7 @@ build_tsibble_meta <- function(
   } else {
     index2 <- get_expr(index2)
   }
+  is_grped <- dplyr::is_grouped_df(x)
   tbl <- as_tibble(x)
 
   if (NROW(x) == 0) {
@@ -381,11 +434,17 @@ build_tsibble_meta <- function(
     } else {
       interval <- init_interval()
     }
-    tbl <- update_tsibble_attrs(
+    grp_data <- group_data(tbl)
+    tbl <- new_tibble(
       tbl, "key" = key, "index" = index, "index2" = index2,
-      "interval" = interval, "regular" = regular, "ordered" = TRUE
+      "interval" = interval, "regular" = regular, "ordered" = TRUE,
+      "groups" = NULL, nrow = 0L, class = "tbl_ts"
     )
-    return(set_grped_tsibble_class(tbl))
+    if (is_grped) {
+      cls <- c("grouped_ts", "grouped_df")
+      tbl <- new_tsibble(tbl, "groups" = grp_data, class = cls)
+    }
+    return(tbl)
   }
 
   if (is_false(regular)) {
@@ -400,45 +459,39 @@ build_tsibble_meta <- function(
     ))
   }
 
-  # arrange in time order (by key and index)
-  if (is.null(ordered)) { # first time to create a tsibble
-    tbl <- tbl %>%
-      arrange(!!! key, !! index)
-    ordered <- TRUE
-  } else if (is_false(ordered)) { # false returns a warning
-    msg_header <- "Unexpected temporal ordering. Please sort by %s."
-    idx_txt <- expr_text(index)
-    if (is_empty(key)) {
-      warn(sprintf(msg_header, idx_txt))
-    } else {
-      warn(sprintf(msg_header, paste_comma(c(key, idx_txt))))
-    }
-  } # true do nothing
-
   idx_lgl <- identical(index, index2)
   # convert grouped_df to tsibble:
   # the `groups` arg must be supplied, otherwise returns a `tbl_ts` not grouped
   if (!idx_lgl) {
-    tbl <- tbl %>% group_by(!! index2, add = TRUE)
+    tbl <- group_by(tbl, !! index2, add = TRUE)
   }
-  tbl <- update_tsibble_attrs(
+  grp_data <- group_data(tbl)
+  tbl <- new_tibble(
     tbl, "key" = key, "index" = index, "index2" = index2,
-    "interval" = interval, "regular" = regular, "ordered" = ordered
+    "interval" = interval, "regular" = regular, "ordered" = ordered,
+    "groups" = NULL, nrow = NROW(tbl), class = "tbl_ts"
   )
-  set_grped_tsibble_class(tbl)
+  if (is_grped) {
+    cls <- c("grouped_ts", "grouped_df")
+    tbl <- new_tsibble(tbl, "groups" = grp_data, class = cls)
+  }
+  tbl
 }
 
 #' Create a subclass of a tsibble
 #'
 #' @param x A `tbl_ts`, required.
-#' @param ... Name-value pairs defining attributes.
+#' @param ... Name-value pairs defining new attributes other than a tsibble.
 #' @param class Subclasses to assign to the new object, default: none.
 #'
 #' @export
 new_tsibble <- function(x, ..., class = NULL) {
   not_tsibble(x)
-  x <- update_tsibble_attrs(x, ...)
-  set_tsibble_class(x, class = class)
+  x <- new_tibble(x, ..., class = "tbl_ts")
+  assert_key_data(x %@% key)
+  attr(x, "row.names") <- .set_row_names(NROW(x))
+  class(x) <- c(class, class(x))
+  x
 }
 
 #' Identifiers used for creating key
@@ -460,11 +513,11 @@ validate_index <- function(data, index) {
   }
   if (quo_is_missing(index)) {
     if (sum(val_idx, na.rm = TRUE) != 1) {
-      abort("Can't determine the index and please specify argument `index`.")
+      abort("Can't determine index and please specify argument `index`.")
     }
     chr_index <- names(data)[val_idx]
     chr_index <- chr_index[!is.na(chr_index)]
-    inform(sprintf("Column `%s` is the index.", chr_index))
+    inform(sprintf("Using `%s` as index variable.", chr_index))
   } else {
     chr_index <- tidyselect::vars_pull(names(data), !! index)
     idx_pos <- names(data) %in% chr_index
@@ -473,9 +526,7 @@ validate_index <- function(data, index) {
       return(sym(chr_index))
     } else if (!val_idx[idx_pos]) {
       cls_idx <- map_chr(data, ~ class(.)[1])
-      abort(sprintf(
-        "Unsupported index type: %s", cls_idx[idx_pos])
-      )
+      abort(sprintf("Unsupported index type: %s", cls_idx[idx_pos]))
     }
   }
   if (anyNA(data[[chr_index]])) {
@@ -491,10 +542,12 @@ duplicated_key_index <- function(data, key, index) {
   # time zone associated with the index will be dropped,
   # e.g. nycflights13::weather, thus result in duplicates.
   # dup <- anyDuplicated(data[, identifiers, drop = FALSE])
-  res <- grouped_df(data, vars = key) %>%
-    summarise(!! "zzz" := anyDuplicated.default(!! index)) %>%
-    dplyr::pull(!! "zzz")
-  any_not_equal_to_c(res, 0)
+  res <- 
+    summarise(
+      grouped_df(as_tibble(data), key),
+      !! "zzz" := anyDuplicated.default(!! index)
+    )
+  any_not_equal_to_c(res$zzz, 0)
 }
 
 # check if a comb of key vars result in a unique data entry
@@ -530,10 +583,6 @@ retain_tsibble <- function(data, key, index) {
 #' @export
 #' @examples
 #' as_tibble(pedestrian)
-#'
-#' # a grouped tbl_ts -----
-#' grped_ped <- pedestrian %>% group_by(Sensor)
-#' as_tibble(grped_ped)
 as_tibble.tbl_ts <- function(x, ...) {
   x <- remove_tsibble_attrs(x)
   class(x) <- c("tbl_df", "tbl", "data.frame")
@@ -573,7 +622,7 @@ use_id <- function(x, key) {
   key <- enquo(key)
   if (quo_is_call(key)) {
     call_fn <- call_name(key)
-    if (call_fn == "key") return(eval_tidy(key)) # key(x)
+    if (call_fn %in% c("key", "key_data")) return(eval_tidy(key)) # key(x)
     if (call_fn != "id") {
       abort(sprintf("Please use `key = id(...)`, not `%s(...)`.", call_fn))
     } # vars(x)
@@ -581,17 +630,21 @@ use_id <- function(x, key) {
   key_expr <- get_expr(key)
   if (is_string(key_expr)) {
     abort(suggest_key(key_expr))
-  }
+  } 
   safe_key <- purrr::safely(eval_tidy)(
     key_expr,
     env = child_env(get_env(key), id = id)
   )
-  if (is_null(safe_key$error)) {
+  res <- safe_key$result
+  if (is.data.frame(res)) {
+    assert_key_data(res)
+    return(res)
+  } else if (is_null(safe_key$error)) {
     fn <- function(x) {
       if (is_list(x)) all(map_lgl(x, fn)) else is_expression(x)
     }
-    lgl <- fn(safe_key$result)
-    if (lgl) return(safe_key$result)
+    lgl <- fn(res)
+    if (lgl) return(res)
   }
   abort(suggest_key(as_string(key_expr)))
 }
@@ -605,7 +658,7 @@ use_id <- function(x, key) {
 #' @param data A data frame for creating a tsibble.
 #' @inheritParams tsibble
 #'
-#' @rdname duplicated
+#' @rdname duplicates
 #' @export
 #' @examples
 #' harvest <- tibble(
@@ -627,52 +680,33 @@ is_duplicated <- function(data, key = id(), index) {
 #' @param from_last `TRUE` does the duplication check from the last of identical
 #' elements.
 #'
-#' @rdname duplicated
+#' @rdname duplicates
 #' @export
 are_duplicated <- function(data, key = id(), index, from_last = FALSE) {
   key <- use_id(data, !! enquo(key))
   index <- validate_index(data, enquo(index))
 
-  grouped_df(data, vars = key) %>%
-    mutate(!! "zzz" := duplicated.default(!! index, fromLast = from_last)) %>%
-    dplyr::pull(!! "zzz")
+  res <- 
+    mutate(
+      grouped_df(data, vars = key), 
+      !! "zzz" := duplicated.default(!! index, fromLast = from_last)
+    )
+  res$zzz
 }
 
-#' @rdname duplicated
+#' @rdname duplicates
 #' @export
 duplicates <- function(data, key = id(), index) {
   key <- use_id(data, !! enquo(key))
   index <- validate_index(data, enquo(index))
 
-  grouped_df(data, vars = key) %>%
+  ungroup(
     filter(
+      grouped_df(data, vars = key),
       duplicated.default(!! index) |
       duplicated.default(!! index, fromLast = TRUE)
-    ) %>%
-    ungroup()
-}
-
-update_tsibble_attrs <- function(x, ...) {
-  # Can't use structure() here because it breaks the row.names attribute
-  attribs <- list2(...)
-  if (has_length(attribs)) {
-    attributes(x)[names(attribs)] <- attribs
-  }
-  x
-}
-
-set_tsibble_class <- function(x, class = NULL) {
-  attr(x, "row.names") <- .set_row_names(NROW(x))
-  class(x) <- c(class, "tbl_ts", "tbl_df", "tbl", "data.frame")
-  x
-}
-
-set_grped_tsibble_class <- function(x) {
-  if (is_empty(groups(x))) {
-    set_tsibble_class(x)
-  } else {
-    set_tsibble_class(x, class = "grouped_ts")
-  }
+    )
+  )
 }
 
 remove_tsibble_attrs <- function(x) {
@@ -681,10 +715,13 @@ remove_tsibble_attrs <- function(x) {
   x
 }
 
-#' @export
-`row.names<-.tbl_ts` <- function(x, value) {
-  if (!is_null(value)) {
-    warn("Setting row names on a tsibble is deprecated.")
+assert_key_data <- function(x) {
+  if(is_false(
+    is.data.frame(x) &&
+    NCOL(x) > 0 &&
+    is.list(x[[NCOL(x)]]) &&
+    tail(names(x), 1L) == ".rows"
+  )) {
+    abort("The `key` attribute must be a data frame with its last column called `.rows`.")
   }
-  NextMethod()
 }

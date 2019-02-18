@@ -24,12 +24,12 @@ new_data <- function(.data, n = 1L, ...) {
 #' new_data(pedestrian, n = 3)
 new_data.tbl_ts <- function(.data, n = 1L, keep_all = FALSE, ...) {
   not_regular(.data)
-  unknown_interval(int <- interval(.data))
+  abort_unknown_interval(int <- interval(.data))
 
   idx <- index(.data)
   tunit <- time_unit(int)
 
-  grped_df <- grped_df_by_key(.data)
+  grped_df <- as_grouped_df(group_by_key(.data))
   last_entry <- summarise(grped_df, !! idx := max(!! idx))
 
   nc <- NCOL(last_entry)
@@ -46,7 +46,7 @@ new_data.tbl_ts <- function(.data, n = 1L, keep_all = FALSE, ...) {
     cn <- setdiff(names(.data), measured_vars(.data))
     out <- select(out, !!! cn)
   }
-  update_tsibble(out, .data, ordered = TRUE, interval = interval(.data))
+  update_meta(out, .data, ordered = TRUE, interval = interval(.data))
 }
 
 #' @description
@@ -75,7 +75,7 @@ append_row.tbl_ts <- function(.data, n = 1L, ...) {
   out <- dplyr::bind_rows(.data, new_data)
   ord <- is_ordered(.data)
   if (ord) ord <- NULL # re-order
-  update_tsibble(out, .data, ordered = ord, interval = interval(.data))
+  update_meta(out, .data, ordered = ord, interval = interval(.data))
 }
 
 #' @export

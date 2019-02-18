@@ -1,3 +1,37 @@
+# tsibble 0.7.0
+
+The tsibble's data structure and API reach to the lifecycle of stability.
+
+## Breaking changes
+
+* Following the changes in dplyr `v0.8.0` grouped data frames, tsibble allows for empty key values and disregards the lazily stored key. All operations now recalculate the keying structure.
+* Grouped tsibble (`grouped_ts`) is a subclassing of `grouped_df`.
+* The argument `.size` is retired in `stretch()` in favour of `.step`.
+* `stretch()` gained a new `.fill = NA` argument, which returns the same length as the input. To restore the previous behaviour, please use `.fill = NULL`. (#88)
+
+## New features
+
+* `slide_tsibble()`, `tile_tsibble()`, `stretch_tsibble()` provide fast and shorthand subsetting tsibble by rolling rows.
+* `slide()` gained a new `.step` argument for calculating at every specified step instead of every single step.
+* `update_tsibble()` to update key and index a bit easier.
+
+## Bug fixes
+
+* Fixed `rbind()` for dropping custom index class. (#78)
+* Fixed `count_gaps()` for dropping custom index class.
+* `count_gaps()` now only summarises keys with gaps instead of all the keys.
+* Fixed `guess_frequency.yearweek()` returning `Inf`. (@jeffzi, #84)
+* Fixed incorrect interval computation for fractional doubles.
+* More appropriately handles sub-second intervals.
+* If grouped tsibble, `fill_gaps()` returns a grouped tsibble too.
+
+## Defunct & deprecated functions
+
+* Defunct `find_duplicates()`.
+* Deprecated `fill_na()` in favour of `fill_gaps()`.
+* Defunct argument `.drop` in column-wise dplyr verbs.
+* Defunct `key_by()` (no idea why it's there).
+
 # tsibble 0.6.2
 
 ## New features
