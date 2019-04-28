@@ -17,7 +17,7 @@
 #' * [yearweek]: weekly aggregation
 #' * [as.Date] or [lubridate::as_date]: daily aggregation
 #' * [lubridate::ceiling_date], [lubridate::floor_date], or [lubridate::round_date]: 
-#' sub-daily aggregation
+#' fine-resolution aggregation
 #' * other index functions from other packages
 #'
 #' @details
@@ -27,7 +27,8 @@
 #' @rdname index-by
 #' @export
 #' @examples
-#' # Monthly counts across sensors ----
+#' # Monthly counts across sensors
+#' library(dplyr, warn.conflicts = FALSE)
 #' monthly_ped <- pedestrian %>% 
 #'   group_by(Sensor) %>% 
 #'   index_by(Year_Month = yearmonth(Date_Time)) %>%
@@ -38,7 +39,7 @@
 #' monthly_ped
 #' index(monthly_ped)
 #' 
-#' # Using existing variable ----
+#' # Using existing variable
 #' pedestrian %>% 
 #'   group_by(Sensor) %>% 
 #'   index_by(Date) %>%
@@ -53,7 +54,7 @@
 #'   index_by(Date_Time4 = lubridate::floor_date(Date_Time, "4 hour")) %>%
 #'   summarise(Total_Count = sum(Count))
 #'
-#' # Annual trips by Region and State ----
+#' # Annual trips by Region and State
 #' tourism %>% 
 #'   index_by(Year = lubridate::year(Quarter)) %>% 
 #'   group_by(Region, State) %>% 
@@ -64,30 +65,29 @@ index_by <- function(.data, ...) {
 
 #' @export
 index_by.tbl_ts <- function(.data, ...) {
-  exprs <- enexprs(..., .named = TRUE)
+  exprs <- enquos(..., .named = TRUE)
   if (is_empty(exprs)) {
-    attr(.data, "index2") <- index(.data)
+    attr(.data, "index2") <- index_var(.data)
     return(.data)
   }
   if (is_false(has_length(exprs, 1))) {
     abort("`index_by()` only accepts one expression.")
   }
   expr_name <- names(exprs)[1]
-  idx <- index(.data)
-  idx_chr <- as_string(idx)
-  if (identical(idx_chr, expr_name)) {
-    abort(sprintf("Column `%s` (index) can't be overwritten.", idx_chr))
+  idx <- index_var(.data)
+  if (identical(idx, expr_name)) {
+    abort(sprintf("Column `%s` (index) can't be overwritten.", idx))
   }
   idx2 <- sym(expr_name)
   tbl <- 
     group_by(
       mutate(ungroup(.data), !!! exprs),
-      !!! groups(.data), !! idx2
+      !!! groups(.data), !! idx2, .drop = FALSE
     )
   build_tsibble(
-    tbl, key = key_data(.data), index = !! idx, index2 = !! idx2,
-    regular = is_regular(.data), validate = FALSE,
-    ordered = is_ordered(.data), interval = interval(.data)
+    tbl, key_data = key_data(.data), index = !! idx, index2 = !! idx2,
+    ordered = is_ordered(.data), interval = interval(.data),
+    validate = FALSE
   )
 }
 
@@ -97,8 +97,7 @@ rename_index <- function(.data, .vars) {
   idx <- idx_chr == .vars
   if (sum(idx) == 0) return(.data)
 
-  names(.data)[idx] <- new_idx_chr <- names[idx]
-  attr(.data, "index") <- sym(new_idx_chr)
+  attr(.data, "index") <- names(.data)[idx] <- new_idx_chr <- names[idx]
   .data
 }
 
@@ -108,17 +107,16 @@ rename_index2 <- function(.data, .vars) {
   idx <- idx2_chr == .vars
   if (sum(idx) == 0) return(.data)
 
-  names(.data)[idx] <- new_idx2_chr <- names[idx]
-  attr(.data, "index2") <- sym(new_idx2_chr)
+  attr(.data, "index2") <- names(.data)[idx] <- new_idx2_chr <- names[idx]
   .data
 }
 
 mutate_index2 <- function(.data, .vars) {
   chr <- intersect(index2_var(.data), .vars)
-  if (is_empty(chr)) {
-    attr(.data, "index2") <- index(.data)
+  if (!is_empty(chr)) {
+    attr(.data, "index2") <- chr
   } else {
-    attr(.data, "index2") <- sym(chr)
+    attr(.data, "index2") <- index_var(.data)
   }
   .data
 }

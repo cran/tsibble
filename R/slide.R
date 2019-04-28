@@ -158,6 +158,8 @@ slide_dfc <- function(
 #' # row-wise sliding over data frame
 #' ###
 #'
+#' library(tidyr)
+#' library(dplyr)
 #' my_df <- data.frame(
 #'   group = rep(letters[1:2], each = 8),
 #'   x = c(1:8, 8:1),
@@ -399,9 +401,11 @@ partial_pslider <- function(
 #' and proceed.
 #'
 #' They are useful for preparing the tsibble for time series cross validation.
-#' They all return a tsibble including new column `.id` as part of the key. The
+#' They all return a tsibble including a new column `.id` as part of the key. The
 #' output dimension will increase considerably with `slide_tsibble()` and
-#' `stretch_tsibble()`.
+#' `stretch_tsibble()`, which is likely to run out of memory when the data is
+#' large. Alternatively, you could construct cross validation using `pslide()`
+#' and `pstretch()` to avoid the memory issue.
 #' @family rolling tsibble
 #' @export
 #' @examples
@@ -409,7 +413,7 @@ partial_pslider <- function(
 #'   year = rep(2010:2012, 2),
 #'   fruit = rep(c("kiwi", "cherry"), each = 3),
 #'   kilo = sample(1:10, size = 6),
-#'   key = id(fruit), index = year
+#'   key = fruit, index = year
 #' )
 #' harvest %>% 
 #'   slide_tsibble(.size = 2)
@@ -444,10 +448,10 @@ roll_tsibble <- function(.x, indices, .id = ".id") {
       mutate(tbl[row_indices, ], !! .id := id_indices), 
       !!! groups(.x)
     )
-  new_key <- c(sym(.id), key(.x))
+  new_key <- c(.id, key_vars(.x))
   build_tsibble(
-    res, key = new_key, index = !! index(.x), index2 = !! index2(.x),
-    regular = is_regular(.x), interval = interval(.x), validate = FALSE
+    res, key = !! new_key, index = !! index(.x), index2 = !! index2(.x),
+    interval = interval(.x), validate = FALSE
   )
 }
 
@@ -556,8 +560,7 @@ bind_df <- function(x, .size, .fill = NA, .id = NULL, byrow = TRUE) {
       return(dplyr::bind_cols(!!! x))
     }
   }
-  lst <- new_list_along(x[[abs_size]])
-  lst[] <- .fill
+  lst <- rep_named(names(x[[abs_size]]), list(.fill))
   if (byrow) {
     dplyr::bind_rows(lst, !!! x[-seq_len(abs_size - 1)], .id = .id)
   } else {

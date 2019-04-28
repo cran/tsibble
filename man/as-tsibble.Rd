@@ -2,7 +2,6 @@
 % Please edit documentation in R/as-tsibble.R, R/ts2tsibble.R
 \name{as_tsibble}
 \alias{as_tsibble}
-\alias{as_tsibble.tbl_df}
 \alias{as_tsibble.data.frame}
 \alias{as_tsibble.list}
 \alias{as_tsibble.ts}
@@ -10,29 +9,24 @@
 \alias{as_tsibble.hts}
 \title{Coerce to a tsibble object}
 \usage{
-as_tsibble(x, ...)
+as_tsibble(x, key = NULL, index, regular = TRUE, validate = TRUE,
+  .drop = TRUE, ...)
 
-\method{as_tsibble}{tbl_df}(x, key = id(), index, regular = TRUE,
-  validate = TRUE, ...)
+\method{as_tsibble}{data.frame}(x, key = NULL, index, regular = TRUE,
+  validate = TRUE, .drop = TRUE, ...)
 
-\method{as_tsibble}{data.frame}(x, key = id(), index, regular = TRUE,
-  validate = TRUE, ...)
+\method{as_tsibble}{list}(x, key = NULL, index, regular = TRUE,
+  validate = TRUE, .drop = TRUE, ...)
 
-\method{as_tsibble}{list}(x, key = id(), index, regular = TRUE,
-  validate = TRUE, ...)
+\method{as_tsibble}{ts}(x, ..., tz = "UTC")
 
-\method{as_tsibble}{ts}(x, tz = "UTC", ...)
-
-\method{as_tsibble}{mts}(x, tz = "UTC", gather = TRUE, ...)
+\method{as_tsibble}{mts}(x, ..., tz = "UTC", pivot_longer = TRUE)
 }
 \arguments{
 \item{x}{Other objects to be coerced to a tsibble (\code{tbl_ts}).}
 
-\item{...}{Other arguments passed on to individual methods.}
-
-\item{key}{Variable(s) that define unique time indices, used in conjunction
-with the helper \code{\link[=id]{id()}}. If a univariate time series (without an explicit key),
-simply call \code{id()}.}
+\item{key}{Unquoted variable(s) that uniquely determine time indices. \code{NULL} for
+empty key, and works with tidy selector (e.g. \code{starts_with()}).}
 
 \item{index}{A bare (or unquoted) variable to specify the time index variable.}
 
@@ -43,10 +37,14 @@ interval is determined by the greatest common divisor of index column, if \code{
 of key variables leads to unique time indices (i.e. a valid tsibble). If you
 are sure that it's a valid input, specify \code{FALSE} to skip the checks.}
 
+\item{.drop}{If \code{TRUE}, empty key groups are dropped.}
+
+\item{...}{Other arguments passed on to individual methods.}
+
 \item{tz}{Time zone. May be useful when a \code{ts} object is more frequent than
 daily.}
 
-\item{gather}{TRUE gives a "long" data form, otherwise as "wide" as \code{x}.}
+\item{pivot_longer}{TRUE gives a "longer" form of the data, otherwise as is.}
 }
 \value{
 A tsibble object.
@@ -55,36 +53,33 @@ A tsibble object.
 Coerce to a tsibble object
 }
 \examples{
-# coerce tibble to tsibble w/o a key ----
+# coerce tibble to tsibble w/o a key
 tbl1 <- tibble(
   date = as.Date("2017-01-01") + 0:9,
   value = rnorm(10)
 )
 as_tsibble(tbl1)
-# specify the index var
+# supply the index to suppress the message
 as_tsibble(tbl1, index = date)
 
-# coerce tibble to tsibble with one key ----
+# coerce tibble to tsibble with one key
 # "date" is automatically considered as the index var, and "group" is the key
 tbl2 <- tibble(
   mth = rep(yearmonth("2017-01") + 0:9, 3),
   group = rep(c("x", "y", "z"), each = 10),
   value = rnorm(30)
 )
-as_tsibble(tbl2, key = id(group))
-as_tsibble(tbl2, key = id(group), index = mth)
-
+as_tsibble(tbl2, key = group)
+as_tsibble(tbl2, key = group, index = mth)
 # coerce ts to tsibble
 as_tsibble(AirPassengers)
 as_tsibble(sunspot.year)
 as_tsibble(sunspot.month)
 as_tsibble(austres)
-
 # coerce mts to tsibble
 z <- ts(matrix(rnorm(300), 100, 3), start = c(1961, 1), frequency = 12)
 as_tsibble(z)
-as_tsibble(z, gather = FALSE)
-
+as_tsibble(z, pivot_longer = FALSE)
 }
 \seealso{
 \link{tsibble}

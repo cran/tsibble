@@ -71,6 +71,7 @@ filter_index <- function(.data, ..., .preserve = FALSE) {
 #' lgl2 <- time_in(x, "2015-03-23 10" ~ "2015-10-31 12")
 #' lgl2[1:10]
 #'
+#' library(dplyr)
 #' pedestrian %>% 
 #'   filter(time_in(Date_Time, "2015-03-23 10" ~ "2015-10-31 12"))
 #' pedestrian %>% 
@@ -80,23 +81,15 @@ filter_index <- function(.data, ..., .preserve = FALSE) {
 #'     "Autumn-Winter", "Spring-Summer"
 #'   ))
 time_in <- function(x, ...) {
-  UseMethod("time_in")
-}
-
-#' @export
-time_in.default <- function(x, ...) {
-  dont_know(x, "time_in")
-}
-
-#' @export
-time_in.POSIXct <- function(x, ...) {
   formulas <- list2(...)
   n <- length(formulas)
   if (n == 0) return(!logical(length(x)))
 
-  local_tz <- Sys.timezone()
-  if ("Europe/London" %in% local_tz) {
-    warn("System time zone: \"Europe/London\".\nIt may yield an unexpected output. Please see `?filter_index` for details.")
+  if (lubridate::is.POSIXct(x)) {
+    local_tz <- Sys.timezone()
+    if ("Europe/London" %in% local_tz) {
+      warn("System time zone: \"Europe/London\".\nIt may yield an unexpected output. Please see `?filter_index` for details.")
+    }
   }
 
   lgl <- lhs <- rhs <- vector("list", n)
@@ -113,30 +106,6 @@ time_in.POSIXct <- function(x, ...) {
 
   purrr::reduce(lgl, `|`)
 }
-
-#' @export
-time_in.Date <- time_in.POSIXct
-
-#' @export
-time_in.difftime <- time_in.POSIXct
-
-#' @export
-time_in.yearweek <- time_in.POSIXct
-
-#' @export
-time_in.yearmonth <- time_in.POSIXct
-
-#' @export
-time_in.yearmon <- time_in.POSIXct
-
-#' @export
-time_in.yearquarter <- time_in.POSIXct
-
-#' @export
-time_in.yearqtr <- time_in.POSIXct
-
-#' @export
-time_in.numeric <- time_in.POSIXct
 
 #' @importFrom stats start end
 start.numeric <- function(x, y = NULL, ...) {
@@ -258,21 +227,51 @@ end.POSIXct <- function(x, y = NULL, ...) {
 
 start.yearweek <- function(x, y = NULL, ...) {
   x <- as_date(x)
-  NextMethod()
+  if (!is_null(y)) {
+    y <- as.character(as_date(yearweek(y)))
+  }
+  start(x = x, y = y)
 }
 
 end.yearweek <- function(x, y = NULL, ...) {
   x <- as_date(x)
-  NextMethod()
+  if (!is_null(y)) {
+    y <- as.character(as_date(yearweek(y)))
+  }
+  end(x = x, y = y)
 }
 
-start.yearmonth <- start.yearweek
+start.yearmonth <- function(x, y = NULL, ...) {
+  x <- as_date(x)
+  if (!is_null(y)) {
+    y <- as.character(as_date(yearmonth(y)))
+  }
+  start(x = x, y = y)
+}
 
-end.yearmonth <- end.yearweek
+end.yearmonth <- function(x, y = NULL, ...) {
+  x <- as_date(x)
+  if (!is_null(y)) {
+    y <- as.character(as_date(yearmonth(y)))
+  }
+  end(x = x, y = y)
+}
 
-start.yearquarter <- start.yearweek
+start.yearquarter <- function(x, y = NULL, ...) {
+  x <- as_date(x)
+  if (!is_null(y)) {
+    y <- as.character(as_date(yearquarter(y)))
+  }
+  start(x = x, y = y)
+}
 
-end.yearquarter <- end.yearweek
+end.yearquarter <- function(x, y = NULL, ...) {
+  x <- as_date(x)
+  if (!is_null(y)) {
+    y <- as.character(as_date(yearquarter(y)))
+  }
+  end(x = x, y = y)
+}
 
 start.yearmon <- function(x, y = NULL, ...) {
   x <- yearmonth(x)

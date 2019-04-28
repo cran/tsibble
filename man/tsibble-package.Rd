@@ -7,39 +7,42 @@
 \description{
 \if{html}{\figure{logo.png}{options: align='right'}}
 The \strong{tsibble} package provides a data class of \code{tbl_ts} to represent tidy
-temporal data. A tsibble consists of a time index, key, and other measured
+time series data. A tsibble consists of a time index, key, and other measured
 variables in a data-centric format, which is built on top of the tibble.
 }
 \section{Index}{
 
-The time indices are preserved as the essential data component of the tsibble,
-instead of implicit attribute (for example, the \code{tsp} attribute in a \code{ts} object). A
-few index classes, such as \code{Date}, \code{POSIXct}, and \code{difftime}, forms the basis of
-the tsibble, with new additions \link{yearweek}, \link{yearmonth}, and \link{yearquarter}
-representing year-week, year-month, and year-quarter respectively. Any arbitrary
-index class are also supported, including \code{zoo::yearmon}, \code{zoo::yearqtr}, and
-\code{nanotime}.
-For a \code{tbl_ts} of regular interval,
-a choice of index representation has to be made. For example, a monthly data
-should correspond to time index created by \link{yearmonth} or \code{zoo::yearmon},
-instead of \code{Date} or \code{POSIXct}. Because months in a year ensures the regularity,
-12 months every year. However, if using \code{Date}, a month contains days ranging
-from 28 to 31 days, which results in irregular time space. This is also applicable
-to year-week and year-quarter.
+An extensive range of indices are supported by tsibble: native time classes in R
+(such as \code{Date}, \code{POSIXct}, and \code{difftime}) and tsibble's new additions
+(such as \link{yearweek}, \link{yearmonth}, and \link{yearquarter}). Some commonly-used classes
+have built-in support too, including \code{ordered}, \code{hms::hms}, \code{zoo::yearmon},
+\code{zoo::yearqtr}, and \code{nanotime}.
+
+For a \code{tbl_ts} of regular interval, a choice of index representation has to
+be made. For example, a monthly data should correspond to time index created
+by \link{yearmonth} or \code{zoo::yearmon}, instead of \code{Date} or \code{POSIXct}. Because
+months in a year ensures the regularity, 12 months every year. However, if
+using \code{Date}, a month containing days ranges from 28 to 31 days, which results
+in irregular time space. This is also applicable to year-week and year-quarter.
 
 Since the \strong{tibble} that underlies the \strong{tsibble} only accepts a 1d atomic
-vector or a list, a \code{tbl_ts} doesn't accept \code{POSIXlt} and \code{timeDate} columns.
+vector or a list, the tsibble doesn't accept types of \code{POSIXlt} and \code{timeDate}.
+
+Tsibble supports arbitrary index classes, as long as they can be ordered from
+past to future. To support a custom class, one needs to define \code{\link[=index_valid]{index_valid()}}
+for the class and calculate the interval through \code{\link[=interval_pull]{interval_pull()}}.
 }
 
 \section{Key}{
 
-Key variable(s) together with the index uniquely identifies each record, which
-can be created via the \link{id} function as identifiers:
+Key variable(s) together with the index uniquely identifies each record:
 \itemize{
-\item Empty: an implicit variable \code{id()} resulting in a univariate time series.
-\item One or more variables: explicit variables. For example, \code{data(pedestrian)}
-and \code{data(tourism)} use the \code{id(Sensor)} & \code{id(Region, State, Purpose)} as
-the key respectively.
+\item Empty: an implicit variable. \code{NULL} resulting in a univariate time series.
+\item A single variable: For example, \code{data(pedestrian)} use the bare \code{Sensor} as
+the key.
+\item Multiple variables: For example, Declare \code{key = c(Region, State, Purpose)}
+for \code{data(tourism)}.
+Key can be created in conjunction with tidy selectors like \code{starts_with()}.
 }
 }
 
@@ -58,13 +61,15 @@ cannot be determined (\code{?}).
 
 An interval is obtained based on the corresponding index representation:
 \itemize{
-\item integer/numeric: either "unit" or "year"
-\item \code{yearquarter}/\code{yearqtr}: "quarter"
-\item \code{yearmonth}/\code{yearmon}: "month"
-\item \code{yearweek}: "week"
-\item \code{Date}: "day"
-\item \code{POSIXct}: "hour", "minute", "second", "millisecond", "microsecond"
-\item \code{nanotime}: "nanosecond"
+\item \code{integer}/\code{numeric}/\code{ordered}: either "unit" or "year" (\code{Y})
+\item \code{yearquarter}/\code{yearqtr}: "quarter" (\code{Q})
+\item \code{yearmonth}/\code{yearmon}: "month" (\code{M})
+\item \code{yearweek}: "week" (\code{W})
+\item \code{Date}: "day" (\code{D})
+\item \code{difftime}: "quarter" (\code{Q}), "month" (\code{M}), "week" (\code{W}), "day" (D),
+"hour" (\code{h}), "minute" (\code{m}), "second" (\code{s})
+\item \code{POSIXct}/\code{hms}: "hour" (\code{h}), "minute" (\code{m}), "second" (\code{s}), "millisecond" (\code{us}), "microsecond" (\code{ms})
+\item \code{nanotime}: "nanosecond" (\code{ns})
 }
 }
 
@@ -92,7 +97,7 @@ tsibble(
   qtr = rep(yearquarter("2010-01") + 0:9, 3),
   group = rep(c("x", "y", "z"), each = 10),
   value = rnorm(30),
-  key = id(group)
+  key = group
 )
 }
 \seealso{
@@ -110,11 +115,7 @@ Authors:
 \itemize{
   \item Di Cook (0000-0002-3813-7155) [thesis advisor]
   \item Rob Hyndman (0000-0002-2140-5352) [thesis advisor]
-}
-
-Other contributors:
-\itemize{
-  \item Mitchell O'Hara-Wild [contributor]
+  \item Mitchell O'Hara-Wild (0000-0001-6729-7695)
 }
 
 }

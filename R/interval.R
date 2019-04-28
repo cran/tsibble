@@ -1,38 +1,35 @@
 #' Pull time interval from a vector
 #'
-#' Assuming regularly spaced time, the `pull_interval()` returns a list of time
+#' Assuming regularly spaced time, the `interval_pull()` returns a list of time
 #' components as the "interval" class.
 #'
-#' @param x A vector of `POSIXt`, `Date`, `yearmonth`, `yearquarter`, `difftime`,
-#' `hms`, `ordered`, `integer`, `numeric`.
+#' @param x A vector of `POSIXct`, `Date`, `yearweek`, `yearmonth`, `yearquarter`,
+#' `difftime`/`hms`, `ordered`, `integer`, `numeric`, and `nanotime`.
 #'
-#' @details `index_valid()` and `pull_interval()` make a tsibble extensible to 
-#' support custom time index.
+#' @details Extend tsibble to support custom time indexes by defining S3 generics
+#' `index_valid()` and `interval_pull()` for them. 
 #' @return an "interval" class (a list) includes "year", 
 #' "quarter", "month", "week", "day", "hour", "minute", "second", "millisecond",
 #' "microsecond", "nanosecond", "unit".
 #'
-#' @rdname pull-interval
+#' @rdname interval-pull
 #' @export
 #'
 #' @examples
 #' x <- seq(as.Date("2017-10-01"), as.Date("2017-10-31"), by = 3)
-#' pull_interval(x)
-pull_interval <- function(x) {
-  if (has_length(x, 1L) || has_length(x, 0L)) {
-    return(init_interval())
-  }
-  UseMethod("pull_interval")
+#' interval_pull(x)
+interval_pull <- function(x) {
+  UseMethod("interval_pull")
 }
 
 #' @export
-pull_interval.default <- function(x) {
-  init_interval()
+interval_pull.default <- function(x) {
+  dont_know(x, "interval_pull()")
 }
 
 #' @export
 # Assume date is regularly spaced
-pull_interval.POSIXt <- function(x) {
+interval_pull.POSIXt <- function(x) {
   dttm <- as.double(x)
   if (all((dttm %% 1 == 0))) { # second
     nhms <- gcd_interval(dttm)
@@ -42,83 +39,117 @@ pull_interval.POSIXt <- function(x) {
       minute = period$minute, 
       second = period$second
     )
-  } else if (all(dttm * 1e+3 %% 1 == 0)) { # millisecond
-    dttm <- round(dttm * 1e+3)
+  } else {
     nhms <- gcd_interval(dttm)
-    init_interval(millisecond = nhms)
-  } else { # microsecond
-    dttm <- dttm * 1e+6
-    nhms <- gcd_interval(dttm)
-    init_interval(microsecond = nhms)
+    init_interval(
+      second = nhms %/% 1, 
+      millisecond = nhms %/% 1e-3, 
+      microsecond = nhms %/% 1e-6 %% 1e+3
+    )
   }
 }
 
 #' @export
-pull_interval.nanotime <- function(x) {
+interval_pull.nanotime <- function(x) {
   nano <- as.numeric(x)
   int <- gcd_interval(nano) # num of nanoseconds
   init_interval(nanosecond = int)
 }
 
 #' @export
-pull_interval.difftime <- function(x) {
-  dttm <- as.double(x)
-  nhms <- gcd_interval(dttm)
-  period <- split_period(nhms)
-  init_interval(
-    hour = period$hour, 
-    minute = period$minute, 
-    second = period$second
-  )
+interval_pull.difftime <- function(x) {
+  t_units <- units(x)
+  if (t_units == "weeks") {
+    nweeks <- gcd_interval(unclass(x))
+    init_interval(week = nweeks)
+  } else if (t_units == "months") {
+    nmths <- gcd_interval(unclass(x))
+    init_interval(month = nmths)
+  } else if (t_units == "quarters") {
+    nqtrs <- gcd_interval(unclass(x))
+    init_interval(quarter = nqtrs)
+  } else {
+    dttm <- as.double(x, units = "secs")
+    nhms <- gcd_interval(dttm)
+    period <- split_period(nhms)
+    init_interval(
+      day = period$day,
+      hour = period$hour, 
+      minute = period$minute, 
+      second = period$second
+    )
+  }
 }
 
 #' @export
-pull_interval.hms <- pull_interval.difftime # for hms package
+interval_pull.hms <- function(x) { # for hms package
+  dttm <- as.double(x)
+  nhms <- gcd_interval(dttm)
+  period <- split_period(nhms)
+  secs <- period$second
+  frac <- secs %% 1
+  if (frac == 0) {
+    init_interval(
+      hour = period$hour + period$day * 24, 
+      minute = period$minute, 
+      second = secs
+    )
+  } else {
+    nhms <- gcd_interval(dttm)
+    init_interval(
+      second = nhms %/% 1, 
+      millisecond = nhms %/% 1e-3, 
+      microsecond = nhms %/% 1e-6 %% 1e+3
+    )
+  }
+}
 
 #' @export
-pull_interval.Date <- function(x) {
+interval_pull.Date <- function(x) {
   dttm <- as.numeric(x)
   ndays <- gcd_interval(dttm) # num of seconds
   init_interval(day = ndays)
 }
 
 #' @export
-pull_interval.yearweek <- function(x) {
+interval_pull.yearweek <- function(x) {
   wk <- units_since(x)
   nweeks <- gcd_interval(wk)
   init_interval(week = nweeks)
 }
 
 #' @export
-pull_interval.yearmonth <- function(x) {
+interval_pull.yearmonth <- function(x) {
   mon <- units_since(x)
   nmonths <- gcd_interval(mon)
   init_interval(month = nmonths)
 }
 
 #' @export
-pull_interval.yearmon <- function(x) {
-  pull_interval(yearmonth(x))
+interval_pull.yearmon <- function(x) {
+  interval_pull(yearmonth(x))
 }
 
 #' @export
-pull_interval.yearquarter <- function(x) {
+interval_pull.yearquarter <- function(x) {
   qtr <- units_since(x)
   nqtrs <- gcd_interval(qtr)
   init_interval(quarter = nqtrs)
 }
 
 #' @export
-pull_interval.yearqtr <- function(x) {
-  pull_interval(yearquarter(x))
+interval_pull.yearqtr <- function(x) {
+  interval_pull(yearquarter(x))
 }
 
 #' @export
-pull_interval.numeric <- function(x) {
+interval_pull.numeric <- function(x) {
   nunits <- gcd_interval(x)
   # "place our origin at 1582 if we are historically inclined or at 1900 if 
   # we are more financially motivated." (p98, the grammar of graphics v2)
-  if (min0(x) > 1581 && max0(x) < 2500) {
+  if (is_empty(x)) {
+    init_interval(unit = nunits)
+  } else if (min0(x) > 1581 && max0(x) < 2500) {
     init_interval(year = nunits)
   } else {
     init_interval(unit = nunits)
@@ -126,8 +157,8 @@ pull_interval.numeric <- function(x) {
 }
 
 #' @export
-pull_interval.ordered <- function(x) {
-  pull_interval(as.integer(x))
+interval_pull.ordered <- function(x) {
+  interval_pull(as.integer(x))
 }
 
 #' @export
@@ -152,10 +183,14 @@ pull_interval.ordered <- function(x) {
 #' @export
 #' @examples
 #' new_interval(hour = 1, minute = 30)
+#' new_interval(NULL) # irregular interval
+#' new_interval() # unknown interval
 new_interval <- function(...) {
   args <- list2(...)
+  if (has_length(args, 1) && is_null(args[[1]])) return(irregular())
+
   if (is_false(all(map_lgl(args, ~ has_length(., 1))))) {
-    abort("Only accepts one input for each unit, not `NULL` or multiple.")
+    abort("Only accepts one input for each unit, not multiple.")
   }
   names_args <- names(args)
   names_unit <- fn_fmls_names(init_interval)
@@ -187,6 +222,7 @@ irregular <- function() {
 }
 
 unknown_interval <- function(x) {
+  if (is_empty(x)) return(FALSE)
   no_zeros <- !map_lgl(x, function(x) x == 0)
   sum(no_zeros) == 0
 }
@@ -215,13 +251,16 @@ time_to_date <- function(x, ...) {
 time_to_date.ts <- function(x, tz = "UTC", ...) {
   freq <- stats::frequency(x)
   time_x <- as.numeric(stats::time(x))
+  if (freq == 52) {
+    warn("Expected frequency of weekly data: 365.25 / 7 (\U2248 52.18), not  52.")
+  }
   if (freq == 7) { # daily
     start_year <- trunc(time_x[1])
     as.Date(lubridate::round_date(
       lubridate::date_decimal(start_year + (time_x - start_year) * 7 / 365),
       unit = "day"
     ))
-  } else if (freq == 52) { # weekly
+  } else if (round(freq, 2) ==  52.18) { # weekly
     yearweek(lubridate::date_decimal(time_x))
   } else if (freq > 4 && freq <= 12) { # monthly
     yearmonth(time_x)

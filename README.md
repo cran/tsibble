@@ -3,8 +3,6 @@
 
 # tsibble <img src="man/figures/logo.png" align="right" />
 
-*/ˈt͡sɪbəl/*
-
 [![Travis-CI Build
 Status](https://travis-ci.org/tidyverts/tsibble.svg?branch=master)](https://travis-ci.org/tidyverts/tsibble)
 [![AppVeyor Build
@@ -13,12 +11,11 @@ Status](https://ci.appveyor.com/api/projects/status/github/tidyverts/tsibble?bra
 Status](https://codecov.io/gh/tidyverts/tsibble/branch/master/graph/badge.svg)](https://codecov.io/github/tidyverts/tsibble?branch=master)
 [![CRAN\_Status\_Badge](http://www.r-pkg.org/badges/version/tsibble)](https://cran.r-project.org/package=tsibble)
 [![Downloads](http://cranlogs.r-pkg.org/badges/tsibble?color=brightgreen)](https://cran.r-project.org/package=tsibble)
-[![lifecycle](https://img.shields.io/badge/lifecycle-stable-brightgreen.svg)](https://www.tidyverse.org/lifecycle/#stable)
 
 The **tsibble** package provides a data class of `tbl_ts` to represent
-tidy time series data. A *tsibble* consists of a time index, key and
-other measured variables in a data-centric format, which is built on top
-of the *tibble*.
+tidy temporal data. A *tsibble* consists of a time index, key and other
+measured variables in a data-centric format, which is built on top of
+the *tibble*.
 
 ## Installation
 
@@ -42,15 +39,16 @@ remotes::install_github("tidyverts/tsibble")
 The `weather` data included in the package `nycflights13` is used as an
 example to illustrate. The “index” variable is the `time_hour`
 containing the date-times, and the “key” is the `origin` as weather
-stations created via `id()`. **The key together with the index uniquely
-identifies each observation**, which gives a valid *tsibble*. Other
-columns can be considered as measured variables.
+stations. **The key together with the index uniquely identifies each
+observation**, which gives a valid *tsibble*. Other columns can be
+considered as measured variables.
 
 ``` r
+library(dplyr)
 library(tsibble)
 weather <- nycflights13::weather %>% 
   select(origin, time_hour, temp, humid, precip)
-weather_tsbl <- as_tsibble(weather, key = id(origin), index = time_hour)
+weather_tsbl <- as_tsibble(weather, key = origin, index = time_hour)
 weather_tsbl
 #> # A tsibble: 26,115 x 5 [1h] <America/New_York>
 #> # Key:       origin [3]
@@ -66,7 +64,7 @@ weather_tsbl
 
 The **key** is comprised of one or more variables. See `package?tsibble`
 and
-[`vignette("intro-tsibble")`](http://pkg.earo.me/tsibble/articles/intro-tsibble.html)
+[`vignette("intro-tsibble")`](http://tsibble.tidyverts.org/articles/intro-tsibble.html)
 for details.
 
 *Tsibble* internally computes the interval for given time indices based
@@ -90,7 +88,7 @@ in time series analysis, which is easily done using `fill()` from
 full_weather <- weather_tsbl %>%
   fill_gaps(precip = 0) %>% 
   group_by(origin) %>% 
-  fill(temp, humid, .direction = "down")
+  tidyr::fill(temp, humid, .direction = "down")
 full_weather
 #> # A tsibble: 26,190 x 5 [1h] <America/New_York>
 #> # Key:       origin [3]
@@ -108,7 +106,7 @@ full_weather
 `fill_gaps()` also handles filling in time gaps by values or functions,
 and respects time zones for date-times. Wanna a quick overview of
 implicit missing values? Check out
-[`vignette("implicit-na")`](http://pkg.earo.me/tsibble/articles/implicit-na.html).
+[`vignette("implicit-na")`](http://tsibble.tidyverts.org/articles/implicit-na.html).
 
 ### `index_by()` + `summarise()` to aggregate over calendar periods
 
@@ -160,6 +158,14 @@ purrr-like syntax:
   - `stretch()`/`stretch2()`/`pstretch()`: fixing an initial window and
     expanding to include more observations.
 
+<details>
+
+<summary>Rolling window animation</summary>
+
+<img src="man/figures/animate-1.gif" align="center" />
+
+</details>
+
 For example, a moving average of window size 3 is carried out on hourly
 temperatures for each group (*origin*).
 
@@ -182,13 +188,16 @@ full_weather %>%
 
 Looking for rolling in parallel? Their multiprocessing equivalents are
 prefixed with `future_`. More examples can be found at
-[`vignette("window")`](https://pkg.earo.me/tsibble/articles/window.html).
+[`vignette("window")`](https://tsibble.tidyverts.org/articles/window.html).
 
-## More around tsibble
+## More about tsibble
 
-Tsibble also serves as a natural input for forecasting and many other
-downstream analytical tasks. Stay tuned for
-[tidyverts.org](http://tidyverts.org).
+  - Tsibble also serves as a natural input for forecasting and many
+    other downstream analytical tasks. Stay tuned for
+    [tidyverts.org](https://tidyverts.org).
+  - The [short
+    article](https://less.earo.me/posts/2019-04-tsibble-design/)
+    describes the overall philosophy and design of **tsibble**.
 
 -----
 

@@ -7,6 +7,7 @@ knitr::opts_chunk$set(
 options(tibble.print_min = 5)
 
 ## ----ped-----------------------------------------------------------------
+library(dplyr)
 library(tsibble)
 pedestrian
 

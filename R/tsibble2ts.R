@@ -5,7 +5,7 @@
 #' multiple measures.
 #' @param frequency A smart frequency with the default `NULL`. If set, the 
 #' preferred frequency is passed to `ts()`.
-#' @param fill A value replaces missing values.
+#' @param fill A value to replace missing values.
 #' @param ... Ignored for the function.
 #'
 #' @return A `ts` object.
@@ -26,28 +26,29 @@ as.ts.tbl_ts <- function(x, value, frequency = NULL, fill = NA, ...) {
     abort("Can't proceed with the key of multiple variables.")
   }
   mvars <- measured_vars(x)
-  str_val <- paste_comma(surround(mvars, "`"))
+  str_val <- comma(backticks(mvars))
   if (quo_is_missing(value)) {
     if (is_false(has_length(mvars, 1) || is_empty(key_vars))) {
       abort(sprintf("Can't determine column `value`: %s.", str_val))
     }
     value_var <- mvars
   } else {
-    value_var <- tidyselect::vars_pull(names(x), !! value)
+    value_var <- vars_pull(names(x), !! value)
     if (is_false(value_var %in% mvars)) {
       abort(sprintf("Column `value` must be one of them: %s.", str_val))
     }
   }
   idx <- index(x)
-  tsbl_sel <- x %>% 
-    arrange(!!! key_vars, !! idx) %>% 
-    select_tsibble(!! idx, !!! key_vars, !! value_var, validate = FALSE) %>% 
-    as_tibble()
+  tsbl_sort <- arrange(x, !!! key_vars, !! idx)
+  tsbl_sel <-
+    as_tibble(select_tsibble(
+      tsbl_sort, !! idx, !!! key_vars, !! value_var, validate = FALSE
+    ))
   if (is_empty(key_vars)) {
     finalise_ts(tsbl_sel, index = index(x), frequency = frequency)
   } else {
-    mat_ts <- tsbl_sel %>% 
-      spread(key = !! key_vars[[1]], value = !! value_var, fill = fill)
+    mat_ts <- tidyr::spread(tsbl_sel, key = !! key_vars[[1]], 
+      value = !! value_var, fill = fill)
     finalise_ts(mat_ts, index = idx, frequency = frequency)
   }
 }
@@ -144,12 +145,12 @@ guess_frequency.numeric <- function(x) {
 
 #' @export
 guess_frequency.yearweek <- function(x) {
-  52 / pull_interval(x)$week
+  round(365.25 / 7 / interval_pull(x)$week, 2)
 }
 
 #' @export
 guess_frequency.yearmonth <- function(x) {
-  12 / pull_interval(x)$month
+  12 / interval_pull(x)$month
 }
 
 #' @export
@@ -157,7 +158,7 @@ guess_frequency.yearmon <- guess_frequency.yearmonth
 
 #' @export
 guess_frequency.yearquarter <- function(x) {
-  4 / pull_interval(x)$quarter
+  4 / interval_pull(x)$quarter
 }
 
 #' @export
@@ -165,12 +166,12 @@ guess_frequency.yearqtr <- guess_frequency.yearquarter
 
 #' @export
 guess_frequency.Date <- function(x) {
-  7 / pull_interval(x)$day
+  7 / interval_pull(x)$day
 }
 
 #' @export
 guess_frequency.POSIXt <- function(x) {
-  int <- pull_interval(x)
+  int <- interval_pull(x)
   number <- int$hour + int$minute / 60 + int$second / 3600
   if (number > 1 / 60) {
     24 / number

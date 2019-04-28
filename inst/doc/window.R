@@ -6,8 +6,9 @@ knitr::opts_chunk$set(
 options(tibble.print_min = 5)
 
 ## ----full-data, message = FALSE------------------------------------------
-library(tsibble)
 library(dplyr)
+library(tidyr)
+library(tsibble)
 pedestrian_full <- pedestrian %>% 
   fill_gaps(.full = TRUE)
 pedestrian_full

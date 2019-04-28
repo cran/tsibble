@@ -6,19 +6,15 @@ split_period <- function(x) {
   )
 }
 
-first_arg <- function(x) {
-  purrr::compact(map(x, ~ dplyr::first(call_args(.x))))
-}
-
 # regular time interval is obtained from the greatest common divisor of positive
 # time distances.
 gcd_interval <- function(x) {
-  if (has_length(x, 1)) { # only one time index
-    NA_real_
+  if (has_length(x, 1L) || has_length(x, 0L)) { # only one time index
+    0
   } else if (is_integerish(x)) {
     gcd_vector(x)
   } else {
-    gcd_vector_r(unique(abs(diff(x))))
+    gcd_vector_r(unique(round(abs(diff(x)), digits = 6)))
   }
 }
 

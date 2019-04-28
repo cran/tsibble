@@ -290,6 +290,9 @@ code > span.al { color: #ff0000; font-weight: bold; }
 code > span.fu { color: #900; font-weight: bold; }  code > span.er { color: #a61717; background-color: #e3d2d2; } 
 </style>
 
+
+
+
 </head>
 
 <body>
@@ -298,13 +301,14 @@ code > span.fu { color: #900; font-weight: bold; }  code > span.er { color: #a61
 
 
 <h1 class="title toc-ignore">Handle implicit missingness with tsibble</h1>
-<h4 class="author"><em>Earo Wang</em></h4>
+<h4 class="author">Earo Wang</h4>
 
 
 
 <p>Assuming you have <a href="https://pkg.earo.me/tsibble/articles/intro-tsibble.html">set up a tsibble</a>, you are ready for undertaking analysis in temporal context. Many time operations, such as lag and lead, assume an intact vector input ordered in time. To avoid inviting these errors into the analysis, it is a good practice to inspect any <strong>implicit missingness</strong> of the tsibble before analysis. A handful of tools are provided to understand and tackle missing values in: (1) <code>has_gaps()</code> checks if there exists implicit missingness; (2) <code>scan_gaps()</code> reports all implicit missing entries; (3) <code>count_gaps()</code> summarises the time ranges that are absent from the data; (4) <code>fill_gaps()</code> turns them into explicit ones, along with imputing by values or functions. These functions have a common argument <code>.full</code>. If <code>FALSE</code> (default) looks into the time period for each key, otherwise the full-length time span. The <code>pedestrian</code> data contains hourly tallies of pedestrians at four counting sensors in 2015 and 2016 in inner Melbourne.</p>
-<div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb1-1" data-line-number="1"><span class="kw">library</span>(tsibble)</a>
-<a class="sourceLine" id="cb1-2" data-line-number="2">pedestrian</a></code></pre></div>
+<div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb1-1" data-line-number="1"><span class="kw">library</span>(dplyr)</a>
+<a class="sourceLine" id="cb1-2" data-line-number="2"><span class="kw">library</span>(tsibble)</a>
+<a class="sourceLine" id="cb1-3" data-line-number="3">pedestrian</a></code></pre></div>
 <pre><code>#&gt; # A tsibble: 66,037 x 5 [1h] &lt;Australia/Melbourne&gt;
 #&gt; # Key:       Sensor [4]
 #&gt;   Sensor         Date_Time           Date        Time Count

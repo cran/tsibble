@@ -4,15 +4,17 @@
 \alias{build_tsibble}
 \title{Low-level constructor for a tsibble object}
 \usage{
-build_tsibble(x, key, index, index2, ordered = NULL, regular = TRUE,
-  interval = NULL, validate = TRUE)
+build_tsibble(x, key, key_data = NULL, index, index2, ordered = NULL,
+  interval = TRUE, validate = TRUE, .drop = key_drop_default(x))
 }
 \arguments{
 \item{x}{A \code{data.frame}, \code{tbl_df}, \code{tbl_ts}, or other tabular objects.}
 
-\item{key}{Variable(s) that define unique time indices, used in conjunction
-with the helper \code{\link[=id]{id()}}. If a univariate time series (without an explicit key),
-simply call \code{id()}.}
+\item{key}{Unquoted variable(s) that uniquely determine time indices. \code{NULL} for
+empty key, and works with tidy selector (e.g. \code{starts_with()}).}
+
+\item{key_data}{A data frame containing key variables and \code{.rows}. When a data
+frame is supplied, the argument \code{key} will be ignored.}
 
 \item{index}{A bare (or unquoted) variable to specify the time index variable.}
 
@@ -21,17 +23,16 @@ simply call \code{id()}.}
 
 \item{ordered}{The default of \code{NULL} arranges the key variable(s) first and
 then index from past to future. \code{TRUE} suggests to skip the ordering as \code{x} in
-the correct order. \code{FALSE} also skips the ordering but gives a warning instead.}
+the correct order. \code{FALSE} checks the ordering and may give a warning.}
 
-\item{regular}{Regular time interval (\code{TRUE}) or irregular (\code{FALSE}). The
-interval is determined by the greatest common divisor of index column, if \code{TRUE}.}
-
-\item{interval}{\code{NULL} computes the interval. Use the specified interval via
-\code{\link[=new_interval]{new_interval()}} as is, if an class of \code{interval} is supplied.}
+\item{interval}{\code{TRUE} automatically calculates the interval, and \code{FALSE} for
+irregular interval. Use the specified interval via \code{\link[=new_interval]{new_interval()}} as is.}
 
 \item{validate}{\code{TRUE} suggests to verify that each key or each combination
 of key variables leads to unique time indices (i.e. a valid tsibble). If you
 are sure that it's a valid input, specify \code{FALSE} to skip the checks.}
+
+\item{.drop}{If \code{TRUE}, empty key groups are dropped.}
 }
 \description{
 \code{build_tsibble()} creates a \code{tbl_ts} object with more controls. It is useful
@@ -42,6 +43,7 @@ determine if the time needs ordering and the interval needs calculating.
 # Prepare `pedestrian` to use a new index `Date` ----
 pedestrian \%>\%
   build_tsibble(
-    key = key(.), index = !! index(.), index2 = Date, interval = interval(.)
+    key = !! key_vars(.), index = !! index(.), index2 = Date,
+    interval = interval(.)
   )
 }

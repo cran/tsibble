@@ -1,12 +1,8 @@
-#' @importFrom tidyr gather
-#' @export
-tidyr::gather
-
 #' @inheritParams tidyr::gather
 #'
-#' @rdname tidyverse
-#' @export
+#' @rdname tsibble-tidyverse
 #' @examples
+#' library(tidyr)
 #' # example from tidyr
 #' stocks <- tsibble(
 #'   time = as.Date('2009-01-01') + 0:9,
@@ -16,10 +12,11 @@ tidyr::gather
 #' )
 #' (stocksm <- stocks %>% gather(stock, price, -time))
 #' stocksm %>% spread(stock, price)
+#' @export
 gather.tbl_ts <- function(data, key = "key", value = "value", ...,
   na.rm = FALSE, convert = FALSE, factor_key = FALSE) {
-  key <- sym(enexpr(key))
-  new_key <- c(key(data), key)
+  key <- as_string(enexpr(key))
+  new_key <- c(key_vars(data), key)
   value <- enexpr(value)
   exprs <- enexprs(...)
   if (is_empty(exprs)) {
@@ -27,31 +24,25 @@ gather.tbl_ts <- function(data, key = "key", value = "value", ...,
       c(quo_name(key), quo_name(value), quo_name(index(data)))
     )
   }
-  vars <- tidyselect::vars_select(names(data), !!! exprs)
+  vars <- vars_select(names(data), !!! exprs)
   data <- mutate_index2(data, vars)
   tbl <- gather(
-    as_grouped_df(data), key = !! key, value = !! value, !!! exprs,
+    as_tibble(data), key = !! key, value = !! value, !!! exprs,
     na.rm = na.rm, convert = convert, factor_key = factor_key
   )
   build_tsibble(
-    tbl, key = new_key, index = !! index(data), index2 = !! index2(data), 
-    regular = is_regular(data), ordered = is_ordered(data), 
-    interval = interval(data), validate = FALSE
+    tbl, key = !! new_key, index = !! index(data), index2 = !! index2(data), 
+    ordered = is_ordered(data), interval = interval(data), validate = FALSE
   )
 }
 
-#' @importFrom tidyr spread
-#' @export
-tidyr::spread
-
 #' @inheritParams tidyr::spread
-#' @rdname tidyverse
+#' @rdname tsibble-tidyverse
 #' @export
-spread.tbl_ts <- function(data, key, value, fill = NA, convert = FALSE,
-  drop = TRUE, sep = NULL) {
+spread.tbl_ts <- function(data, key, value, ...) {
   key <- enexpr(key)
   value <- enexpr(value)
-  key_var <- tidyselect::vars_pull(names(data), !! key)
+  key_var <- vars_pull(names(data), !! key)
   if (has_index(key_var, data)) {
     abort(sprintf(
       "Column `%s` (index) can't be spread.\nPlease use `as_tibble()` to coerce.", 
@@ -59,36 +50,29 @@ spread.tbl_ts <- function(data, key, value, fill = NA, convert = FALSE,
     ))
   }
   key_left <- setdiff(key_vars(data), key_var)
-  new_key <- key(remove_key(data, .vars = key_left))
+  new_key <- key_vars(remove_key(data, .vars = key_left))
 
-  tbl <- spread(
-    as_grouped_df(data), key = !! key, value = !! value, fill = fill, 
-    convert = convert, drop = drop, sep = sep
-  )
+  tbl <- spread(as_tibble(data), key = !! key, value = !! value, ...)
   tbl <- retain_tsibble(tbl, new_key, index(data))
 
   vars <- names(tbl)
   data <- mutate_index2(data, vars)
   build_tsibble(
-    tbl, key = new_key, index = !! index(data), index2 = !! index2(data), 
-    regular = is_regular(data), ordered = is_ordered(data), 
-    interval = interval(data), validate = FALSE
+    tbl, key = !! new_key, index = !! index(data), index2 = !! index2(data), 
+    ordered = is_ordered(data), interval = is_regular(data), 
+    validate = FALSE
   )
 }
 
-#' @importFrom tidyr nest
-#' @export
-tidyr::nest
-
 #' @inheritParams tidyr::nest
-#' @rdname tidyverse
-#' @export
+#' @rdname tsibble-tidyverse
 #' @examples
 #' nested_stock <- stocksm %>% 
 #'   nest(-stock)
 #' stocksm %>% 
 #'   group_by(stock) %>% 
 #'   nest()
+#' @export
 nest.tbl_ts <- function(data, ..., .key = "data") {
   nest_exprs <- enexprs(...)
   key_var <- expr_name(enexpr(.key))
@@ -96,7 +80,7 @@ nest.tbl_ts <- function(data, ..., .key = "data") {
   if (is_empty(nest_exprs)) {
     nest_vars <- cn
   } else {
-    nest_vars <- tidyselect::vars_select(cn, !!! nest_exprs)
+    nest_vars <- vars_select(cn, !!! nest_exprs)
   }
   if (is_false(has_index(nest_vars, data))) {
     abort(sprintf(
@@ -104,7 +88,7 @@ nest.tbl_ts <- function(data, ..., .key = "data") {
       index_var(data)
     ))
   }
-  tbl <- as_grouped_df(data)
+  tbl <- as_tibble(data)
   if (is_grouped_ts(data)) {
     grp_vars <- group_vars(tbl)
   } else {
@@ -118,7 +102,7 @@ nest.tbl_ts <- function(data, ..., .key = "data") {
   grp <- syms(grp_vars)
 
   out <- select(ungroup(tbl), !!! grp)
-  idx <- dplyr::group_indices(data, !!! grp)
+  idx <- dplyr::group_indices(data, !!! grp, .drop = TRUE)
   representatives <- which(!duplicated(idx))
   out <- slice(out, representatives)
   tsb_sel <- select_tsibble(data, !!! nest_vars, validate = FALSE)
@@ -126,23 +110,11 @@ nest.tbl_ts <- function(data, ..., .key = "data") {
   as_lst_ts(out)
 }
 
-#' @importFrom tidyr unnest
-#' @export
-tidyr::unnest
-
-#' @param key Unquoted variables to create the key (via [id]) after unnesting.
-#' @inheritParams tidyr::unnest
-#'
-#' @rdname tidyverse
-#' @export
-#' @examples
-#' nested_stock %>% 
-#'   unnest(key = id(stock))
-unnest.lst_ts <- function(data, ..., key = id(),
+unnest.lst_ts <- function(data, ..., key = NULL,
   .drop = NA, .id = NULL, .sep = NULL, .preserve = NULL
 ) {
   key <- use_id(data, !! enquo(key))
-  preserve <- tidyselect::vars_select(names(data), !! enquo(.preserve))
+  preserve <- vars_select(names(data), !! enquo(.preserve))
   exprs <- enquos(...)
   if (is_empty(exprs)) {
     list_cols <- names(data)[purrr::map_lgl(data, is_list)]
@@ -169,22 +141,24 @@ unnest.lst_ts <- function(data, ..., key = id(),
     )
   tsbl <- eval_df[is_tsbl][[1L]]
   idx <- index(tsbl)
-  key <- c(key(tsbl), key)
+  key <- c(key_vars(tsbl), key)
   out <- unnest_tsibble(out, key, idx)
 
   idx_chr <- as_string(idx)
   # restore the index class, as it's dropped by NextMethod()
   class(out[[idx_chr]]) <- class(tsbl[[idx_chr]])
   build_tsibble(
-    out, key = key, index = !! idx, index2 = !! index2(tsbl),
-    ordered = is_ordered(tsbl), regular = is_regular(tsbl), 
-    interval = interval(tsbl), validate = FALSE
+    out, key = !! key, index = !! idx, index2 = !! index2(tsbl),
+    ordered = is_ordered(tsbl), interval = is_regular(tsbl), validate = FALSE
   )
 }
 
-#' @rdname tidyverse
-#' @export
+#' @param key Unquoted variables to create the key after unnesting.
+#' @inheritParams tidyr::unnest
+#' @rdname tsibble-tidyverse
 #' @examples
+#' nested_stock %>% 
+#'   unnest(key = stock)
 #' stock_qtl <- stocksm %>% 
 #'   group_by(stock) %>% 
 #'   index_by(day3 = lubridate::floor_date(time, unit = "3 day")) %>% 
@@ -192,26 +166,26 @@ unnest.lst_ts <- function(data, ..., key = id(),
 #'     value = list(quantile(price)), 
 #'     qtl = list(c("0%", "25%", "50%", "75%", "100%"))
 #'   )
-#' unnest(stock_qtl, key = id(qtl))
-unnest.tbl_ts <- function(data, ..., key = id(),
+#' unnest(stock_qtl, key = qtl)
+#' @export
+unnest.tbl_ts <- function(data, ..., key = NULL,
   .drop = NA, .id = NULL, .sep = NULL, .preserve = NULL
 ) {
   key <- use_id(data, !! enquo(key))
   tbl <- 
     unnest(
-      as_grouped_df(data), 
+      as_tibble(data), 
       ..., .drop = .drop, .id = .id, .sep = .sep, .preserve = .preserve
     )
-  key <- c(key(data), key)
+  key <- c(key_vars(data), key)
   idx <- index(data)
   tbl <- unnest_tsibble(tbl, key, idx)
 
   idx_chr <- as_string(idx)
   class(tbl[[idx_chr]]) <- class(data[[idx_chr]])
   build_tsibble(
-    tbl, key = key, index = !! idx, index2 = !! index2(data), 
-    ordered = is_ordered(data), regular = is_regular(data), 
-    interval = interval(data), validate = FALSE
+    tbl, key = !! key, index = !! idx, index2 = !! index2(data), 
+    ordered = is_ordered(data), interval = is_regular(data), validate = FALSE
   )
 }
 
@@ -220,27 +194,17 @@ unnest_tsibble <- function(data, key, index) {
   is_dup <- duplicated_key_index(data, key, index)
   if (is_dup) {
     header <- "The result is not a valid tsibble.\n"
-    hint <- "Do you forget argument `key = id(...)` in `unnest()` to create the key?."
+    hint <- "Do you forget argument `key` in `unnest()` to create the key?."
     abort(paste0(header, hint))
   }
   data
 }
 
-#' @importFrom tidyr fill
-#' @export
-tidyr::fill
-
-#' @inheritParams tidyr::fill
-#' @rdname tidyverse
-#' @export
 fill.tbl_ts <- function(data, ..., .direction = c("down", "up")) {
   res <- NextMethod()
-  update_meta2(res, data, ordered = is_ordered(data), 
-    interval = interval(data))
+  update_meta2(res, data, ordered = is_ordered(data), interval = interval(data))
 }
 
-#' @rdname tidyverse
-#' @export
 fill.grouped_ts <- fill.tbl_ts
 
 #' @export
@@ -260,7 +224,6 @@ rename.lst_ts <- mutate.lst_ts
 #' @export
 arrange.lst_ts <- mutate.lst_ts
 
-#' @export
 filter.lst_ts <- mutate.lst_ts
 
 #' @export

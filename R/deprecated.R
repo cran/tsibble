@@ -1,3 +1,35 @@
+# nocov start
+warn_deprecated <- function(msg, id = msg) {
+  if (rlang::is_true(rlang::peek_option("lifecycle_disable_warnings"))) {
+    return(invisible(NULL))
+  }
+
+  if (!rlang::is_true(rlang::peek_option("lifecycle_repeat_warnings"))) {
+    if (rlang::env_has(deprecation_env, id)) {
+      return(invisible(NULL))
+    }
+
+    msg <- paste0(
+      msg,
+      "\n",
+      "This warning is displayed once per session."
+    )
+  }
+
+  rlang::env_poke(deprecation_env, id, TRUE)
+
+  if (rlang::is_true(rlang::peek_option("lifecycle_warnings_as_errors"))) {
+    signal <- .Defunct
+  } else {
+    signal <- .Deprecated
+  }
+
+  signal(msg = msg)
+}
+
+deprecation_env <- new.env(parent = emptyenv())
+# nocov end
+
 #' Deprecated functions
 #'
 #' @param x Other objects.
@@ -5,7 +37,16 @@
 #' @export
 #' @keywords internal
 as.tsibble <- function(x, ...) {
+  warn_deprecated("as.tsibble() is deprecated, please use as_tsibble().")
   as_tsibble(x, ...)
+}
+
+#' @rdname deprecated
+#' @export
+#' @keywords internal
+pull_interval <- function(x) {
+  .Deprecated("interval_pull()")
+  UseMethod("interval_pull")
 }
 
 #' @rdname deprecated
@@ -13,24 +54,40 @@ as.tsibble <- function(x, ...) {
 #' @keywords internal
 #' @include gaps.R
 fill_na <- function(.data, ..., .full = FALSE) {
-  .Deprecated("fill_na()")
+  .Deprecated("fill_gaps()")
   fill_gaps(.data, ..., .full = .full)
 }
 
-#' @description
-#' Find which row has duplicated key and index elements
+#' Identifiers used for creating key
+#'
+#' @param ... Variables passed to tsibble()/as_tsibble().
 #'
 #' @rdname deprecated
-#' @param data A `tbl_ts` object.
-#' @param key Structural variable(s) that define unique time indices, used with
-#' the helper [id]. If a univariate time series (without an explicit key),
-#' simply call `id()`.
-#' @param index A bare (or unquoted) variable to specify the time index variable.
-#' @param fromLast `TRUE` does the duplication check from the last of identical
-#' elements.
-#'
-#' @return A logical vector of the same length as the row number of `data`
+#' @keywords internal
 #' @export
-find_duplicates <- function(data, key = id(), index, fromLast = FALSE) {
-  .Defunct("duplicates()")
+id <- function(...) {
+  unname(enexprs(...))
+}
+
+use_id <- function(x, key) {
+  key_quo <- enquo(key)
+  if (quo_is_call(key_quo)) {
+    call_fn <- call_name(key_quo)
+    if (call_fn == "id") {
+      res <- eval_tidy(get_expr(key_quo), env = child_env(get_env(key_quo), id = id))
+      header <- "`id()` is deprecated for creating key.\n"
+      if (is_empty(res)) {
+        res_vars <- NULL
+        warn(sprintf("%sPlease use `key = NULL`.", header))
+      } else if (has_length(res, 1)) {
+        res_vars <- as_string(res[[1]])
+        warn(sprintf("%sPlease use `key = %s`.", header, res_vars))
+      } else {
+        res_vars <- map(res, as_string)
+        warn(sprintf("%sPlease use `key = c(%s)`.", header, comma(res_vars)))
+      }
+      return(res_vars)
+    }
+  }
+  vars_select(names(x), !! key_quo)
 }

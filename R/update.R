@@ -1,4 +1,4 @@
-by_row <- function(FUN, .data, ordered = TRUE, interval = NULL, ..., 
+by_row <- function(FUN, .data, ordered = TRUE, interval = TRUE, ..., 
   .preserve = FALSE) {
   FUN <- match.fun(FUN, descend = FALSE)
   tbl <- FUN(as_tibble(.data), ..., .preserve = .preserve)
@@ -11,18 +11,22 @@ by_row <- function(FUN, .data, ordered = TRUE, interval = NULL, ...,
 
 # put new data with existing attributes (update key)
 update_meta <- function(
-  new, old, ordered = TRUE, interval = NULL, validate = FALSE
+  new, old, ordered = TRUE, interval = TRUE, validate = FALSE
 ) {
+  if (validate) {
+    retain_tsibble(new, key = key(old), index = index(old))
+  }
+  validate <- TRUE || validate
   restore_index_class(build_tsibble(
-    new, key = key(old), index = !! index(old), index2 = !! index2(old),
-    regular = is_regular(old), ordered = ordered, interval = interval, 
-    validate = validate
+    new, key = !! key_vars(old), index = !! index(old), index2 = !! index2(old),
+    ordered = ordered, interval = interval, validate = validate,
+    .drop = is_key_dropped(old)
   ), old)
 }
 
 # preserve key data
 update_meta2 <- function(
-  new, old, ordered = TRUE, interval = NULL, validate = FALSE
+  new, old, ordered = TRUE, interval = TRUE, validate = FALSE
 ) {
   old_key <- select(key_data(old), !!! key(old))
   if (is_empty(old_key)) {
@@ -35,23 +39,16 @@ update_meta2 <- function(
   null_lgl <- map_lgl(new_key[[".rows"]], is_null)
   new_key[[".rows"]][null_lgl] <- list(integer())
   restore_index_class(build_tsibble(
-    new, key = new_key, index = !! index(old), index2 = !! index2(old),
-    regular = is_regular(old), ordered = ordered, interval = interval, 
-    validate = validate
+    new, key_data = new_key, index = !! index(old), index2 = !! index2(old),
+    ordered = ordered, interval = interval, validate = validate
   ), old)
 }
 
-# needed when grouping by index2 (e.g. summarise)
+# needed when grouping by index2, dropping empty groups (e.g. summarise)
 group_by_index2 <- function(x) {
   idx2 <- index2(x)
   x <- as_tibble(x)
-  group_by(x, !! idx2, add = TRUE)
-}
-
-as_grouped_df <- function(x) {
-  class(x) <- class(x)[-match("tbl_ts", class(x))] # remove "tbl_ts"
-  class(x) <- class(x)[class(x) != "grouped_ts"]
-  x
+  group_by(x, !! idx2, add = TRUE, .drop = TRUE)
 }
 
 restore_index_class <- function(new, old) {
@@ -59,7 +56,7 @@ restore_index_class <- function(new, old) {
   new_idx <- index2(new)
   class(new[[new_idx]]) <- class(old[[old_idx]])
   if (!identical(interval(new), interval(old))) {
-    attr(new, "interval") <- pull_interval(new[[new_idx]])
+    attr(new, "interval") <- interval_pull(new[[new_idx]])
   }
   new
 }
@@ -69,19 +66,16 @@ rename_tsibble <- function(.data, ...) {
   lst_quos <- enquos(...)
   if (is_empty(lst_quos)) return(.data)
 
-  val_vars <- tidyselect::vars_rename(names_dat, !!! lst_quos)
+  val_vars <- vars_rename(names_dat, !!! lst_quos)
   # index
-  res <- .data %>% 
-    rename_index(val_vars) %>% 
-    rename_index2(val_vars) %>% 
-    rename_key(val_vars) %>% 
-    rename_group(val_vars)
+  res <- rename_index2(rename_index(.data, val_vars), val_vars)
+  res <- rename_group(rename_key(res, val_vars), val_vars)
   names(res) <- names(val_vars)
 
   build_tsibble(
-    res, key = key_data(res), index = !! index(res), index2 = !! index2(res),
-    regular = is_regular(res), ordered = is_ordered(res), 
-    interval = interval(res), validate = FALSE
+    res, key_data = key_data(res),
+    index = !! index(res), index2 = !! index2(res),
+    ordered = is_ordered(res), interval = interval(res), validate = FALSE
   )
 }
 
@@ -100,7 +94,7 @@ select_tsibble <- function(.data, ..., validate = TRUE) {
   }
   
   # key (key of the reduced size (bf & af) but also different names)
-  key_vars <- syms(val_vars[val_vars %in% key_vars(.data)])
+  key_vars <- val_vars[val_vars %in% key_vars(.data)]
   
   if (validate) {
     vec_names <- names(val_vars)
@@ -112,9 +106,10 @@ select_tsibble <- function(.data, ..., validate = TRUE) {
   }
   
   build_tsibble(
-    sel_data, key = key_vars, index = !! index(.data), index2 = !! index2(.data),
-    regular = is_regular(.data), ordered = is_ordered(.data), 
-    interval = interval(.data), validate = FALSE
+    sel_data,
+    key = !! key_vars, index = !! index(.data), index2 = !! index2(.data),
+    ordered = is_ordered(.data), interval = interval(.data),
+    validate = FALSE, .drop = is_key_dropped(.data)
   )
 }
 

@@ -4,7 +4,7 @@ context("dplyr verbs for tsibble")
 
 pedestrian <- pedestrian %>%
   group_by(Sensor) %>%
-  slice(1:10) %>%
+  slice(1:48) %>%
   ungroup()
 
 tourism <- tourism %>%
@@ -13,6 +13,8 @@ tourism <- tourism %>%
   ungroup()
 
 test_that("group_by()", {
+  expect_error(group_by(pedestrian, Date_Time), "a grouping variable.")
+  expect_error(group_by(pedestrian, Date_Time, Sensor), "a grouping variable.")
   grped_df <- pedestrian %>%
     group_by(Date) %>%
     group_by(Sensor, add = TRUE)
@@ -21,7 +23,7 @@ test_that("group_by()", {
     group_by(Sensor)
   expect_equal(n_groups(grped_df), 4)
   expect_length(group_size(grped_df), 4)
-  expect_length(group_indices(grped_df), 40)
+  expect_length(group_indices(grped_df), NROW(grped_df))
   expect_named(
     pedestrian %>% group_by(sensor = Sensor),
     c(names(pedestrian), "sensor")
@@ -31,12 +33,19 @@ test_that("group_by()", {
     group_vars(pedestrian %>% index_by(yearmonth(Date))),
     "yearmonth(Date)"
   )
+})
 
+test_that("group_by_key()", {
   grped_t <- tourism %>%
     group_by(Purpose) %>%
     group_by(Region, State, add = TRUE)
   expect_length(group_vars(grped_t), 3)
   expect_equal(group_by_key(tourism), grped_t)
+
+  expect_identical(
+    pedestrian %>% index_by(Date) %>% group_by_key() %>% index2_var(),
+    "Date"
+  )
 })
 
 test_that("ungroup()", {
@@ -52,9 +61,9 @@ test_that("ungroup()", {
 test_that("arrange.tbl_ts()", {
   expect_equal(arrange(tourism), tourism)
   expect_equal(arrange(tourism %>% group_by(Purpose)), group_by(tourism, Purpose))
-  expect_warning(tsbl1 <- arrange(tourism, Quarter), "Unexpected temporal order.")
+  tsbl1 <- arrange(tourism, Quarter)
   expect_equal(tsbl1, tourism)
-  expect_false(is_ordered(tsbl1))
+  expect_true(is_ordered(tsbl1))
   expect_identical(key(tsbl1), key(tourism))
   expect_identical(groups(tsbl1), groups(tourism))
   tsbl2 <- arrange(tsbl1, Region, State, Purpose, Quarter)
@@ -65,37 +74,30 @@ idx_year <- seq.int(1970, 2010, by = 10)
 dat_x <- tsibble(year = idx_year, value = rnorm(5), index = year)
 
 test_that("warnings for arrange a univariate time series", {
-  expect_warning(arrange(dat_x, value), "Unexpected temporal order.")
+  expect_warning(arrange(dat_x, value), "Unspecified temporal order.")
 })
 
 test_that("expect warnings from arrange.tbl_ts()", {
   expect_is(pedestrian %>% arrange(desc(Sensor), Date_Time), "tbl_ts")
-  expect_warning(pedestrian %>% arrange(Time), "Unexpected temporal order.")
-  expect_warning(pedestrian %>% arrange(Sensor, desc(Date_Time)), "Unexpected temporal order.")
-  expect_warning(pedestrian %>% arrange(desc(Date_Time)), "Unexpected temporal order.")
-  expect_warning(pedestrian %>% arrange(Count, Date_Time, Sensor), "Unexpected temporal order.")
-  expect_warning(pedestrian %>% arrange(Sensor, Count, Date_Time), "Unexpected temporal order.")
-  expect_warning(tbl <- pedestrian %>% arrange(Date_Time, Sensor), "Unexpected temporal order.")
+  expect_warning(pedestrian %>% arrange(Time), "Unspecified temporal order.")
+  expect_warning(pedestrian %>% arrange(Sensor, desc(Date_Time)), "Unspecified temporal order.")
+  expect_warning(pedestrian %>% arrange(desc(Date_Time)), "Unspecified temporal order.")
+  expect_warning(pedestrian %>% arrange(Count, Date_Time, Sensor), "Unspecified temporal order.")
+  expect_warning(pedestrian %>% arrange(Sensor, Count, Date_Time), "Unspecified temporal order.")
+  tbl <- pedestrian %>% arrange(Date_Time, Sensor)
   expect_identical(tbl %>% arrange(Sensor, Date_Time), pedestrian)
-  bm <- pedestrian %>%
-    filter(Sensor == "Birrarung Marr")
-  expect_warning(bm %>% arrange(desc(Date_Time)), "Unexpected temporal order.")
+  bm <- pedestrian %>% filter(Sensor == "Birrarung Marr")
+  expect_warning(bm %>% arrange(desc(Date_Time)), "Unspecified temporal order.")
 })
 
 test_that("arrange.grouped_ts()", {
-  expect_warning(
-    tsbl2 <- tourism %>% group_by(Region, State) %>% arrange(Quarter),
-    "Unexpected temporal order."
-  )
+  tsbl2 <- tourism %>% group_by(Region, State) %>% arrange(Quarter)
   expect_equal(tsbl2, tourism)
   expect_identical(key(tsbl2), key(tourism))
   expect_identical(group_vars(tsbl2), c("Region",  "State"))
-  expect_warning(
-    tsbl3 <- tourism %>%
-      group_by(Region, State) %>%
-      arrange(Quarter, .by_group = TRUE),
-    "Unexpected temporal order."
-  )
+  tsbl3 <- tourism %>%
+    group_by(Region, State) %>%
+    arrange(Quarter, .by_group = TRUE)
   expect_equal(tsbl3, tourism)
   expect_identical(key(tsbl3), key(tourism))
   expect_identical(group_vars(tsbl3), c("Region",  "State"))
@@ -126,9 +128,11 @@ test_that("filter() and slice()", {
   expect_identical(slice(pedestrian, NA), slice(pedestrian, 0L))
   expect_identical(slice(pedestrian, c(1, NA)), slice(pedestrian, 1L))
   expect_identical(slice(pedestrian, c(1, NA, 100000)), slice(pedestrian, 1L))
-  expect_warning(slice(pedestrian, 3:1), "Unexpected temporal order.")
+  expect_warning(slice(pedestrian, 3:1), "Unspecified temporal order.")
   expect_error(slice(pedestrian, c(3, 3)), "Duplicated")
   expect_error(slice(pedestrian, 3, 3), "only accepts one expression.")
+  expect_identical(slice(pedestrian, -(1:10)), pedestrian[-(1:10), ])
+  expect_identical(slice(pedestrian, -(10:1)), slice(pedestrian, -(1:10)))
 })
 
 test_that("filter() and slice() with .preserve = TRUE", {
@@ -139,6 +143,9 @@ test_that("filter() and slice() with .preserve = TRUE", {
     as_tibble()
   expect_identical(key_data(ped_fil1)$.rows, group_data(ped_fil2)$.rows)
   expect_identical(key_rows(ped_fil1), group_rows(ped_fil2))
+  res <- as_tsibble(AirPassengers) %>% 
+    filter_index(~ "1949 Mar", .preserve = TRUE)
+  expect_false(identical(key_rows(res), key_rows(as_tsibble(AirPassengers))))
 })
 
 test_that("select() and rename()", {
@@ -152,9 +159,9 @@ test_that("select() and rename()", {
     quo_name(index(select(tourism, Index = Quarter, Region:Purpose))),
     "Index"
   )
-  expect_equal(
-    quo_name(index(select(tourism, Index = Quarter, Region:Purpose))),
-    "Index"
+  expect_named(
+    select(tourism, Index = Quarter, Trip = Trips, Region:Purpose),
+    c("Index", "Trip", "Region", "State", "Purpose")
   )
   expect_identical(rename(tourism), tourism)
 })
@@ -188,6 +195,14 @@ test_that("mutate()", {
   expect_error(mutate(tourism, Region = State), "is not a valid tsibble.")
   expect_identical(ncol(mutate(tourism, New = 1)), ncol(tourism) + 1L)
   expect_equal(ncol(mutate(tourism, State = NULL)), 4)
+  expect_equal(
+    interval(tourism %>% mutate(Quarter = as.Date(Quarter))),
+    new_interval(day = 1)
+  )
+  expect_equal(
+    interval(new_data(tourism) %>% mutate(Trips2 = 1)),
+    new_interval(quarter = 1)
+  )
   tsbl <- tourism %>%
     group_by(Region, State, Purpose) %>%
     mutate(New = 1:n())
@@ -224,7 +239,7 @@ tsbl <- tsibble(
   a = rnorm(30),
   b = rnorm(30),
   c = rnorm(30),
-  key = id(group), index = qtr
+  key = group, index = qtr
 )
 
 test_that("transmute()", {

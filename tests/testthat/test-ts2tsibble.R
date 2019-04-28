@@ -19,8 +19,10 @@ test_that("a ts with different frequnecy", {
   tsbl5 <- as_tsibble(x5)
   expect_identical(format(interval(tsbl5)), "1D")
   x6 <- ts(1:10, start = c(2000, 1), frequency = 52)
-  tsbl6 <- as_tsibble(x6)
-  expect_identical(format(interval(tsbl6)), "1W")
+  expect_warning(tsbl6 <- as_tsibble(x6), "Expected frequency")
+  x7 <- ts(1:10, start = c(2000, 1), frequency = 52.18)
+  tsbl7 <- as_tsibble(x7)
+  expect_identical(format(interval(tsbl7)), "1W")
 })
 
 test_that("a mts", {
@@ -28,7 +30,8 @@ test_that("a mts", {
   tsbl1 <- as_tsibble(x)
   expect_identical(dim(tsbl1), c(length(x), 3L))
   expect_identical(key_vars(tsbl1)[[1L]], "key")
-  tsbl2 <- as_tsibble(x, gather = FALSE)
+  expect_warning(tsbl2 <- as_tsibble(x, gather = FALSE), "deprecated")
+  tsbl2 <- as_tsibble(x, pivot_longer = FALSE)
   expect_identical(dim(tsbl2), c(nrow(x), 3L))
   expect_identical(key_vars(tsbl2), character(0))
   expect_identical(colnames(tsbl2), c("index", "Series 1", "Series 2"))

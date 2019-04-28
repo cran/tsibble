@@ -68,8 +68,27 @@ n_keys <- function(x) {
   NROW(key_data(x))
 }
 
-validate_key <- function(.data, .vars) {
-  syms(unname(tidyselect::vars_select(names(.data), !!! .vars)))
+#' Default value for .drop argument for key
+#'
+#' @param .tbl A data frame
+#' @keywords internal
+#' @export
+key_drop_default <- function(.tbl) {
+  UseMethod("key_drop_default")
+}
+
+#' @export
+key_drop_default.default <- function(.tbl) {
+  TRUE
+}
+
+#' @export
+key_drop_default.tbl_ts <- function(.tbl) {
+  tryCatch({
+    !identical(attr(key_data(.tbl), ".drop"), FALSE)
+  }, error = function(e) {
+    TRUE
+  })
 }
 
 remove_key <- function(.data, .vars) {
@@ -102,4 +121,14 @@ rename_group <- function(.data, .vars) {
   names(.data)[idx] <- new_grp_chr <- names[idx]
   names(attr(.data, "groups")) <- c(new_grp_chr, ".rows")
   .data
+}
+
+is_key_dropped <- function(x) {
+  if (!is_grouped_ts(x)) {
+    key_drop_default(x)
+  } else {
+    key_vars <- key_vars(x)
+    grp_vars <- group_vars(x)
+    group_by_drop_default(x) && any(is.element(key_vars, grp_vars))
+  }
 }

@@ -18,17 +18,22 @@ test_that("class: Date", {
 
 test_that("class: year*", {
   yrwk <- as_yearweek(unique(pedestrian$Date))
-  expect_error(start(yrwk, 2017), "Must be")
+  expect_error(start(yrwk, 2017), "how to handle the numeric class")
   expect_equal(start(yrwk), as.Date("2015-01-01"))
   expect_equal(
     start(yrwk, x),
-    as.Date(c("2016-01-01", "2016-10-01", "2016-12-09"))
+    as.Date(c("2015-12-28", "2016-09-26", "2016-12-05"))
   )
   expect_equal(end(pedestrian$Date), as.Date("2017-01-01"))
   expect_equal(
     end(pedestrian$Date, x),
     as.Date(c("2017-01-01", "2016-11-01", "2016-12-10"))
   )
+  x <- yearquarter(c("2013 Q3", "2013 Qtr 3", "Quarter 4 2015"))
+  expect_equal(time_in(x, ~ "2014 Q1"), c(TRUE, TRUE, FALSE))
+  expect_equal(time_in(yearmonth(x), ~ "2014 March"), c(TRUE, TRUE, FALSE))
+  expect_equal(time_in(x, "2014 Q1" ~ .), c(FALSE, FALSE, TRUE))
+  expect_equal(time_in(yearmonth(x), "2014 March" ~ .), c(FALSE, FALSE, TRUE))
 })
 
 si <- sessionInfo()
@@ -127,9 +132,9 @@ test_that("filter_index()", {
   )
   expect_equal(filter_index(pedestrian), pedestrian)
   ped_yr <- pedestrian %>%
-      group_by(Sensor) %>%
-      index_by(year = as.integer(year(Date_Time))) %>%
-      summarise(cc = sum(Count))
+    group_by(Sensor) %>%
+    index_by(year = as.integer(year(Date_Time))) %>%
+    summarise(cc = sum(Count))
   expect_identical(
     ped_yr %>% filter_index(2015),
     ped_yr %>% filter(year == 2015)

@@ -10,15 +10,25 @@ dat_x <- tibble(
   value = rnorm(5)
 )
 
-test_that("A tsibble cannot be NULL or without index", {
+test_that("A tsibble cannot be NULL, without index, or unknown class", {
   expect_error(tsibble(), "Can't determine index")
   expect_error(as_tsibble(), "NULL")
+  expect_error(as_tsibble(as.matrix(AirPassengers)), "handle the matrix class")
 })
 
 test_that("A tsibble must not contain missing values in index", {
   expect_error(
     tsibble(idx = ymd_h("2017-10-01 0", tz = "Australia/Melbourne") + hours(1:3)),
     "must not contain `NA`.")
+})
+
+test_that("Argument regular is not logical", {
+  expect_error(
+    tsibble(
+      idx = ymd_h("2017-10-01 0", tz = "Australia/Melbourne") + hours(1:3),
+      regular = new_interval()
+    ),
+    "not TRUE")
 })
 
 test_that("A tibble is not tsibble", {
@@ -37,7 +47,7 @@ test_that("Coerce to tbl_df and data.frame", {
 })
 
 stocks <- tsibble(
-  time = seq(0, 1e-11, 1e-12)[1:10],
+  time = seq(0, 1e-5, 1e-6)[1:10],
   X = rnorm(10, 0, 1),
   Y = rnorm(10, 0, 2),
   Z = rnorm(10, 0, 4),
@@ -45,7 +55,9 @@ stocks <- tsibble(
 )
 
 test_that("numeric with fractional intervals", {
-  expect_output(print(stocks), "A tsibble: 10 x 4 \\[1e-12\\]")
+  expect_identical(
+    tbl_sum(stocks), c("A tsibble" = "10 x 4 [1e-06]")
+  )
 })
 
 start <- as.POSIXct("2010-01-15 13:55:23.975", tz = "UTC")
@@ -53,8 +65,10 @@ x <-  start + lubridate::milliseconds(x = seq(0, 99, by = 5))
 df <- data.frame(time = x, value = rnorm(length(x)))
 tsbl <- as_tsibble(df, index = time)
 
-test_that("POSIXct with 10 milliseconds interval", {
-  expect_output(print(tsbl), "A tsibble: 20 x 2 \\[5ms\\] <UTC>")
+test_that("POSIXct with 5 milliseconds interval", {
+  expect_identical(
+    tbl_sum(tsbl), c("A tsibble" = "20 x 2 [5ms] <UTC>")
+  )
 })
 
 x <- ISOdatetime(2011,8,2,0,0,0) + c(34201881660:34201881669)*1e-6
@@ -62,7 +76,8 @@ df <- data.frame(time = x, value = rnorm(10))
 tsbl <- as_tsibble(df, index = time)
 
 test_that("POSIXct with 1 microseconds interval", {
-  expect_output(print(tsbl), cat("A tsibble: 10 x 2 [10\U00B5s] <?>"))
+  res <- if (is_utf8_output()) "10 x 2 [1\U00B5s] <?>" else "10 x 2 [1us] <?>"
+  expect_identical(tbl_sum(tsbl), c("A tsibble" = res))
 })
 
 library(nanotime)
@@ -71,22 +86,21 @@ df <- data.frame(time = x, value = rnorm(10))
 tsbl <- as_tsibble(df)
 
 test_that("nanotime with 1 nanoseconds interval", {
-  expect_output(print(tsbl), "A tsibble: 10 x 2 \\[1ns\\]")
+  expect_identical(tbl_sum(tsbl), c("A tsibble" = "10 x 2 [1ns]"))
 })
 
 test_that("POSIXt with 1 second interval", {
   expect_identical(index_valid(dat_x$date_time), TRUE)
   expect_message(tsbl <- as_tsibble(dat_x), "Using `date_time` as index variable.")
-  expect_output(print(tsbl), "A tsibble: 5 x 2 \\[1s\\]")
-  expect_error(as_tsibble(dat_x, key = id(date_time)))
+  expect_identical(tbl_sum(tsbl), c("A tsibble" = "5 x 2 [1s] <UTC>"))
+  expect_error(as_tsibble(dat_x, key = date_time))
   expect_is(tsbl, "tbl_ts")
   expect_is(index(tsbl), "name")
   expect_identical(quo_text(index(tsbl)), "date_time")
-  expect_identical(time_unit(pull_interval(tsbl$date_time)), 1)
+  expect_identical(time_unit(interval_pull(tsbl$date_time)), 1)
   expect_identical(key(tsbl), list())
   expect_identical(format(groups(tsbl)), "NULL")
   expect_identical(format(interval(tsbl)), "1s")
-  expect_output(print(interval(tsbl)), "1s")
   expect_true(is_regular(tsbl))
   # expect_equal(key_size(tsbl), 5)
   expect_equal(n_keys(tsbl), 1)
@@ -137,7 +151,7 @@ dat_x <- tibble(
 test_that("POSIXt with 2 minutes interval", {
   tsbl <- as_tsibble(dat_x)
   expect_identical(format(interval(tsbl)), "2m")
-  expect_identical(time_unit(pull_interval(tsbl$date_time)), 120)
+  expect_identical(time_unit(interval_pull(tsbl$date_time)), 120)
 })
 
 idx_hour <- seq.POSIXt(
@@ -152,7 +166,7 @@ dat_x <- tibble(
 test_that("POSIXt with 3 hours interval", {
   tsbl <- as_tsibble(dat_x)
   expect_identical(format(interval(tsbl)), "3h")
-  expect_identical(time_unit(pull_interval(tsbl$date_time)), 3 * 60 * 60)
+  expect_identical(time_unit(interval_pull(tsbl$date_time)), 3 * 60 * 60)
 })
 
 idx_day <- seq.Date(ymd("2017-01-01"), ymd("2017-01-20"), by = 4)
@@ -167,7 +181,7 @@ test_that("Date with 4 days interval", {
   expect_message(tsbl <- as_tsibble(dat_x))
   expect_is(tsbl, "tbl_ts")
   expect_identical(format(interval(tsbl)), "4D")
-  expect_identical(time_unit(pull_interval(tsbl$date)), 4)
+  expect_identical(time_unit(interval_pull(tsbl$date)), 4)
 })
 
 idx_week <- seq(yearweek(ymd("2017-02-01")), length.out = 5, by = 1)
@@ -179,7 +193,7 @@ test_that("Year week with 1 week interval", {
   expect_output(print(tsbl), "A tsibble: 5 x 2 \\[1W\\]")
   expect_is(tsbl, "tbl_ts")
   expect_identical(format(interval(tsbl)), "1W")
-  expect_identical(time_unit(pull_interval(tsbl$yrwk)), 1)
+  expect_identical(time_unit(interval_pull(tsbl$yrwk)), 1)
 })
 
 idx_month <- seq(
@@ -197,7 +211,7 @@ test_that("Year month with 1 month interval", {
   expect_is(tsbl, "tbl_ts")
   expect_is(as_tsibble(tsbl, validate = TRUE), "tbl_ts")
   expect_identical(format(interval(tsbl)), "1M")
-  expect_identical(time_unit(pull_interval(tsbl$yrmth)), 1)
+  expect_identical(time_unit(interval_pull(tsbl$yrmth)), 1)
 })
 
 idx_qtr <- seq(
@@ -213,7 +227,7 @@ test_that("Year quarter with 1 quarter interval", {
   expect_message(tsbl <- as_tsibble(dat_x))
   expect_is(tsbl, "tbl_ts")
   expect_identical(format(interval(tsbl)), "1Q")
-  expect_identical(time_unit(pull_interval(tsbl$yrqtr)), 1)
+  expect_identical(time_unit(interval_pull(tsbl$yrqtr)), 1)
 })
 
 idx_year <- seq.int(1970, 2010, by = 10)
@@ -228,18 +242,47 @@ test_that("Year with 10 years interval", {
   tsbl <- as_tsibble(dat_x, index = year)
   expect_is(tsbl, "tbl_ts")
   expect_identical(format(interval(tsbl)), "10Y")
-  expect_identical(time_unit(pull_interval(tsbl$year)), 10)
+  expect_identical(time_unit(interval_pull(tsbl$year)), 10)
+})
+
+
+test_that("Difftime with 2 days interval", {
+  idx_time <- as.difftime(as.Date("2019-03-01") - as.Date("2019-02-28")) + c(0, 2, 4, 6, 8)
+  dat_x <- tibble(time = idx_time, value = rnorm(5))
+  expect_identical(index_valid(dat_x$time), TRUE)
+  expect_message(tsbl <- as_tsibble(dat_x))
+  expect_is(tsbl, "tbl_ts")
+  expect_identical(format(interval(tsbl)), "2D")
+  expect_identical(fill_gaps(tsbl[-2, ], value = tsbl$value[2]), tsbl)
 })
 
 library(hms)
-idx_time <- hms(hour = rep(0, 5), minutes = 1:5, second = rep(0, 5))
-dat_x <- tibble(time = idx_time, value = rnorm(5))
 
 test_that("Difftime with 1 minute interval", {
+  idx_time <- hms(hour = rep(0, 5), minutes = 1:5, second = rep(0, 5))
+  dat_x <- tibble(time = idx_time, value = rnorm(5))
   expect_identical(index_valid(dat_x$time), TRUE)
   expect_message(tsbl <- as_tsibble(dat_x))
   expect_is(tsbl, "tbl_ts")
   expect_identical(format(interval(tsbl)), "1m")
+  expect_identical(fill_gaps(tsbl[-2, ], value = tsbl$value[2]), tsbl)
+})
+
+test_that("Difftime with 3 milliminute interval", {
+  idx_time <- hms(seconds = c(1.001, 1.004, 1.007, 1.010, 1.013))
+  dat_x <- tibble(time = idx_time, value = rnorm(5))
+  expect_message(tsbl <- as_tsibble(dat_x))
+  expect_identical(format(interval(tsbl)), "3ms")
+  # expect_identical(fill_gaps(tsbl[-2, ], value = tsbl$value[2]), tsbl)
+})
+
+test_that("Difftime with 1 day interval", {
+  idx_time <- hms(days = 1:5)
+  dat_x <- tibble(time = idx_time, value = rnorm(5))
+  expect_identical(index_valid(dat_x$time), TRUE)
+  expect_message(tsbl <- as_tsibble(dat_x))
+  expect_is(tsbl, "tbl_ts")
+  expect_identical(format(interval(tsbl)), "24h")
   expect_identical(fill_gaps(tsbl[-2, ], value = tsbl$value[2]), tsbl)
 })
 
@@ -265,8 +308,8 @@ dat_x <- tibble(
 
 test_that("A single key", {
   expect_error(as_tsibble(dat_x, index = date), "A valid tsibble")
-  expect_error(as_tsibble(dat_x, key = "group", index = date), "Key can only be created")
-  tsbl <- as_tsibble(dat_x, key = id(group), index = date)
+  tsbl <- as_tsibble(dat_x, key = group, index = date)
+  expect_identical(as_tsibble(dat_x, key = "group", index = date), tsbl)
   expect_output(print(tsbl), "A tsibble: 10 x 3 \\[1D\\]")
   expect_identical(format(groups(tsbl)), "NULL")
   # expect_equal(key_size(tsbl), c(5, 5))
@@ -275,17 +318,17 @@ test_that("A single key", {
 
 test_that("Duplicated identifier: index", {
   dat_y <- dat_x[c(1, 2, 1, 4:10), ]
-  expect_error(as_tsibble(dat_y, key = id(group), index = date))
+  expect_error(as_tsibble(dat_y, key = group, index = date))
 })
 
 test_that("Duplicated identifier: key", {
   dat_x$group <- rep(letters[1:2], c(6, 4))
-  expect_error(as_tsibble(dat_x, key = id(group), index = date))
+  expect_error(as_tsibble(dat_x, key = group, index = date))
 })
 
 test_that("validate = FALSE", {
   dat_x$group <- rep(letters[1:2], c(6, 4))
-  tsbl <- as_tsibble(dat_x, key = id(group), index = date, validate = FALSE)
+  tsbl <- as_tsibble(dat_x, key = group, index = date, validate = FALSE)
   expect_is(tsbl, "tbl_ts")
 })
 
@@ -300,16 +343,16 @@ dat_x <- tribble(
 )
 
 test_that("multiple variables", {
-  expect_error(as_tsibble(dat_x, key = id(group1), index = date))
-  expect_error(as_tsibble(dat_x, key = id(group2), index = date))
-  tsbl <- as_tsibble(dat_x, key = id(group1, group2), index = date)
+  expect_error(as_tsibble(dat_x, key = group1, index = date))
+  expect_error(as_tsibble(dat_x, key = group2, index = date))
+  tsbl <- as_tsibble(dat_x, key = c(group1, group2), index = date)
   expect_identical(length(key(tsbl)), 2L)
 })
 
 test_that("Use '-' and ':' in key vars", {
-  tsbl1 <- as_tsibble(dat_x, key = id(-date, -value), index = date)
+  tsbl1 <- as_tsibble(dat_x, key = c(-date, -value), index = date)
   expect_identical(length(key(tsbl1)), 2L)
-  tsbl2 <- as_tsibble(dat_x, key = id(group1:group2), index = date)
+  tsbl2 <- as_tsibble(dat_x, key = group1:group2, index = date)
   expect_identical(length(key(tsbl2)), 2L)
 })
 
@@ -325,40 +368,65 @@ test_that("as_tsibble.tbl_ts & as_tsibble.grouped_df", {
   expect_identical(ped, pedestrian)
   grped_ped <- pedestrian %>% group_by(Date)
   expect_equal(as_tsibble(grped_ped), grped_ped)
-  expect_is(as_tsibble(tbl, key = id(group), index = mth), "tbl_ts")
-  expect_is(as_tsibble(tbl, key = id(group), index = mth), "grouped_ts")
+  expect_is(as_tsibble(tbl, key = group, index = mth), "tbl_ts")
+  expect_is(as_tsibble(tbl, key = group, index = mth), "grouped_ts")
 })
 
 test_that("build_tsibble()", {
   expect_error(build_tsibble(
-    pedestrian, key = id(Sensor), index = Date_Time,
+    pedestrian, key = Sensor, index = Date_Time,
     interval = list(hour = 1)
   ), "Argument `interval` must be class interval,")
-  expect_error(
-    build_tsibble(pedestrian, key = Sensor, index = Date_Time),
-    "Key can only be created"
-  )
-  expect_error(
-    build_tsibble(pedestrian, key = dplyr::vars(Sensor), index = Date_Time),
-    "Please use"
-  )
-
   tsbl <- build_tsibble(
-    pedestrian, key = id(Sensor), index = Date_Time,
+    pedestrian, key = Sensor, index = Date_Time,
     index2 = Date
   )
-  idx2 <- index2(tsbl)
-  expect_is(idx2, "name")
+  idx2 <- index2_var(tsbl)
+  expect_equal(idx2, "Date")
+  expect_is(tsbl, "grouped_ts")
 
   idx_drop <- dplyr::bind_rows(tsbl, tsbl)
   expect_error(print(idx_drop), "dropped somehow")
 
   expect_error(
-    build_tsibble(pedestrian, key = id(Sensor), index = NULL), "NULL."
+    build_tsibble(pedestrian, key = Sensor, index = NULL), "NULL."
   )
 
   expect_error(pedestrian %>%
     mutate(Date_Time = as.character(Date_Time)),
     "Unsupported index"
+  )
+})
+
+test_that("build_tsibble() for empty data frame", {
+  ped_null <- pedestrian[0, ]
+  expect_error(build_tsibble(
+    ped_null, key = Sensor, index = Date_Time,
+    interval = list(hour = 1)
+  ), "Argument `interval` must be class interval,")
+  expect_identical(interval(build_tsibble(
+    ped_null, key = Sensor, index = Date_Time,
+    interval = new_interval(hour = 1))),
+    new_interval(hour = 1)
+  )
+})
+
+test_that("update_tsibble() #112", {
+  tsbl <- as_tsibble(dat_x, key = c(group1, group2), index = date, regular = FALSE)
+  expect_true(is_regular(update_tsibble(tsbl, regular = TRUE)))
+})
+
+test_that("update_tsibble() for unknown interval", {
+  tsbl <- as_tsibble(dat_x, key = c(group1, group2), index = date)[1L, ]
+  expect_true(unknown_interval(interval(update_tsibble(tsbl))))
+})
+
+test_that("update_tsibble() for different index and index2", {
+  ped2 <- pedestrian %>%
+    mutate(Hour_Since = Date_Time - min(Date_Time)) %>%
+    index_by(Date)
+  expect_identical(
+    index2_var(update_tsibble(ped2, index = Hour_Since)),
+    "Date"
   )
 })

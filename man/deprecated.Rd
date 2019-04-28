@@ -2,34 +2,27 @@
 % Please edit documentation in R/deprecated.R
 \name{as.tsibble}
 \alias{as.tsibble}
+\alias{pull_interval}
 \alias{fill_na}
-\alias{find_duplicates}
+\alias{id}
 \title{Deprecated functions}
 \usage{
 as.tsibble(x, ...)
 
+pull_interval(x)
+
 fill_na(.data, ..., .full = FALSE)
 
-find_duplicates(data, key = id(), index, fromLast = FALSE)
+id(...)
 }
 \arguments{
 \item{x}{Other objects.}
 
-\item{data}{A \code{tbl_ts} object.}
-
-\item{key}{Structural variable(s) that define unique time indices, used with
-the helper \link{id}. If a univariate time series (without an explicit key),
-simply call \code{id()}.}
-
-\item{index}{A bare (or unquoted) variable to specify the time index variable.}
-
-\item{fromLast}{\code{TRUE} does the duplication check from the last of identical
-elements.}
-}
-\value{
-A logical vector of the same length as the row number of \code{data}
+\item{...}{Variables passed to tsibble()/as_tsibble().}
 }
 \description{
-Find which row has duplicated key and index elements
+Deprecated functions
+
+Identifiers used for creating key
 }
 \keyword{internal}

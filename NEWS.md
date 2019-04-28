@@ -1,6 +1,39 @@
-# tsibble 0.7.0
+# tsibble 0.8.0
 
-The tsibble's data structure and API reach to the lifecycle of stability.
+## Breaking changes
+
+* This release has undergone an overhaul to clean tsibble's meta data: (1) attribute `regular` integrated to `interval`, (2) attribute `ordered` integrated to `index`. A previously stored tsibble object may receive a warning "corrupt tsibble object".
+* The **dplyr** and **tidyr** generics are no longer re-exported. Instead they will be registered on load, which means you need to explicitly load `library(tidyverse)` in front.
+
+## Defunct & deprecated functions/arguments
+
+* Deprecate `id()` for creating key for the consistence of tidy selectors, and will be defunct until August 2019.
+* Deprecate of `pull_interval()` in favour of `interval_pull()`.
+* Deprecate `as.tsibble()` in favour of `as_tsibble()`. The warning is displayed once per session.
+* Deprecate `gather = TRUE` in `as_tsibble.ts()` in favour of `pivot_longer = TRUE`.
+* Continue with deprecation of `fill_na()` in favour of `fill_gaps()`, and will be defunct in the next release.
+
+## Improvements
+
+* Support the interval of "quarter", "month", "week" & "day" for `difftime`.
+* Support the interval of "millisecond" & "microsecond" for `hms`.
+* Added new argument `.drop` for dropping empty factor or not in `as_tsibble()` and `build_tsibble()`.
+* Binary `-` operator between yearweek, yearmonth, and yearquarter returns class `difftime`.
+* Added new argument `key_data` to `build_tsibble()` for the easy-to-reason purpose.
+* `yearquarter()` better supports strings that contains "Q"/"Qtr"/"Quarter". (#107)
+
+## Bug fixes
+
+* Fixed bugs in `as_tsibble.ts()` for monthly series starting at other months than January. (#89)
+* `guess_frequency.yearweek()` returns 52.18 for more accurate weekly representation, instead of 52.
+* `n()` now can be called in `slice.tbl_ts()`. (#95)
+* Fixed false warnings for negative indices in `slice.tbl_ts()`.
+* Fixed false warnings for a few cases in `arrange.tbl_ts()`.
+* Fixed `*_join()` for not finding key or index when `by` is specified. (#102)
+* Added "Tasmania" to `data(tourism)` and 2017 data.
+* More robustly handles sub-second intervals.
+
+# tsibble 0.7.0
 
 ## Breaking changes
 

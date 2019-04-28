@@ -16,7 +16,7 @@
 #'
 #' @export
 #' @rdname period
-#' @seealso [pull_interval]
+#' @seealso [interval_pull]
 #'
 #' @examples
 #' # coerce POSIXct/Dates to yearweek, yearmonth, yearquarter
@@ -24,19 +24,22 @@
 #' yearweek(x)
 #' yearmonth(x)
 #' yearmonth(yearweek(x))
-#' yearmonth("2018-07")
 #' yearquarter(x)
 #'
 #' # coerce yearmonths to yearquarter
 #' y <- yearmonth(x)
 #' yearquarter(y)
 #'
+#' # parse characters
+#' yearmonth(c("2018 Jan", "2018-01", "2018 January"))
+#' yearquarter(c("2018 Q1", "2018 Qtr1", "2018 Quarter 1"))
+#'
 #' # seq() and binary operaters
 #' wk1 <- yearweek("2017-11-01")
 #' wk2 <- yearweek("2018-04-29")
 #' seq(from = wk1, to = wk2, by = 2) # by two weeks
 #' wk1 + 0:9
-#' mth <- yearmonth("2017-11-01")
+#' mth <- yearmonth("2017-11")
 #' seq(mth, length.out = 5, by = 1) # by 1 month
 #' mth + 0:9
 #' seq(yearquarter(mth), length.out = 5, by = 1) # by 1 quarter
@@ -70,7 +73,7 @@ unique.yearweek <- function(x, incomparables = FALSE, ...) {
 
 #' @export
 diff.yearweek <- function(x, lag = 1, differences = 1, ...) {
-  out <- diff((as_date(x) - as_date("1969-12-29")) / 7, 
+  out <- diff((as_date(x) - as_date("1969-12-29")) / 7,
     lag = lag, differences = differences)
   structure(out, class = "difftime", units = "weeks")
 }
@@ -96,9 +99,11 @@ diff.yearweek <- function(x, lag = 1, differences = 1, ...) {
   e1_yrwk <- is_yearweek(e1)
   e2_yrwk <- is_yearweek(e2)
   if (e1_yrwk && e2_yrwk) {
-    abort("Binary `-` is not defined for class yearweek.")
+    res <- units_since(e1) - units_since(e2)
+    structure(res, class = "difftime", units = "weeks")
+  } else {
+    yearweek(as_date(e1) - e2 * 7)
   }
-  yearweek(as_date(e1) - e2 * 7)
 }
 
 is_yearweek <- function(x) {
@@ -123,7 +128,7 @@ yearweek.character <- function(x) {
   if (is_empty(x)) return(as_yearweek(x))
 
   anytime::assertDate(x)
-  as_yearweek(anytime::anydate(x))
+  yearweek(anytime::anydate(x))
 }
 
 #' @export
@@ -136,13 +141,11 @@ format.yearweek <- function(x, format = "%Y W%V", ...) {
   x <- as_date(x)
   yr <- lubridate::year(x)
   ord <- lubridate::make_date(yr, 1)
-  wday <- lubridate::wday(x) - 1
-  wday[wday == 0] <- 7
-  wks <- as.integer(floor((x - ord - wday + 10) / 7))
+  wday <- lubridate::wday(x, week_start = 1)
+  mth_wk <- strftime(x, format = "%m_%V")
   yrs <- yr
-  yrs[wks == 0] <- yr[wks == 0] - 1
-  is_53 <- yr[wks == 53]
-  yrs[wks == 53] <- is_53 + !is_53weeks(is_53)
+  yrs[mth_wk == "01_53"] <- yr[mth_wk == "01_53"] - 1
+  yrs[mth_wk == "12_01"] <- yr[mth_wk == "12_01"] + 1
   if (format == "%Y W%V") {
     return(paste(yrs, strftime(x, format = "W%V")))
   }
@@ -224,9 +227,9 @@ unique.yearmonth <- function(x, incomparables = FALSE, ...) {
 
 #' @export
 diff.yearmonth <- function(x, lag = 1, differences = 1, ...) {
-  out <- diff((lubridate::year(x) - 1970) * 12 + lubridate::month(x), 
+  out <- diff((lubridate::year(x) - 1970) * 12 + lubridate::month(x),
     lag = lag, differences = differences)
-  structure(out, class = "difftime", units = "month")
+  structure(out, class = "difftime", units = "months")
 }
 
 #' @export
@@ -250,9 +253,11 @@ diff.yearmonth <- function(x, lag = 1, differences = 1, ...) {
   e1_yrmth <- is_yearmonth(e1)
   e2_yrmth <- is_yearmonth(e2)
   if (e1_yrmth && e2_yrmth) {
-    abort("Binary `-` is not defined for class yearmonth.")
+    res <- units_since(e1) - units_since(e2)
+    structure(res, class = "difftime", units = "months")
+  } else {
+    yearmonth(as_date(e1) - lubridate::period(months = e2, units = "month"))
   }
-  yearmonth(as_date(e1) - lubridate::period(months = e2, units = "month"))
 }
 
 is_yearmonth <- function(x) {
@@ -291,7 +296,7 @@ yearmonth.yearmonth <- function(x) {
 #' @export
 yearmonth.numeric <- function(x) {
   year <- trunc(x)
-  month <- formatC((x %% 1) * 12 + 1, flag = 0, width = 2)
+  month <- formatC(round((x %% 1) * 12) %% 12 + 1, flag = 0, width = 2)
   result <- lubridate::make_date(year, month, 1)
   as_yearmonth(result)
 }
@@ -347,7 +352,7 @@ unique.yearquarter <- function(x, incomparables = FALSE, ...) {
 diff.yearquarter <- function(x, lag = 1, differences = 1, ...) {
   out <- diff((lubridate::year(x) - 1970) * 4 + lubridate::quarter(x),
     lag = lag, differences = differences)
-  structure(out, class = "difftime", units = "quarter")
+  structure(out, class = "difftime", units = "quarters")
 }
 
 #' @export
@@ -371,9 +376,11 @@ diff.yearquarter <- function(x, lag = 1, differences = 1, ...) {
   e1_yrqtr <- is_yearquarter(e1)
   e2_yrqtr <- is_yearquarter(e2)
   if (e1_yrqtr && e2_yrqtr) {
-    abort("Binary `-` is not defined for class yearquarter.")
+    res <- units_since(e1) - units_since(e2)
+    structure(res, class = "difftime", units = "quarters")
+  } else {
+    yearquarter(as_date(e1) - lubridate::period(months = e2 * 3))
   }
-  yearquarter(as_date(e1) - lubridate::period(months = e2 * 3))
 }
 
 is_yearquarter <- function(x) {
@@ -397,8 +404,26 @@ yearquarter.Date <- yearquarter.POSIXt
 yearquarter.character <- function(x) {
   if (is_empty(x)) return(as_yearquarter(x))
 
-  anytime::assertDate(x)
-  as_yearquarter(anytime::anydate(x))
+  # exact matching with q, qtr, or quarter
+  key_words <- regmatches(x, gregexpr("[[:alpha:]]+", x))
+  if (all(grepl("^(q|qtr|quarter)$", key_words, ignore.case = TRUE))) {
+    yr_qtr <- regmatches(x, gregexpr("[[:digit:]]+", x))
+    digits_lgl <- map_lgl(yr_qtr, ~ !has_length(.x, 2))
+    digits_len <- map_int(yr_qtr, ~ sum(nchar(.x)))
+    if (any(digits_lgl) || any_not_equal_to_c(digits_len, 5)) {
+      abort("Character strings are not in a standard unambiguous format.")
+    }
+    yr_lgl <- map(yr_qtr, ~ grepl("[[:digit:]]{4}", .x))
+    yr <- as.integer(map2_chr(yr_qtr, yr_lgl, ~ .x[.y]))
+    qtr <- as.integer(map2_chr(yr_qtr, yr_lgl, ~ .x[!.y]))
+    if (any(qtr > 4)) {
+      abort("Quarters can't be greater than 4.")
+    }
+    as_yearquarter(lubridate::make_date(yr, qtr * 3))
+  } else {
+    anytime::assertDate(x)
+    as_yearquarter(anytime::anydate(x))
+  }
 }
 
 #' @export
@@ -592,6 +617,13 @@ units_since.POSIXct <- function(x) {
   as.numeric(x)
 }
 
+bad_by <- function(by) {
+  if (!is_bare_numeric(by, n = 1)) {
+    abort("`by` only takes a numeric.")
+  }
+}
+
+# nocov start
 seq_date <- function(
   from, to, by, length.out = NULL, along.with = NULL,
   ...) {
@@ -691,9 +723,4 @@ seq_date <- function(
   }
   res
 }
-
-bad_by <- function(by) {
-  if (!is_bare_numeric(by, n = 1)) {
-    abort("`by` only takes a numeric.")
-  }
-}
+# nocov end

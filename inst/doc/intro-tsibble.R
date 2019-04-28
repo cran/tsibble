@@ -7,14 +7,15 @@ knitr::opts_chunk$set(
 options(tibble.print_min = 5)
 
 ## ----weather-------------------------------------------------------------
-library(tsibble)
+library(dplyr)
 library(lubridate)
+library(tsibble)
 weather <- nycflights13::weather %>% 
   select(origin, time_hour, temp, humid, precip)
 weather
 
 ## ----weather-ts, message = TRUE------------------------------------------
-weather_tsbl <- as_tsibble(weather, key = id(origin))
+weather_tsbl <- as_tsibble(weather, key = origin)
 weather_tsbl
 
 ## ----weather-tsum--------------------------------------------------------
@@ -34,7 +35,7 @@ flights <- nycflights13::flights %>%
 ## ----flights-ts----------------------------------------------------------
 flights_tsbl <- flights %>%
   as_tsibble(
-    key = id(carrier, flight), 
+    key = c(carrier, flight), 
     index = sched_dep_datetime, 
     regular = FALSE
   )

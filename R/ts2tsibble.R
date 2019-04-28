@@ -8,62 +8,72 @@
 #' as_tsibble(sunspot.year)
 #' as_tsibble(sunspot.month)
 #' as_tsibble(austres)
-#'
 #' @export
-as_tsibble.ts <- function(x, tz = "UTC", ...) {
+as_tsibble.ts <- function(x, ..., tz = "UTC") {
   idx <- time_to_date(x, tz = tz)
   value <- as.numeric(x) # rm its ts class
   tbl <- tibble(index = idx, value = value)
   build_tsibble(
-    tbl, key = id(), index = index, ordered = TRUE, validate = FALSE
+    tbl, key = NULL, index = index, ordered = TRUE, validate = FALSE
   )
 }
 
 #' @rdname as-tsibble
-#' @param gather TRUE gives a "long" data form, otherwise as "wide" as `x`.
+#' @param pivot_longer TRUE gives a "longer" form of the data, otherwise as is.
 #'
 #' @examples
 #' # coerce mts to tsibble
 #' z <- ts(matrix(rnorm(300), 100, 3), start = c(1961, 1), frequency = 12)
 #' as_tsibble(z)
-#' as_tsibble(z, gather = FALSE)
-#'
+#' as_tsibble(z, pivot_longer = FALSE)
 #' @export
-as_tsibble.mts <- function(x, tz = "UTC", gather = TRUE, ...) {
-  if (gather) {
+as_tsibble.mts <- function(x, ..., tz = "UTC", pivot_longer = TRUE) {
+  pivot_longer <- warn_gather(..., pivot_longer = pivot_longer)
+  if (pivot_longer) {
     long_tbl <- gather_ts(x, tz = tz)
     build_tsibble(
-      long_tbl, key = id(key), index = index, ordered = TRUE, validate = FALSE
+      long_tbl, key = key, index = index, ordered = TRUE, validate = FALSE
     )
   } else {
     wide_tbl <- bind_time(x, tz = tz)
     build_tsibble(
-      wide_tbl, key = id(), index = index, ordered = TRUE, validate = FALSE
+      wide_tbl, key = NULL, index = index, ordered = TRUE, validate = FALSE
     )
   }
 }
 
+warn_gather <- function(..., pivot_longer = TRUE) {
+  dots <- dots_list(...)
+  if ("gather" %in% names(dots)) {
+    warn("Argument `gather` is deprecated, please use `pivot_longer` instead.")
+    dots$gather
+  } else {
+    pivot_longer
+  }
+}
+
+
 #' @keywords internal
 #' @export
-as_tsibble.msts <- function(x, tz = "UTC", gather = TRUE, ...) {
+as_tsibble.msts <- function(x, ..., tz = "UTC", pivot_longer = TRUE) {
   if (NCOL(x) == 1) {
-    as_tsibble.ts(x, tz = tz)
+    as_tsibble.ts(x, ..., tz = tz)
   } else {
-    as_tsibble.mts(x, tz = tz, gather = gather)
+    as_tsibble.mts(x, ..., tz = tz, pivot_longer = pivot_longer)
   }
 }
 
 #' @rdname as-tsibble
 #' @usage NULL
 #' @export
-as_tsibble.hts <- function(x, tz = "UTC", ...) {
+as_tsibble.hts <- function(x, ..., tz = "UTC") {
   full_labs <- extract_labels(x)
   tbl <- gather_ts(x, tz = tz) %>% 
     dplyr::select(index, "value")
   tbl_hts <- dplyr::bind_cols(tbl, full_labs)
   # this would work around the special character issue in headers for parse()
-  key <- syms(colnames(tbl_hts)[3:ncol(tbl_hts)])
-  build_tsibble(tbl_hts, key = key, index = index, ordered = TRUE,
+  key <- colnames(tbl_hts)[3:ncol(tbl_hts)]
+  build_tsibble(tbl_hts, key = !! key, index = index, ordered = TRUE,
     validate = FALSE)
 }
 
@@ -106,7 +116,7 @@ bind_time <- function(x, tz = "UTC") {
 
 gather_ts <- function(x, tz = "UTC") {
   tbl <- bind_time(x, tz = tz)
-  gather(tbl, key = "key", value = "value", -index)
+  tidyr::gather(tbl, key = "key", value = "value", -index)
 }
 
 # recursive function to repeat nodes for hts

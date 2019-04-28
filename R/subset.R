@@ -6,7 +6,7 @@
 # #' @export
 # `$<-.tbl_ts` <- function(x, name, value) {
 #   exceed_rows(x, length(value))
-#   name <- tidyselect::vars_select(union(names(x), name), name)
+#   name <- vars_select(union(names(x), name), name)
 #   lst_i <- map(name, ~ (.x = value))
 #   mutate(x, !!! lst_i)
 # }
@@ -22,7 +22,7 @@
   if (!is.data.frame(res)) return(res)
 
   cn <- names(res)
-  new_key <- syms(cn[cn %in% key_vars(x)])
+  new_key <- cn[cn %in% key_vars(x)]
 
   if (!missing(i)) {
     if (any_not_equal_to_c(anyDuplicated.default(i), 0)) return(as_tibble(res))
@@ -33,11 +33,9 @@
   if (not_tsibble || maybe_tsibble) {
     as_tibble(res)
   } else {
-    reg <- is_regular(x)
-    ord <- is_ordered(x)
     build_tsibble(
-      res, key = new_key, index = !! index(x), index2 = !! index2(x),
-      regular = reg, ordered = ord, validate = FALSE
+      res, key = !! new_key, index = !! index(x), index2 = !! index2(x),
+      interval = is_regular(x), ordered = is_ordered(x), validate = FALSE
     )
   }
 }
@@ -57,9 +55,9 @@
 #     # x[, j] <- 
 #     if (i > NCOL(x)) {
 #       i <- as.character(i)
-#       i <- tidyselect::vars_select(union(i, names(x)), i)
+#       i <- vars_select(union(i, names(x)), i)
 #     } else {
-#       i <- tidyselect::vars_select(names(x), i)
+#       i <- vars_select(names(x), i)
 #     }
 #     lst_i <- map(i, ~ (.x = value))
 #     mutate(x, !!! lst_i)
@@ -73,9 +71,9 @@
 #     }
 #     if (j > NCOL(x)) { # character always greater than numbers
 #       j <- as.character(j)
-#       j <- tidyselect::vars_select(union(j, names(x)), j)
+#       j <- vars_select(union(j, names(x)), j)
 #     } else {
-#       j <- tidyselect::vars_select(names(x), j)
+#       j <- vars_select(names(x), j)
 #     }
 #     lst_j <- map(j, ~ (.x = value))
 #     out <- rbind.data.frame(mutate(res, !!! lst_j), x[-i, ])

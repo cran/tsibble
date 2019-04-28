@@ -89,7 +89,7 @@ dat_x <- tibble(
   value = rep(1:2, each = 5)
 )
 dat_y <- dat_x[c(2:8, 10), ]
-tsbl <- as_tsibble(dat_y, key = id(group), index = date)
+tsbl <- as_tsibble(dat_y, key = group, index = date)
 
 test_that("fill_gaps() for corner case", {
   expect_identical(fill_gaps(tsbl[1:5, ]), tsbl[1:5, ])
@@ -111,7 +111,7 @@ test_that("fill_gaps() for a grouped_ts", {
     group_by(group) %>%
     fill_gaps(value = sum(value), .full = TRUE)
   expect_warning(
-    tourism %>% group_by(Quarter) %>% fill_gaps(Trips = sum(Trips)),
+    tourism %>% group_by(Region) %>% fill_gaps(Trips = sum(Trips)),
     "`.data` is a complete tsibble."
   )
   expect_identical(dim(full_tsbl), c(10L, 3L))
@@ -195,7 +195,7 @@ harvest <- tsibble(
   year = c(2010, 2011, 2013, 2011, 2012, 2013),
   fruit = rep(c("kiwi", "cherry"), each = 3),
   kilo = sample(1:10, size = 6),
-  key = id(fruit), index = year
+  key = fruit, index = year
 )
 
 test_that("has_gaps()", {
@@ -211,6 +211,6 @@ test_that("seq_generator()", {
   x <- nanotime::nanotime("1970-01-01T00:00:00.000000001+00:00") + c(0:3, 5:9)
   expect_length(seq_generator(x), 10)
   y <- structure(c("x", "y"), class = "xxx")
-  pull_interval.xxx <- function(x) {init_interval(unit = 1)}
-  expect_error(seq_generator(y, pull_interval(y)), "defined")
+  interval_pull.xxx <- function(x) {init_interval(unit = 1)}
+  expect_error(seq_generator(y, interval_pull(y)), "defined")
 })

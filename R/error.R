@@ -1,5 +1,5 @@
 is_index_null <- function(x) {
-  if (is.null(index(x))) {
+  if (is_null(x %@% "index")) {
     abort("The `index` has been dropped somehow. Please reconstruct tsibble.")
   }
 }
@@ -21,10 +21,6 @@ not_regular <- function(x) {
   if (!is_regular(x)) {
     abort("Can't handle tsibble of irregular interval.")
   }
-}
-
-suggest_key <- function(x) {
-  sprintf("Key can only be created via `id()`.\nDid you mean `key = id(%s)`?", x)
 }
 
 not_tsibble <- function(x) {

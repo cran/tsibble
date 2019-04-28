@@ -1,7 +1,3 @@
-#' @importFrom dplyr arrange
-#' @export
-dplyr::arrange
-
 #' Tidyverse methods for tsibble
 #'
 #' * `arrange()`: if not arranging key and index in past-to-future order, a warning is
@@ -10,11 +6,12 @@ dplyr::arrange
 #' be issued.
 #' * `select()`: keeps the variables you mention as well as the index.
 #' * `transmute()`: keeps the variable you operate on, as well as the index and key.
-#' * `summarise()` reduces a sequence of values over time instead of a single summary.
-#' * `unnest()` requires argument `key = id()` to get back to a tsibble.
+#' * `summarise()` reduces a sequence of values over time instead of a single summary,
+#' as well as dropping empty keys/groups.
+#' * `unnest()` requires argument `key = NULL` to get back to a tsibble.
 #'
 #' @param .data A `tbl_ts`.
-#' @param ... same arguments accepted as its dplyr generic.
+#' @param ... Same arguments accepted as its dplyr generic.
 #' @inheritParams dplyr::arrange
 #' @details
 #' Column-wise verbs, including `select()`, `transmute()`, `summarise()`,
@@ -23,85 +20,37 @@ dplyr::arrange
 #' is changed, it will validate whether it's a tsibble internally. Use `as_tibble()`
 #' to leave off the time context.
 #'
-#' @name tidyverse
-#' @rdname tidyverse
+#' @name tsibble-tidyverse
+#' @rdname tsibble-tidyverse
 #' @export
 arrange.tbl_ts <- function(.data, ...) {
-  exprs <- enquos(...)
-  if (is_empty(exprs)) return(.data)
-  ordered <- ordered_by_arrange(.data, !!! exprs)
-
   arr_data <- NextMethod()
-  update_meta(arr_data, .data, ordered = ordered, interval = interval(.data))
+  update_meta(arr_data, .data, ordered = FALSE, interval = interval(.data))
 }
 
-#' @rdname tidyverse
 #' @export
-arrange.grouped_ts <- function(.data, ..., .by_group = FALSE) {
-  exprs <- enquos(...)
-  if (is_empty(exprs)) return(.data)
-  ordered <- ordered_by_arrange(.data, !!! exprs, .by_group = .by_group)
-
+arrange.grouped_ts <- function(.data, ...) {
   arr_data <- NextMethod()
-  update_meta(arr_data, .data, ordered = ordered, interval = interval(.data))
+  update_meta(arr_data, .data, ordered = FALSE, interval = interval(.data))
 }
 
-ordered_by_arrange <- function(.data, ..., .by_group = FALSE) {
-  vars <- exprs <- enquos(...)
-  if (.by_group) {
-    grps <- groups(.data)
-    vars <- exprs <- c(as_quosures(grps, env = caller_env()), vars)
-  }
-  call_pos <- map_lgl(exprs, quo_is_call)
-  vars[call_pos] <- first_arg(vars[call_pos])
-  val_vars <- tidyselect::vars_select(names(.data), !!! vars)
-  idx <- index_var(.data)
-  idx_pos <- val_vars %in% idx
-  idx_is_call <- dplyr::first(exprs[idx_pos])
-  key <- key(.data)
-  if (is_false(any(idx_pos))) { # no index presented in the ...
-    mvars <- measured_vars(.data)
-    # if there's any measured variable in the ..., the time order will change.
-    !any(mvars %in% val_vars)
-  } else if (quo_is_call(idx_is_call)) { # desc(index)
-    fn <- call_name(idx_is_call)
-    fn != "desc"
-  } else {
-    exp_vars <- c(key, idx)
-    exp_idx <- which(val_vars %in% exp_vars)
-    n_keys(.data) < 2 ||
-      all(exp_idx == seq_along(exp_idx)) &&
-      has_length(exp_idx, length(exp_vars)) &&
-      is_false(idx_pos[1])
-  }
-}
-
-#' @importFrom dplyr filter
-#' @export
-dplyr::filter
-
-#' @rdname tidyverse
-#' @export
+#' @rdname tsibble-tidyverse
 filter.tbl_ts <- function(.data, ..., .preserve = FALSE) {
-  by_row(filter, .data, ordered = is_ordered(.data), interval = NULL, ...,
-    .preserve = .preserve
+  by_row(filter, .data, ordered = is_ordered(.data),
+    interval = is_regular(.data), ..., .preserve = .preserve
   )
 }
 
-#' @importFrom dplyr slice
-#' @export
-dplyr::slice
-
-#' @rdname tidyverse
+#' @rdname tsibble-tidyverse
 #' @export
 slice.tbl_ts <- function(.data, ..., .preserve = FALSE) {
   pos <- enquos(...)
   if (length(pos) > 1) {
     abort("`slice()` only accepts one expression.")
   }
-  pos_eval <- eval_tidy(expr(!! dplyr::first(pos)))
-  ascending <- row_validate(pos_eval)
-  by_row(slice, .data, ordered = ascending, interval = NULL, ..., 
+  pos_df <- summarise(as_tibble(.data), !! ".pos_col" := list2(!! pos[[1]]))
+  ascending <- all(map_lgl(pos_df[[".pos_col"]], row_validate))
+  by_row(slice, .data, ordered = ascending, interval = is_regular(.data), ...,
     .preserve = .preserve)
 }
 
@@ -111,14 +60,15 @@ row_validate <- function(x) {
   if (any_not_equal_to_c(pos_dup, 0)) {
     abort(sprintf("Duplicated integers occur to the position of %i.", pos_dup))
   }
-  is_ascending(x)
+  x <- stats::na.omit(x)
+  if (any(sign(x) < 0)) {
+    TRUE
+  } else {
+    is_ascending(x)
+  }
 }
 
-#' @importFrom dplyr select
-#' @export
-dplyr::select
-
-#' @rdname tidyverse
+#' @rdname tsibble-tidyverse
 #' @export
 select.tbl_ts <- function(.data, ...) {
   lst_quos <- enquos(...)
@@ -135,36 +85,28 @@ select.tbl_ts <- function(.data, ...) {
   named <- list_is_named(lst_quos)
   .data <- rename_tsibble(.data, !!! lst_quos[named])
 
-  lst_quos[named] <- names(lst_quos)[named]
+  lst_env <- map(lst_quos, quo_get_env)[named]
+  lst_quos[named] <- as_quosures(names(lst_quos)[named], env = lst_env)
   select_tsibble(.data, !!! lst_quos)
 }
 
-#' @rdname tidyverse
 #' @export
 select.grouped_ts <- select.tbl_ts
 
-#' @importFrom dplyr rename
-#' @export
-dplyr::rename
-
-#' @rdname tidyverse
+#' @rdname tsibble-tidyverse
 #' @export
 rename.tbl_ts <- function(.data, ...) {
   rename_tsibble(.data, ...)
 }
 
-#' @rdname tidyverse
 #' @export
 rename.grouped_ts <- rename.tbl_ts
 
-#' @importFrom dplyr mutate
-#' @export
-dplyr::mutate
-
-#' @rdname tidyverse
+#' @rdname tsibble-tidyverse
 #' @export
 mutate.tbl_ts <- function(.data, ...) {
-  mut_data <- mutate(as_grouped_df(.data), ...)
+  # mutate returns lst_ts without attributes, coerce to tbl_df first
+  mut_data <- mutate(as_tibble(.data), ...)
 
   idx_chr <- index_var(.data)
   if (is_false(idx_chr %in% names(mut_data))) { # index has been removed
@@ -181,6 +123,11 @@ mutate.tbl_ts <- function(.data, ...) {
   # validate = TRUE to check if tsibble still holds
   val_idx <- has_index(vec_names, .data)
   val_key <- has_any_key(vec_names, .data)
+  if (val_idx) {
+    interval <- TRUE
+  } else {
+    interval <- interval(.data)
+  }
   if (val_key) {
     key_vars <- setdiff(names(mut_data), measured_vars(.data))
     .data <- remove_key(.data, key_vars)
@@ -190,18 +137,13 @@ mutate.tbl_ts <- function(.data, ...) {
     mut_data <- retain_tsibble(mut_data, key(.data), index(.data))
   }
   build_tsibble(
-    mut_data, key = key(.data), index = !! index(.data),
-    index2 = !! index2(.data), regular = is_regular(.data),
-    ordered = is_ordered(.data), interval = NULL, # index gets overwritten
-    validate = FALSE
+    mut_data, key = !! key_vars(.data), index = !! index(.data),
+    index2 = !! index2(.data), ordered = is_ordered(.data), interval = interval,
+    validate = FALSE, .drop = is_key_dropped(.data)
   )
 }
 
-#' @importFrom dplyr transmute
-#' @export
-dplyr::transmute
-
-#' @rdname tidyverse
+#' @rdname tsibble-tidyverse
 #' @export
 transmute.tbl_ts <- function(.data, ...) {
   lst_quos <- enquos(..., .named = TRUE)
@@ -211,7 +153,6 @@ transmute.tbl_ts <- function(.data, ...) {
   select_tsibble(mut_data, !!! vec_names, validate = FALSE)
 }
 
-#' @rdname tidyverse
 #' @export
 transmute.grouped_ts <- function(.data, ...) {
   res <- NextMethod()
@@ -221,13 +162,9 @@ transmute.grouped_ts <- function(.data, ...) {
   dplyr::bind_cols(tsbl, res[, !(names(res) %in% names(tsbl))])
 }
 
-#' @importFrom dplyr summarise
-#' @export
-dplyr::summarise
-
-#' @rdname tidyverse
-#' @export
+#' @rdname tsibble-tidyverse
 #' @examples
+#' library(dplyr, warn.conflicts = FALSE)
 #' # Sum over sensors ----
 #' pedestrian %>%
 #'   summarise(Total = sum(Count))
@@ -235,8 +172,9 @@ dplyr::summarise
 #' pedestrian %>%
 #'   as_tibble() %>%
 #'   summarise(Total = sum(Count))
+#' @export
 summarise.tbl_ts <- function(.data, ...) {
-  # Unlike summarise.grouped_df(), summarise.tbl_ts() doesn't compute values for 
+  # Unlike summarise.grouped_df(), summarise.tbl_ts() doesn't compute values for
   # empty groups. Bc information is unavailable over the time range for empty
   # groups.
   idx <- index(.data)
@@ -253,67 +191,46 @@ summarise.tbl_ts <- function(.data, ...) {
   grped_data <- group_by_index2(.data)
   grps <- groups(grped_data)
   len_grps <- length(grps)
-  sum_data <- 
+  sum_data <-
     group_by(
       summarise(grped_data, !!! nonkey_quos),
       !!! grps[-((len_grps - 1):len_grps)] # remove index2 and last grp
     )
   if (identical(idx, idx2)) {
-    int <- interval(.data)
-    reg <- is_regular(.data)
+    int <- is_regular(.data)
   } else {
-    int <- NULL
-    reg <- TRUE
+    int <- TRUE
   }
-  grps <- syms(setdiff(group_vars(.data), as_string(idx2)))
+  grps <- setdiff(group_vars(.data), as_string(idx2))
 
   build_tsibble(
-    sum_data, key = grps, index = !! idx2, regular = reg, ordered = TRUE, 
-    interval = int, validate = FALSE
+    sum_data, key = !! grps, index = !! idx2, ordered = TRUE, interval = int,
+    validate = FALSE
   )
 }
 
-#' @importFrom dplyr summarize
 #' @export
-dplyr::summarize
-
-#' @rdname tidyverse
-#' @export
-summarize.tbl_ts <- summarise.tbl_ts
-
-#' @importFrom dplyr group_by grouped_df
-#' @export
-dplyr::group_by
-
-#' @inheritParams dplyr::group_by
-#' @rdname tidyverse
-#' @export
-group_by.tbl_ts <- function(.data, ..., add = FALSE, .drop = FALSE) {
+group_by.tbl_ts <- function(.data, ..., add = FALSE,
+  .drop = group_by_drop_default(.data)) {
   lst_quos <- enquos(..., .named = TRUE)
   grp_vars <- names(lst_quos)
   if (add) {
     grp_vars <- union(grp_vars, group_vars(.data))
   }
-  key_vars <- key_vars(.data)
-  if (all(is.element(key_vars, grp_vars)) && 
-    has_length(key_vars, length(grp_vars))) {
-    return(group_by_key(.data))
-  }
+  if (is_empty(grp_vars)) return(.data)
 
   grped_tbl <- NextMethod()
   if (.drop) { # needs to drop key too
     build_tsibble(
-      grped_tbl, key = key(.data), index = !! index(.data),
-      index2 = !! index2(.data), regular = is_regular(.data),
-      ordered = is_ordered(.data), interval = NULL,
-      validate = FALSE
+      grped_tbl, key = !! key_vars(.data), index = !! index(.data),
+      index2 = !! index2(.data), ordered = is_ordered(.data),
+      interval = interval(.data), validate = FALSE
     )
   } else {
     build_tsibble(
-      grped_tbl, key = key_data(.data), index = !! index(.data),
-      index2 = !! index2(.data), regular = is_regular(.data),
-      ordered = is_ordered(.data), interval = NULL,
-      validate = FALSE
+      grped_tbl, key_data = key_data(.data), index = !! index(.data),
+      index2 = !! index2(.data), ordered = is_ordered(.data),
+      interval = interval(.data), validate = FALSE
     )
   }
 }
@@ -327,56 +244,51 @@ group_by.tbl_ts <- function(.data, ..., add = FALSE, .drop = FALSE) {
 #' @examples
 #' tourism %>%
 #'   group_by_key()
-group_by_key <- function(.data, ..., .drop = FALSE) {
+group_by_key <- function(.data, ..., .drop = key_drop_default(.data)) {
   is_idx_idx2 <- identical(index_var(.data), index2_var(.data))
   if (is_empty(key_vars(.data)) && is_idx_idx2) {
     .data
-  } else if (!.drop && is_idx_idx2) {
-    cls <- c("grouped_ts", "grouped_df")
-    new_tsibble(.data, "groups" = key_data(.data), class = cls)
-  } else if (.drop && is_idx_idx2) {
-    grped_tbl <- group_by(as_tibble(.data), !!! key(.data))
+  } else if (is_idx_idx2) {
+    grped_tbl <- group_by(as_tibble(.data), !!! key(.data), .drop = .drop)
     build_tsibble(
-      grped_tbl, key = key(.data), index = !! index(.data),
-      index2 = !! index2(.data), regular = is_regular(.data),
-      ordered = is_ordered(.data), interval = interval(.data),
-      validate = FALSE
+      grped_tbl, key = !! key_vars(.data), index = !! index(.data),
+      index2 = !! index2(.data), ordered = is_ordered(.data),
+      interval = interval(.data), validate = FALSE
     )
   } else {
-    grped_tbl <- group_by(as_tibble(.data), !!! key(.data), !! index2(.data))
-    build_tsibble_meta(
-      grped_tbl, key = key_data(.data), index = !! index(.data),
-      index2 = !! index2(.data), regular = is_regular(.data),
-      ordered = is_ordered(.data), interval = interval(.data)
+    grped_tbl <- group_by(as_tibble(.data), !!! key(.data), !! index2(.data),
+      .drop = .drop)
+    build_tsibble(
+      grped_tbl, key_data = key_data(.data), index = !! index(.data),
+      index2 = !! index2(.data), ordered = is_ordered(.data),
+      interval = interval(.data), validate = FALSE
     )
   }
 }
 
-#' @importFrom dplyr ungroup
-#' @export
-dplyr::ungroup
-
-#' @rdname tidyverse
 #' @export
 ungroup.grouped_ts <- function(x, ...) {
   tbl <- ungroup(as_tibble(x))
-  build_tsibble_meta(
-    tbl, key = key_data(x), index = !! index(x), regular = is_regular(x),
-    ordered = is_ordered(x), interval = interval(x)
+  build_tsibble(
+    tbl, key_data = key_data(x), index = !! index(x),
+    ordered = is_ordered(x), interval = interval(x), validate = FALSE
   )
 }
 
 #' @export
 ungroup.tbl_ts <- function(x, ...) {
-  attr(x, "index2") <- index(x)
+  attr(x, "index2") <- index_var(x)
   x
 }
 
-#' @importFrom dplyr distinct
-#' @export
-dplyr::distinct
+distinct.tbl_ts <- function(.data, ...) {
+  dplyr::distinct(as_tibble(.data), ...)
+}
 
-#' @export
-distinct.tbl_ts <- function(.data, ..., .keep_all = FALSE) {
-  distinct(as_tibble(.data), ...)
+group_by_drop_default <- function(.tbl) {
+  tryCatch({
+    !identical(attr(group_data(.tbl), ".drop"), FALSE)
+  }, error = function(e) {
+    TRUE
+  })
 }

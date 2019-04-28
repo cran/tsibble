@@ -15,14 +15,15 @@ globalVariables(c(".", ".gaps"))
 #' @seealso [tidyr::fill], [tidyr::replace_na] for handling missing values `NA`.
 #' @export
 #' @examples
+#' library(dplyr)
 #' harvest <- tsibble(
 #'   year = c(2010, 2011, 2013, 2011, 2012, 2014),
 #'   fruit = rep(c("kiwi", "cherry"), each = 3),
 #'   kilo = sample(1:10, size = 6),
-#'   key = id(fruit), index = year
+#'   key = fruit, index = year
 #' )
 #'
-#' # gaps as default `NA` ----
+#' # gaps as default `NA`
 #' fill_gaps(harvest, .full = TRUE)
 #' full_harvest <- fill_gaps(harvest, .full = FALSE)
 #' full_harvest
@@ -30,28 +31,28 @@ globalVariables(c(".", ".gaps"))
 #' # use fill() to fill `NA` by previous/next entry
 #' full_harvest %>% 
 #'   group_by(fruit) %>% 
-#'   fill(kilo, .direction = "down")
+#'   tidyr::fill(kilo, .direction = "down")
 #'
-#' # replace gaps with a specific value ----
+#' # replace gaps with a specific value
 #' harvest %>%
 #'   fill_gaps(kilo = 0L)
 #'
-#' # replace gaps using a function by variable ----
+#' # replace gaps using a function by variable
 #' harvest %>%
 #'   fill_gaps(kilo = sum(kilo))
 #'
-#' # replace gaps using a function for each group ----
+#' # replace gaps using a function for each group
 #' harvest %>%
 #'   group_by(fruit) %>%
 #'   fill_gaps(kilo = sum(kilo))
 #'
-#' # leaves existing `NA` untouched ----
+#' # leaves existing `NA` untouched
 #' harvest[2, 3] <- NA
 #' harvest %>%
 #'   group_by(fruit) %>%
 #'   fill_gaps(kilo = sum(kilo, na.rm = TRUE))
 #'
-#' # replace NA ----
+#' # replace NA
 #' pedestrian %>%
 #'   group_by(Sensor) %>%
 #'   fill_gaps(Count = as.integer(median(Count)))
@@ -80,16 +81,10 @@ fill_gaps.tbl_ts <- function(.data, ..., .full = FALSE) {
   cn <- names(.data)
   if (!is_empty(lst_exprs)) { # any replacement
     # error handling
-    tidyselect::vars_select(measured_vars(.data), !!! names(lst_exprs))
-    replaced_df <- ungroup(summarise(as_grouped_df(.data), !!! lst_exprs))
+    vars_select(measured_vars(.data), !!! names(lst_exprs))
+    replaced_df <- ungroup(summarise(as_tibble(.data), !!! lst_exprs))
     by_name <- intersect(names(gap_data), names(replaced_df))
-
-    if (NROW(replaced_df) > NROW(gap_data)) {
-      abort(sprintf(
-        "Replacement has length %s, not 1 or %s.", 
-        NROW(replaced_df), NROW(gap_data)
-      ))
-    } else if (is_empty(by_name)) { # by value
+    if (is_empty(by_name)) { # by value
       gap_data <- mutate(gap_data, !!! replaced_df)
     } else { # by function
       gap_data <- left_join(gap_data, replaced_df, by = by_name)
@@ -123,7 +118,7 @@ scan_gaps.tbl_ts <- function(.data, .full = FALSE, ...) {
   if (unknown_interval(int)) return(.data[0L, c(key_vars(.data), idx_chr)])
 
   key <- key(.data)
-  keyed_tbl <- as_grouped_df(group_by_key(.data))
+  keyed_tbl <- as_tibble(group_by_key(.data))
   if (.full) {
     idx_full <- seq_generator(eval_tidy(idx, data = keyed_tbl), int)
     sum_data <- 
@@ -138,7 +133,7 @@ scan_gaps.tbl_ts <- function(.data, .full = FALSE, ...) {
         !! idx_chr := list2(!! idx_chr := seq_generator(!! idx, int))
       )
   }
-  ref_data <- ungroup(unnest(sum_data, !! idx))
+  ref_data <- ungroup(tidyr::unnest(sum_data, !! idx))
   if (NROW(ref_data) == NROW(.data)) {
     return(.data[0L, c(key_vars(.data), idx_chr)])
   }
@@ -165,6 +160,7 @@ scan_gaps.tbl_ts <- function(.data, .full = FALSE, ...) {
 #' @examples
 #' ped_gaps <- pedestrian %>% 
 #'   count_gaps(.full = TRUE)
+#' ped_gaps
 #' if (!requireNamespace("ggplot2", quietly = TRUE)) {
 #'   stop("Please install the ggplot2 package to run these following examples.")
 #' }
@@ -194,7 +190,7 @@ count_gaps.tbl_ts <- function(.data, .full = FALSE, ...) {
   }
 
   idx_full <- seq_generator(eval_tidy(idx, data = .data), int)
-  grped_tbl <- as_grouped_df(group_by_key(gap_data))
+  grped_tbl <- as_tibble(group_by_key(gap_data))
   lst_out <- 
     summarise(
       grped_tbl,
@@ -202,7 +198,7 @@ count_gaps.tbl_ts <- function(.data, .full = FALSE, ...) {
     )
 
   idx_type <- class(lst_out[[".gaps"]][[1]][[".from"]])
-  out <- unnest(lst_out, .gaps)
+  out <- tidyr::unnest(lst_out, .gaps)
   class(out[[".from"]]) <- class(out[[".to"]]) <- idx_type
   tibble(!!! out)
 }
@@ -218,7 +214,7 @@ count_gaps.tbl_ts <- function(.data, .full = FALSE, ...) {
 #'   year = c(2010, 2011, 2013, 2011, 2012, 2013),
 #'   fruit = rep(c("kiwi", "cherry"), each = 3),
 #'   kilo = sample(1:10, size = 6),
-#'   key = id(fruit), index = year
+#'   key = fruit, index = year
 #' )
 #' has_gaps(harvest)
 #' has_gaps(harvest, .full = TRUE)
@@ -233,7 +229,7 @@ has_gaps.tbl_ts <- function(.data, .full = FALSE, ...) {
   not_regular(.data)
   int <- interval(.data)
   idx <- index(.data)
-  grped_tbl <- as_grouped_df(group_by_key(.data))
+  grped_tbl <- as_tibble(group_by_key(.data))
   if (.full) {
     idx_full <- seq_generator(eval_tidy(idx, data = .data), int)
     res <- 
@@ -266,12 +262,12 @@ tbl_gaps <- function(x, y) {
   gap_rle <- rle_lgl(gap_vec)
   lgl_rle <- gap_rle$values
   gap_idx <- gap_rle$lengths
-  to <- cumsum(gap_idx)
-  from <- c(1, to[-length(to)] + 1)
-  nobs <- gap_idx[lgl_rle]
-  if (is_empty(nobs)) {
+  if (has_length(gap_idx, 1)) {
     tibble(.from = y[0], .to = y[0], .n = integer())
   } else {
+    to <- cumsum(gap_idx)
+    from <- c(1, to[-length(to)] + 1)
+    nobs <- gap_idx[lgl_rle]
     tibble(
       .from = y[from][lgl_rle],
       .to = y[to][lgl_rle],
@@ -286,7 +282,7 @@ seq_generator <- function(x, interval = NULL) {
   min_x <- min(x)
   max_x <- max(x)
   if (is_null(interval)) {
-    interval <- pull_interval(x)
+    interval <- interval_pull(x)
   }
   tunit <- time_unit(interval)
   if (tunit == 0) return(x)

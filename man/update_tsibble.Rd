@@ -4,15 +4,14 @@
 \alias{update_tsibble}
 \title{Update key and index for a tsibble}
 \usage{
-update_tsibble(x, key = NULL, index = NULL, regular = NULL,
-  validate = TRUE)
+update_tsibble(x, key, index, regular = is_regular(x), validate = TRUE,
+  .drop = key_drop_default(x))
 }
 \arguments{
 \item{x}{A tsibble.}
 
-\item{key}{Variable(s) that define unique time indices, used in conjunction
-with the helper \code{\link[=id]{id()}}. If a univariate time series (without an explicit key),
-simply call \code{id()}.}
+\item{key}{Unquoted variable(s) that uniquely determine time indices. \code{NULL} for
+empty key, and works with tidy selector (e.g. \code{starts_with()}).}
 
 \item{index}{A bare (or unquoted) variable to specify the time index variable.}
 
@@ -22,14 +21,17 @@ interval is determined by the greatest common divisor of index column, if \code{
 \item{validate}{\code{TRUE} suggests to verify that each key or each combination
 of key variables leads to unique time indices (i.e. a valid tsibble). If you
 are sure that it's a valid input, specify \code{FALSE} to skip the checks.}
+
+\item{.drop}{If \code{TRUE}, empty key groups are dropped.}
 }
 \description{
 Update key and index for a tsibble
 }
 \details{
-Default \code{NULL} inherits attributes from \code{x}.
+Unspecified arguments will inherit the attributes from \code{x}.
 }
 \examples{
+library(dplyr)
 pedestrian \%>\% 
   group_by_key() \%>\% 
   mutate(Hour_Since = Date_Time - min(Date_Time)) \%>\% 
