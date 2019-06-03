@@ -19,6 +19,7 @@ test_that("group_by()", {
     group_by(Date) %>%
     group_by(Sensor, add = TRUE)
   expect_length(group_vars(grped_df), 2)
+  expect_identical(group_vars(grped_df), c("Date", "Sensor"))
   grped_df <- pedestrian %>%
     group_by(Sensor)
   expect_equal(n_groups(grped_df), 4)
@@ -71,7 +72,7 @@ test_that("arrange.tbl_ts()", {
 })
 
 idx_year <- seq.int(1970, 2010, by = 10)
-dat_x <- tsibble(year = idx_year, value = rnorm(5), index = year)
+dat_x <- tsibble(year = idx_year, value = 5:1, index = year)
 
 test_that("warnings for arrange a univariate time series", {
   expect_warning(arrange(dat_x, value), "Unspecified temporal order.")

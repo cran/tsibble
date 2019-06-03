@@ -1,4 +1,4 @@
-by_row <- function(FUN, .data, ordered = TRUE, interval = TRUE, ..., 
+by_row <- function(FUN, .data, ordered = TRUE, interval = TRUE, ...,
   .preserve = FALSE) {
   FUN <- match.fun(FUN, descend = FALSE)
   tbl <- FUN(as_tibble(.data), ..., .preserve = .preserve)
@@ -15,8 +15,8 @@ update_meta <- function(
 ) {
   if (validate) {
     retain_tsibble(new, key = key(old), index = index(old))
+    validate <- FALSE
   }
-  validate <- TRUE || validate
   restore_index_class(build_tsibble(
     new, key = !! key_vars(old), index = !! index(old), index2 = !! index2(old),
     ordered = ordered, interval = interval, validate = validate,
@@ -34,8 +34,8 @@ update_meta2 <- function(
       new, old, ordered = ordered, interval = interval, validate = validate
     ))
   }
-  new_key <- group_data(grouped_df(new, key_vars(old))) %>% 
-    right_join(old_key, by = key_vars(old))
+  new_key <- right_join(group_data(grouped_df(new, key_vars(old))), old_key,
+    by = key_vars(old))
   null_lgl <- map_lgl(new_key[[".rows"]], is_null)
   new_key[[".rows"]][null_lgl] <- list(integer())
   restore_index_class(build_tsibble(
@@ -44,16 +44,9 @@ update_meta2 <- function(
   ), old)
 }
 
-# needed when grouping by index2, dropping empty groups (e.g. summarise)
-group_by_index2 <- function(x) {
-  idx2 <- index2(x)
-  x <- as_tibble(x)
-  group_by(x, !! idx2, add = TRUE, .drop = TRUE)
-}
-
 restore_index_class <- function(new, old) {
-  old_idx <- index2(old)
-  new_idx <- index2(new)
+  old_idx <- index2_var(old)
+  new_idx <- index2_var(new)
   class(new[[new_idx]]) <- class(old[[old_idx]])
   if (!identical(interval(new), interval(old))) {
     attr(new, "interval") <- interval_pull(new[[new_idx]])
@@ -67,16 +60,25 @@ rename_tsibble <- function(.data, ...) {
   if (is_empty(lst_quos)) return(.data)
 
   val_vars <- vars_rename(names_dat, !!! lst_quos)
-  # index
-  res <- rename_index2(rename_index(.data, val_vars), val_vars)
-  res <- rename_group(rename_key(res, val_vars), val_vars)
-  names(res) <- names(val_vars)
 
-  build_tsibble(
-    res, key_data = key_data(res),
-    index = !! index(res), index2 = !! index2(res),
-    ordered = is_ordered(res), interval = interval(res), validate = FALSE
-  )
+  old_idx <- index_var(.data)
+  old_idx2 <- index2_var(.data)
+  old_key <- key_vars(.data)
+  old_grp <- group_vars(.data)
+
+  new_names <- names(val_vars)
+  new_idx <- new_names[old_idx == val_vars]
+  new_idx2 <- new_names[old_idx2 == val_vars]
+  new_key <- new_names[val_vars %in% old_key]
+  new_grp <- new_names[val_vars %in% old_grp]
+  attr(.data, "index") <- new_idx
+  attr(.data, "index2") <- new_idx2
+  names(attr(.data, "key")) <- c(new_key, ".rows")
+  if (!is_empty(old_grp)) {
+    names(attr(.data, "groups")) <- c(new_grp, ".rows")
+  }
+  names(.data) <- new_names
+  .data
 }
 
 select_tsibble <- function(.data, ..., validate = TRUE) {
@@ -92,10 +94,11 @@ select_tsibble <- function(.data, ..., validate = TRUE) {
   } else {
     val_vars <- sel_vars
   }
-  
-  # key (key of the reduced size (bf & af) but also different names)
+
+  # key of the reduced size (bf & af) but also different names
   key_vars <- val_vars[val_vars %in% key_vars(.data)]
-  
+  key_nochange <- all(is.element(key_vars(.data), key_vars))
+
   if (validate) {
     vec_names <- names(val_vars)
     validate <- !has_all_key(vec_names, .data)
@@ -104,12 +107,12 @@ select_tsibble <- function(.data, ..., validate = TRUE) {
   if (validate) {
     sel_data <- retain_tsibble(sel_data, key_vars, index(.data))
   }
-  
-  build_tsibble(
-    sel_data,
-    key = !! key_vars, index = !! index(.data), index2 = !! index2(.data),
-    ordered = is_ordered(.data), interval = interval(.data),
-    validate = FALSE, .drop = is_key_dropped(.data)
+
+  build_tsibble(sel_data, key = !! key_vars,
+    key_data = if (key_nochange) key_data(.data) else NULL,
+    index = !! index(.data), index2 = !! index2(.data),
+    ordered = is_ordered(.data), interval = interval(.data), validate = FALSE,
+    .drop = is_key_dropped(.data)
   )
 }
 

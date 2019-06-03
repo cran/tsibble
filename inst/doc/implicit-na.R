@@ -37,6 +37,6 @@ ped_full
 #  pedestrian %>%
 #    fill_gaps(Count = 0L, .full = TRUE)
 #  pedestrian %>%
-#    group_by(Sensor) %>%
+#    group_by_key() %>%
 #    fill_gaps(Count = mean(Count), .full = TRUE)
 

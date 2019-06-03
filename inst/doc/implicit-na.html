@@ -381,7 +381,7 @@ code > span.fu { color: #900; font-weight: bold; }  code > span.er { color: #a61
 <div class="sourceCode" id="cb10"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb10-1" data-line-number="1">pedestrian <span class="op">%&gt;%</span><span class="st"> </span></a>
 <a class="sourceLine" id="cb10-2" data-line-number="2"><span class="st">  </span><span class="kw">fill_gaps</span>(<span class="dt">Count =</span> 0L, <span class="dt">.full =</span> <span class="ot">TRUE</span>)</a>
 <a class="sourceLine" id="cb10-3" data-line-number="3">pedestrian <span class="op">%&gt;%</span><span class="st"> </span></a>
-<a class="sourceLine" id="cb10-4" data-line-number="4"><span class="st">  </span><span class="kw">group_by</span>(Sensor) <span class="op">%&gt;%</span><span class="st"> </span></a>
+<a class="sourceLine" id="cb10-4" data-line-number="4"><span class="st">  </span><span class="kw">group_by_key</span>() <span class="op">%&gt;%</span><span class="st"> </span></a>
 <a class="sourceLine" id="cb10-5" data-line-number="5"><span class="st">  </span><span class="kw">fill_gaps</span>(<span class="dt">Count =</span> <span class="kw">mean</span>(Count), <span class="dt">.full =</span> <span class="ot">TRUE</span>)</a></code></pre></div>
 
 

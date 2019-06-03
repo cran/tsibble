@@ -22,6 +22,13 @@ test_that("A tsibble must not contain missing values in index", {
     "must not contain `NA`.")
 })
 
+test_that("A tsibble with unknown interval due to unexpected index class", {
+  expect_warning(
+    tsibble(date = as.POSIXct(Sys.Date() + 0:9)),
+    "Can't obtain the interval"
+  )
+})
+
 test_that("Argument regular is not logical", {
   expect_error(
     tsibble(
@@ -268,7 +275,7 @@ test_that("Difftime with 1 minute interval", {
   expect_identical(fill_gaps(tsbl[-2, ], value = tsbl$value[2]), tsbl)
 })
 
-test_that("Difftime with 3 milliminute interval", {
+test_that("Difftime with 3 millisecond interval", {
   idx_time <- hms(seconds = c(1.001, 1.004, 1.007, 1.010, 1.013))
   dat_x <- tibble(time = idx_time, value = rnorm(5))
   expect_message(tsbl <- as_tsibble(dat_x))

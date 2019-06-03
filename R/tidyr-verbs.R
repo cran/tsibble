@@ -44,9 +44,9 @@ spread.tbl_ts <- function(data, key, value, ...) {
   value <- enexpr(value)
   key_var <- vars_pull(names(data), !! key)
   if (has_index(key_var, data)) {
-    abort(sprintf(
-      "Column `%s` (index) can't be spread.\nPlease use `as_tibble()` to coerce.", 
-      key_var
+    abort(paste_inline(
+      sprintf("Column `%s` (index) can't be spread.", key_var),
+      "Please use `as_tibble()` to coerce."
     ))
   }
   key_left <- setdiff(key_vars(data), key_var)
@@ -73,124 +73,87 @@ spread.tbl_ts <- function(data, key, value, ...) {
 #'   group_by(stock) %>% 
 #'   nest()
 #' @export
-nest.tbl_ts <- function(data, ..., .key = "data") {
-  nest_exprs <- enexprs(...)
-  key_var <- expr_name(enexpr(.key))
-  cn <- names(data)
-  if (is_empty(nest_exprs)) {
-    nest_vars <- cn
+nest.tbl_ts <- function(.data, ...) {
+  tbl_nest <- tidyr::nest(as_tibble(.data), ...)
+  nest_vars <- setdiff(names(.data), names(tbl_nest))
+  if (!has_all_key(nest_vars, .data) && !has_index(nest_vars, .data)) {
+    build_tsibble(tbl_nest, key = setdiff(key_vars(.data), nest_vars),
+      index = !! index(.data), validate = FALSE)
+  } else if (!has_index(nest_vars, .data)) {
+    build_tsibble(tbl_nest, index = !! index(.data), validate = FALSE)
   } else {
-    nest_vars <- vars_select(cn, !!! nest_exprs)
+    lst_vars <- setdiff(names(tbl_nest), names(.data))
+    .data <- select_tsibble(ungroup(.data), !!! nest_vars, validate = FALSE)
+    tbl_nest[[lst_vars]] <- lapply(tbl_nest[[lst_vars]],
+      function(x) update_meta(x, .data))
+    as_lst_ts(tbl_nest)
   }
-  if (is_false(has_index(nest_vars, data))) {
-    abort(sprintf(
-      "Column `%s` (index) must be nested in the list-column", 
-      index_var(data)
-    ))
-  }
-  tbl <- as_tibble(data)
-  if (is_grouped_ts(data)) {
-    grp_vars <- group_vars(tbl)
-  } else {
-    grp_vars <- setdiff(cn, nest_vars)
-  }
-  data <- ungroup(data)
-  if (is_empty(grp_vars)) {
-    return(as_lst_ts(tibble(!! key_var := list(data))))
-  }
-  nest_vars <- setdiff(nest_vars, grp_vars)
-  grp <- syms(grp_vars)
-
-  out <- select(ungroup(tbl), !!! grp)
-  idx <- dplyr::group_indices(data, !!! grp, .drop = TRUE)
-  representatives <- which(!duplicated(idx))
-  out <- slice(out, representatives)
-  tsb_sel <- select_tsibble(data, !!! nest_vars, validate = FALSE)
-  out[[key_var]] <- unname(split(tsb_sel, idx))[unique(idx)]
-  as_lst_ts(out)
 }
 
-unnest.lst_ts <- function(data, ..., key = NULL,
-  .drop = NA, .id = NULL, .sep = NULL, .preserve = NULL
-) {
-  key <- use_id(data, !! enquo(key))
-  preserve <- vars_select(names(data), !! enquo(.preserve))
-  exprs <- enquos(...)
-  if (is_empty(exprs)) {
-    list_cols <- names(data)[purrr::map_lgl(data, is_list)]
-    list_cols <- setdiff(list_cols, preserve)
-    exprs <- syms(list_cols)
+unnest.lst_ts <- function(data, ..., key = NULL) {
+  if (utils::packageVersion("tidyr") > "0.8.3") {
+    abort(paste_inline(
+      "Can't unnest to a tsibble due to the API changes in `tidyr::unnest()`.",
+      "Please use `unnest_tsibble()` instead."
+    ))
   }
-  if (length(exprs) == 0) return(data)
+  inform(paste_inline(
+    "`unnest()` to a tsibble is deprecated due to the forthcoming tidyr release.",
+    "Please use `unnest_tsibble()` instead."
+  ))
+  unnested_data <- unnest(as_tibble(data), ...)
 
-  nested <- transmute(ungroup(data), !!! exprs)
+  key <- use_id(data, !! enquo(key))
+  lst_cols <- setdiff(names(data), names(unnested_data))
 
   # checking if the nested columns has `tbl_ts` class (only for the first row)
-  first_nested <- nested[1L, ]
-  eval_df <- purrr::imap(first_nested, dplyr::first)
-  is_tsbl <- purrr::map_lgl(eval_df, is_tsibble)
-  if (is_false(any(is_tsbl))) return(NextMethod())
+  first_nested <- data[lst_cols][1L, ]
+  eval_col <- purrr::imap(first_nested, dplyr::first)
+  tsbl_col <- map_lgl(eval_col, is_tsibble)
+  if (sum(tsbl_col) == 0) return(unnested_data)
 
-  if (sum(is_tsbl) > 1) {
-    abort("Only accepts a list-column of `tbl_ts` to be unnested.")
-  }
-  out <- 
-    unnest(
-      as_tibble(data), 
-      !!! exprs, .drop = .drop, .id = .id, .sep = .sep, .preserve = .preserve
-    )
-  tsbl <- eval_df[is_tsbl][[1L]]
+  tsbl <- eval_col[tsbl_col][[1L]]
   idx <- index(tsbl)
   key <- c(key_vars(tsbl), key)
-  out <- unnest_tsibble(out, key, idx)
+  unnested_data <- unnest_check_tsibble(unnested_data, key, idx)
 
   idx_chr <- as_string(idx)
   # restore the index class, as it's dropped by NextMethod()
-  class(out[[idx_chr]]) <- class(tsbl[[idx_chr]])
+  class(unnested_data[[idx_chr]]) <- class(tsbl[[idx_chr]])
   build_tsibble(
-    out, key = !! key, index = !! idx, index2 = !! index2(tsbl),
+    unnested_data, key = !! key, index = !! idx, index2 = !! index2(tsbl),
     ordered = is_ordered(tsbl), interval = is_regular(tsbl), validate = FALSE
   )
 }
 
-#' @param key Unquoted variables to create the key after unnesting.
-#' @inheritParams tidyr::unnest
-#' @rdname tsibble-tidyverse
-#' @examples
-#' nested_stock %>% 
-#'   unnest(key = stock)
-#' stock_qtl <- stocksm %>% 
-#'   group_by(stock) %>% 
-#'   index_by(day3 = lubridate::floor_date(time, unit = "3 day")) %>% 
-#'   summarise(
-#'     value = list(quantile(price)), 
-#'     qtl = list(c("0%", "25%", "50%", "75%", "100%"))
-#'   )
-#' unnest(stock_qtl, key = qtl)
-#' @export
-unnest.tbl_ts <- function(data, ..., key = NULL,
-  .drop = NA, .id = NULL, .sep = NULL, .preserve = NULL
-) {
+unnest.tbl_ts <- function(data, ..., key = NULL) {
+  if (utils::packageVersion("tidyr") > "0.8.3") {
+    abort(paste_inline(
+      "Can't unnest to a tsibble due to the API changes in `tidyr::unnest()`.",
+      "Please use `unnest_tsibble()` instead."
+    ))
+  }
+  inform(paste_inline(
+    "`unnest()` to a tsibble is deprecated due to the forthcoming tidyr release.",
+    "Please use `unnest_tsibble()` instead."
+  ))
+  unnested_data <- unnest(as_tibble(data), ...)
+
   key <- use_id(data, !! enquo(key))
-  tbl <- 
-    unnest(
-      as_tibble(data), 
-      ..., .drop = .drop, .id = .id, .sep = .sep, .preserve = .preserve
-    )
   key <- c(key_vars(data), key)
   idx <- index(data)
-  tbl <- unnest_tsibble(tbl, key, idx)
+  unnested_data <- unnest_check_tsibble(unnested_data, key, idx)
 
   idx_chr <- as_string(idx)
-  class(tbl[[idx_chr]]) <- class(data[[idx_chr]])
+  class(unnested_data[[idx_chr]]) <- class(data[[idx_chr]])
   build_tsibble(
-    tbl, key = !! key, index = !! idx, index2 = !! index2(data), 
+    unnested_data, key = !! key, index = !! idx, index2 = !! index2(data), 
     ordered = is_ordered(data), interval = is_regular(data), validate = FALSE
   )
 }
 
 # used for unnest() to check if the tsibble holds
-unnest_tsibble <- function(data, key, index) {
+unnest_check_tsibble <- function(data, key, index) {
   is_dup <- duplicated_key_index(data, key, index)
   if (is_dup) {
     header <- "The result is not a valid tsibble.\n"
@@ -198,6 +161,62 @@ unnest_tsibble <- function(data, key, index) {
     abort(paste0(header, hint))
   }
   data
+}
+
+#' @param data A tsibble or a data frame contains tsibble in the list-columns.
+#' @param cols Names of columns to unnest.
+#' @inheritParams as_tsibble
+#' @rdname tsibble-tidyverse
+#' @examples
+#' nested_stock %>% 
+#'   unnest_tsibble(cols = data, key = stock)
+#' stock_qtl <- stocksm %>% 
+#'   group_by(stock) %>% 
+#'   index_by(day3 = lubridate::floor_date(time, unit = "3 day")) %>% 
+#'   summarise(
+#'     value = list(quantile(price)), 
+#'     qtl = list(c("0%", "25%", "50%", "75%", "100%"))
+#'   )
+#' unnest_tsibble(stock_qtl, cols = c(value, qtl), key = c(stock, qtl))
+#' @export
+unnest_tsibble <- function(data, cols, key = NULL, validate = TRUE) {
+  if (is_false(inherits(data, "lst_ts") || is_tsibble(data))) {
+    abort("`data` contains no tsibble object.")
+  }
+  if (missing(cols)) {
+    abort("Argument `cols` for columns to unnest is required.")
+  }
+  if (utils::packageVersion("tidyr") > "0.8.3") {
+    unnested_data <- unnest(as_tibble(data), cols = !! enquo(cols))
+  } else {
+    cols_lst <- syms(vars_select(names(data), !! enquo(cols)))
+    unnested_data <- unnest(as_tibble(data), !!! cols_lst)
+  }
+
+  if (is_tsibble(data)) {
+    idx <- index(data)
+    tsbl <- data
+  } else {
+    lst_cols <- setdiff(names(data), names(unnested_data))
+    # checking if the nested columns has `tbl_ts` class (only for the first row)
+    first_nested <- data[lst_cols][1L, ]
+    eval_col <- purrr::imap(first_nested, dplyr::first)
+    tsbl_col <- map_lgl(eval_col, is_tsibble)
+    if (sum(tsbl_col) == 0) {
+      abort("Unnested columns contain no tsibble object.")
+    }
+
+    tsbl <- eval_col[tsbl_col][[1L]]
+    idx <- index(tsbl)
+  }
+
+  key <- use_id(unnested_data, !! enquo(key))
+  idx_chr <- as_string(idx)
+  class(unnested_data[[idx_chr]]) <- class(tsbl[[idx_chr]])
+  build_tsibble(
+    unnested_data, key = !! key, index = !! idx, index2 = !! index2(tsbl), 
+    ordered = is_ordered(tsbl), interval = is_regular(tsbl), validate = validate
+  )
 }
 
 fill.tbl_ts <- function(data, ..., .direction = c("down", "up")) {
@@ -233,9 +252,7 @@ slice.lst_ts <- mutate.lst_ts
 group_by.lst_ts <- mutate.lst_ts
 
 #' @export
-left_join.lst_ts <- function(
-  x, y, by = NULL, copy = FALSE, suffix = c(".x", ".y"), ...
-) {
+left_join.lst_ts <- function(x, ...) {
   as_lst_ts(NextMethod())
 }
 
@@ -249,12 +266,10 @@ full_join.lst_ts <- left_join.lst_ts
 inner_join.lst_ts <- left_join.lst_ts
 
 #' @export
-anti_join.lst_ts <- function(x, y, by = NULL, copy = FALSE, ...) {
-  as_lst_ts(NextMethod())
-}
+anti_join.lst_ts <- left_join.lst_ts
 
 #' @export
-semi_join.lst_ts <- anti_join.lst_ts
+semi_join.lst_ts <- left_join.lst_ts
 
 as_lst_ts <- function(x) {
   cls <- c("tbl_df", "tbl", "data.frame")

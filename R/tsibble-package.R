@@ -46,7 +46,7 @@
 #' cannot be determined (`?`).
 #'
 #' An interval is obtained based on the corresponding index representation:
-#' * `integer`/`numeric`/`ordered`: either "unit" or "year" (`Y`)
+#' * `integer`/`numeric`/`ordered` (ordered factor): either "unit" or "year" (`Y`)
 #' * `yearquarter`/`yearqtr`: "quarter" (`Q`)
 #' * `yearmonth`/`yearmon`: "month" (`M`)
 #' * `yearweek`: "week" (`W`)
@@ -73,7 +73,7 @@
 #' @importFrom purrr pmap pmap_dbl pmap_int pmap_chr pmap_lgl
 #' @importFrom dplyr arrange filter slice select mutate transmute summarise rename
 #' @importFrom dplyr group_by ungroup group_data grouped_df group_vars
-#' @importFrom dplyr group_rows groups
+#' @importFrom dplyr group_rows groups new_grouped_df
 #' @importFrom dplyr anti_join left_join right_join full_join semi_join inner_join
 #' @importFrom tidyr gather spread nest unnest
 #' @importFrom tibble new_tibble

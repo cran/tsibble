@@ -4,14 +4,15 @@
 \alias{build_tsibble}
 \title{Low-level constructor for a tsibble object}
 \usage{
-build_tsibble(x, key, key_data = NULL, index, index2, ordered = NULL,
-  interval = TRUE, validate = TRUE, .drop = key_drop_default(x))
+build_tsibble(x, key = NULL, key_data = NULL, index, index2 = index,
+  ordered = NULL, interval = TRUE, validate = TRUE,
+  .drop = key_drop_default(x))
 }
 \arguments{
 \item{x}{A \code{data.frame}, \code{tbl_df}, \code{tbl_ts}, or other tabular objects.}
 
 \item{key}{Unquoted variable(s) that uniquely determine time indices. \code{NULL} for
-empty key, and works with tidy selector (e.g. \code{starts_with()}).}
+empty key, and works with tidy selector (e.g. \code{\link[dplyr:starts_with]{dplyr::starts_with()}}).}
 
 \item{key_data}{A data frame containing key variables and \code{.rows}. When a data
 frame is supplied, the argument \code{key} will be ignored.}

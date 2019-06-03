@@ -20,7 +20,7 @@ weather_tsbl
 
 ## ----weather-tsum--------------------------------------------------------
 weather_tsbl %>%
-  group_by(origin) %>%
+  group_by_key() %>%
   index_by(date = as_date(time_hour)) %>% 
   summarise(
     temp_high = max(temp, na.rm = TRUE),

@@ -15,7 +15,7 @@ pedestrian_full
 
 ## ----daily-mv------------------------------------------------------------
 pedestrian_full %>% 
-  group_by(Sensor) %>% 
+  group_by_key() %>% 
   mutate(Daily_MA = slide_dbl(Count, 
     mean, na.rm = TRUE, .size = 24, .align = "center-left"
   ))
@@ -46,7 +46,8 @@ my_diag <- function(...) {
 }
 pedestrian %>%
   filter_index(~ "2015-03") %>%
-  nest(-Sensor) %>%
+  group_by_key() %>% 
+  nest() %>%
   mutate(diag = purrr::map(data, ~ pslide_dfr(., my_diag, .size = 24 * 7)))
 
 ## ----furrr, eval = FALSE-------------------------------------------------
@@ -54,6 +55,7 @@ pedestrian %>%
 #  plan(multiprocess)
 #  pedestrian %>%
 #    filter_index(~ "2015-03") %>%
-#    nest(-Sensor) %>%
+#    group_by_key() %>%
+#    nest() %>%
 #    mutate(diag = future_map(data, ~ future_pslide_dfr(., my_diag, .size = 24 * 7)))
 

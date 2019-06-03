@@ -30,7 +30,7 @@ globalVariables(c(".", ".gaps"))
 #'
 #' # use fill() to fill `NA` by previous/next entry
 #' full_harvest %>% 
-#'   group_by(fruit) %>% 
+#'   group_by_key() %>% 
 #'   tidyr::fill(kilo, .direction = "down")
 #'
 #' # replace gaps with a specific value
@@ -43,18 +43,18 @@ globalVariables(c(".", ".gaps"))
 #'
 #' # replace gaps using a function for each group
 #' harvest %>%
-#'   group_by(fruit) %>%
+#'   group_by_key() %>%
 #'   fill_gaps(kilo = sum(kilo))
 #'
 #' # leaves existing `NA` untouched
 #' harvest[2, 3] <- NA
 #' harvest %>%
-#'   group_by(fruit) %>%
+#'   group_by_key() %>%
 #'   fill_gaps(kilo = sum(kilo, na.rm = TRUE))
 #'
 #' # replace NA
 #' pedestrian %>%
-#'   group_by(Sensor) %>%
+#'   group_by_key() %>%
 #'   fill_gaps(Count = as.integer(median(Count)))
 fill_gaps <- function(.data, ..., .full = FALSE) {
   UseMethod("fill_gaps")
@@ -71,12 +71,7 @@ fill_gaps.tbl_ts <- function(.data, ..., .full = FALSE) {
 
   gap_data <- scan_gaps(.data, .full = .full)
   lst_exprs <- enquos(..., .named = TRUE)
-  if (NROW(gap_data) == 0) {
-    if (!is_empty(lst_exprs)) {
-      warn("`.data` is a complete tsibble. Values passed to `...` are ignored.")
-    }
-    return(.data)
-  }
+  if (NROW(gap_data) == 0 && !is_empty(lst_exprs)) return(.data)
 
   cn <- names(.data)
   if (!is_empty(lst_exprs)) { # any replacement
@@ -118,22 +113,19 @@ scan_gaps.tbl_ts <- function(.data, .full = FALSE, ...) {
   if (unknown_interval(int)) return(.data[0L, c(key_vars(.data), idx_chr)])
 
   key <- key(.data)
-  keyed_tbl <- as_tibble(group_by_key(.data))
+  keyed_tbl <- new_grouped_df(.data, groups = key_data(.data))
   if (.full) {
     idx_full <- seq_generator(eval_tidy(idx, data = keyed_tbl), int)
     sum_data <- 
-      summarise(
-        keyed_tbl, 
-        !! idx_chr := list2(!! idx_chr := idx_full)
-      )
+      summarise(keyed_tbl, !! idx_chr := list2(tibble(!! idx_chr := idx_full)))
   } else {
     sum_data <- 
       summarise(
         keyed_tbl,
-        !! idx_chr := list2(!! idx_chr := seq_generator(!! idx, int))
+        !! idx_chr := list2(tibble(!! idx_chr := seq_generator(!! idx, int)))
       )
   }
-  ref_data <- ungroup(tidyr::unnest(sum_data, !! idx))
+  ref_data <- unwrap(sum_data, !! idx)
   if (NROW(ref_data) == NROW(.data)) {
     return(.data[0L, c(key_vars(.data), idx_chr)])
   }
@@ -190,15 +182,12 @@ count_gaps.tbl_ts <- function(.data, .full = FALSE, ...) {
   }
 
   idx_full <- seq_generator(eval_tidy(idx, data = .data), int)
-  grped_tbl <- as_tibble(group_by_key(gap_data))
+  grped_tbl <- new_grouped_df(gap_data, groups = key_data(gap_data))
   lst_out <- 
-    summarise(
-      grped_tbl,
-      !! ".gaps" := list2(tbl_gaps(!! idx, idx_full))
-    )
+    summarise(grped_tbl, !! ".gaps" := list2(tbl_gaps(!! idx, idx_full)))
 
   idx_type <- class(lst_out[[".gaps"]][[1]][[".from"]])
-  out <- tidyr::unnest(lst_out, .gaps)
+  out <- unwrap(lst_out, .gaps)
   class(out[[".from"]]) <- class(out[[".to"]]) <- idx_type
   tibble(!!! out)
 }
@@ -229,7 +218,7 @@ has_gaps.tbl_ts <- function(.data, .full = FALSE, ...) {
   not_regular(.data)
   int <- interval(.data)
   idx <- index(.data)
-  grped_tbl <- as_tibble(group_by_key(.data))
+  grped_tbl <- new_grouped_df(.data, groups = key_data(.data))
   if (.full) {
     idx_full <- seq_generator(eval_tidy(idx, data = .data), int)
     res <- 
@@ -305,4 +294,13 @@ seq_generator <- function(x, interval = NULL) {
     res2 <- hms::as.hms(res2)
   }
   res2
+}
+
+unwrap <- function(.data, .col) {
+  lst_col <- vars_pull(names(.data), !! enquo(.col))
+  res <- .data
+  row_indices <- rep.int(seq_len(NROW(.data)), 
+    vapply(.data[[lst_col]], NROW, integer(1)))
+  res <- res[row_indices, setdiff(names(.data), lst_col)]
+  dplyr::bind_cols(res, dplyr::bind_rows(!!! .data[[lst_col]]))
 }

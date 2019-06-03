@@ -1,15 +1,14 @@
-#' Group and collapse by time index
+#' Group by time index and collapse with `summarise()`
 #'
 #' `index_by()` is the counterpart of `group_by()` in temporal context, but it
-#' only groups the time index. It adds a new column and then group it. The 
-#' following operation is applied to each group of the index, similar to 
-#' `group_by()` but dealing with index only. `index_by()` + `summarise()` will
-#' update the grouping index variable to be the new index. Use `ungroup()` or 
-#' `index_by()` with no arguments to remove the index grouping vars.
+#' only groups the time index. The following operation is applied to each partition
+#' of the index, similar to `group_by()` but dealing with index only. 
+#' `index_by()` + `summarise()` will update the grouping index variable to be 
+#' the new index. Use `ungroup()` to remove the index grouping vars.
 #'
 #' @param .data A `tbl_ts`.
-#' @param ... A single name-value pair of expression: a new index on LHS and the 
-#' current index on RHS. Or an existing variable to be used as index.
+#' @param ... If empty, grouping the current index. Or a single expression contains
+#' an existing variable or a name-value pair.
 #' The index functions that can be used, but not limited:
 #' * [lubridate::year]: yearly aggregation
 #' * [yearquarter]: quarterly aggregation
@@ -27,10 +26,11 @@
 #' @rdname index-by
 #' @export
 #' @examples
+#' pedestrian %>% index_by()
 #' # Monthly counts across sensors
 #' library(dplyr, warn.conflicts = FALSE)
 #' monthly_ped <- pedestrian %>% 
-#'   group_by(Sensor) %>% 
+#'   group_by_key() %>% 
 #'   index_by(Year_Month = yearmonth(Date_Time)) %>%
 #'   summarise(
 #'     Max_Count = max(Count),
@@ -41,7 +41,7 @@
 #' 
 #' # Using existing variable
 #' pedestrian %>% 
-#'   group_by(Sensor) %>% 
+#'   group_by_key() %>% 
 #'   index_by(Date) %>%
 #'   summarise(
 #'     Max_Count = max(Count),
@@ -50,7 +50,7 @@
 #'
 #' # Attempt to aggregate to 4-hour interval, with the effects of DST
 #' pedestrian %>% 
-#'   group_by(Sensor) %>% 
+#'   group_by_key() %>% 
 #'   index_by(Date_Time4 = lubridate::floor_date(Date_Time, "4 hour")) %>%
 #'   summarise(Total_Count = sum(Count))
 #'
@@ -65,23 +65,23 @@ index_by <- function(.data, ...) {
 
 #' @export
 index_by.tbl_ts <- function(.data, ...) {
-  exprs <- enquos(..., .named = TRUE)
-  if (is_empty(exprs)) {
-    attr(.data, "index2") <- index_var(.data)
-    return(.data)
+  exprs <- enquos(...)
+  if (length(exprs) > 1) {
+    abort("`index_by()` only accepts one expression or empty.")
   }
-  if (is_false(has_length(exprs, 1))) {
-    abort("`index_by()` only accepts one expression.")
-  }
-  expr_name <- names(exprs)[1]
+
   idx <- index_var(.data)
-  if (identical(idx, expr_name)) {
+  if (identical(idx, names(exprs))) {
     abort(sprintf("Column `%s` (index) can't be overwritten.", idx))
   }
-  idx2 <- sym(expr_name)
+  if (is_empty(exprs)) {
+    idx2 <- index(.data)
+  } else {
+    idx2 <- sym(names(quos_auto_name(exprs)))
+  }
   tbl <- 
     group_by(
-      mutate(ungroup(.data), !!! exprs),
+      mutate(ungroup(as_tibble(.data)), !!! exprs),
       !!! groups(.data), !! idx2, .drop = FALSE
     )
   build_tsibble(
@@ -89,26 +89,6 @@ index_by.tbl_ts <- function(.data, ...) {
     ordered = is_ordered(.data), interval = interval(.data),
     validate = FALSE
   )
-}
-
-rename_index <- function(.data, .vars) {
-  names <- names(.vars)
-  idx_chr <- index_var(.data)
-  idx <- idx_chr == .vars
-  if (sum(idx) == 0) return(.data)
-
-  attr(.data, "index") <- names(.data)[idx] <- new_idx_chr <- names[idx]
-  .data
-}
-
-rename_index2 <- function(.data, .vars) {
-  names <- names(.vars)
-  idx2_chr <- index2_var(.data)
-  idx <- idx2_chr == .vars
-  if (sum(idx) == 0) return(.data)
-
-  attr(.data, "index2") <- names(.data)[idx] <- new_idx2_chr <- names[idx]
-  .data
 }
 
 mutate_index2 <- function(.data, .vars) {

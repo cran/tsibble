@@ -31,22 +31,15 @@ interval_pull.default <- function(x) {
 # Assume date is regularly spaced
 interval_pull.POSIXt <- function(x) {
   dttm <- as.double(x)
-  if (all((dttm %% 1 == 0))) { # second
-    nhms <- gcd_interval(dttm)
-    period <- split_period(nhms)
-    init_interval(
-      hour = period$hour, 
-      minute = period$minute, 
-      second = period$second
-    )
-  } else {
-    nhms <- gcd_interval(dttm)
-    init_interval(
-      second = nhms %/% 1, 
-      millisecond = nhms %/% 1e-3, 
-      microsecond = nhms %/% 1e-6 %% 1e+3
-    )
-  }
+  nhms <- gcd_interval(dttm)
+  period <- split_period(nhms)
+  init_interval(
+    hour = period$hour, 
+    minute = period$minute, 
+    second = period$second %/% 1,
+    millisecond = period$second %% 1 %/% 1e-3,
+    microsecond = period$second %% 1 %/% 1e-6 %% 1e+3
+  )
 }
 
 #' @export
@@ -86,22 +79,13 @@ interval_pull.hms <- function(x) { # for hms package
   dttm <- as.double(x)
   nhms <- gcd_interval(dttm)
   period <- split_period(nhms)
-  secs <- period$second
-  frac <- secs %% 1
-  if (frac == 0) {
-    init_interval(
-      hour = period$hour + period$day * 24, 
-      minute = period$minute, 
-      second = secs
-    )
-  } else {
-    nhms <- gcd_interval(dttm)
-    init_interval(
-      second = nhms %/% 1, 
-      millisecond = nhms %/% 1e-3, 
-      microsecond = nhms %/% 1e-6 %% 1e+3
-    )
-  }
+  init_interval(
+    hour = period$hour + period$day * 24, 
+    minute = period$minute, 
+    second = period$second %/% 1,
+    millisecond = period$second %% 1 %/% 1e-3,
+    microsecond = period$second %% 1 %/% 1e-6 %% 1e+3
+  )
 }
 
 #' @export
@@ -222,9 +206,35 @@ irregular <- function() {
 }
 
 unknown_interval <- function(x) {
-  if (is_empty(x)) return(FALSE)
-  no_zeros <- !map_lgl(x, function(x) x == 0)
-  sum(no_zeros) == 0
+  if (is_empty(x)) FALSE else sum(x != 0) == 0
+}
+
+#' @export
+print.interval <- function(x, digits = NULL, ...) {
+  cat_line(format(x, digits = digits, ...))
+  invisible(x)
+}
+
+#' @export
+format.interval <- function(x, digits = NULL, ...) {
+  if (is_empty(x)) return("!")
+  not_zero <- !map_lgl(x, function(x) x == 0)
+  # if output contains all the zeros
+  if (sum(not_zero) == 0) return("?")
+  x <- translate_interval(x)
+  output <- x[not_zero]
+  paste0(output, names(output), collapse = " ")
+}
+
+translate_interval <- function(x) {
+  names_unit <- fn_fmls_names(init_interval)
+  set_names(
+    x[names_unit], 
+    c(
+      "Y", "Q", "M", "W", "D", "h", "m", "s", "ms", 
+      ifelse(is_utf8_output(), "\U00B5s", "us"), "ns", ""
+    )
+  )
 }
 
 #' Extract time unit from a vector
@@ -252,7 +262,7 @@ time_to_date.ts <- function(x, tz = "UTC", ...) {
   freq <- stats::frequency(x)
   time_x <- as.numeric(stats::time(x))
   if (freq == 52) {
-    warn("Expected frequency of weekly data: 365.25 / 7 (\U2248 52.18), not  52.")
+    warn("Expected frequency of weekly data: 365.25 / 7 (approx 52.18), not  52.")
   }
   if (freq == 7) { # daily
     start_year <- trunc(time_x[1])
@@ -280,4 +290,39 @@ time_to_date.ts <- function(x, tz = "UTC", ...) {
 
 time_to_date.gts <- function(x, tz = "UTC", ...) {
   time_to_date(x$bts, tz = tz, ...)
+}
+
+# regular time interval is obtained from the greatest common divisor of positive
+# time distances.
+gcd_interval <- function(x) {
+  if (has_length(x, 1L) || has_length(x, 0L)) { # only one time index
+    0
+  } else if (is_integerish(x)) {
+    gcd_vector(x)
+  } else {
+    gcd_vector_r(unique(round(abs(diff(x)), digits = 6)))
+  }
+}
+
+gcd2 <- function(a, b) {
+  if (isTRUE(all.equal(b, 0))) a else gcd2(b, a %% b)
+}
+
+gcd_vector_r <- function(x) Reduce(gcd2, x)
+
+split_period <- function(x) {
+  output <- lubridate::seconds_to_period(x)
+  list(
+    year = output$year, month = output$month, day = output$day,
+    hour = output$hour, minute = output$minute, second = output$second
+  )
+}
+
+has_tz <- function(x) {
+  tz <- attr(x, "tzone")[[1]]
+  if (is_null(tz) && !inherits(x, "POSIXct")) {
+    FALSE
+  } else {
+    TRUE
+  }
 }
