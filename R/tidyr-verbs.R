@@ -75,14 +75,18 @@ spread.tbl_ts <- function(data, key, value, ...) {
 #' @export
 nest.tbl_ts <- function(.data, ...) {
   tbl_nest <- tidyr::nest(as_tibble(.data), ...)
-  nest_vars <- setdiff(names(.data), names(tbl_nest))
+  data_names <- names(.data)
+  nest_names <- names(tbl_nest)
+  nest_vars <- setdiff(data_names, nest_names)
   if (!has_all_key(nest_vars, .data) && !has_index(nest_vars, .data)) {
     build_tsibble(tbl_nest, key = setdiff(key_vars(.data), nest_vars),
       index = !! index(.data), validate = FALSE)
   } else if (!has_index(nest_vars, .data)) {
     build_tsibble(tbl_nest, index = !! index(.data), validate = FALSE)
   } else {
-    lst_vars <- setdiff(names(tbl_nest), names(.data))
+    new_lst <- nest_names[map_lgl(tbl_nest, is_list)]
+    old_lst <- data_names[map_lgl(.data, is_list)]
+    lst_vars <- setdiff(new_lst, old_lst)
     .data <- select_tsibble(ungroup(.data), !!! nest_vars, validate = FALSE)
     tbl_nest[[lst_vars]] <- lapply(tbl_nest[[lst_vars]],
       function(x) update_meta(x, .data))
@@ -163,26 +167,16 @@ unnest_check_tsibble <- function(data, key, index) {
   data
 }
 
-#' @param data A tsibble or a data frame contains tsibble in the list-columns.
+#' Unnest a data frame consisting of tsibbles to a tsibble
+#'
+#' This function has the lifecyle of questioning
+#'
+#' @param data A data frame contains homogenous tsibbles in the list-columns.
 #' @param cols Names of columns to unnest.
 #' @inheritParams as_tsibble
-#' @rdname tsibble-tidyverse
-#' @examples
-#' nested_stock %>% 
-#'   unnest_tsibble(cols = data, key = stock)
-#' stock_qtl <- stocksm %>% 
-#'   group_by(stock) %>% 
-#'   index_by(day3 = lubridate::floor_date(time, unit = "3 day")) %>% 
-#'   summarise(
-#'     value = list(quantile(price)), 
-#'     qtl = list(c("0%", "25%", "50%", "75%", "100%"))
-#'   )
-#' unnest_tsibble(stock_qtl, cols = c(value, qtl), key = c(stock, qtl))
+#' @keywords internal
 #' @export
 unnest_tsibble <- function(data, cols, key = NULL, validate = TRUE) {
-  if (is_false(inherits(data, "lst_ts") || is_tsibble(data))) {
-    abort("`data` contains no tsibble object.")
-  }
   if (missing(cols)) {
     abort("Argument `cols` for columns to unnest is required.")
   }
@@ -197,14 +191,18 @@ unnest_tsibble <- function(data, cols, key = NULL, validate = TRUE) {
     idx <- index(data)
     tsbl <- data
   } else {
-    lst_cols <- setdiff(names(data), names(unnested_data))
-    # checking if the nested columns has `tbl_ts` class (only for the first row)
+    data_names <- names(data)
+    unnested_names <- names(unnested_data)
+    new_lst <- unnested_names[map_lgl(unnested_data, is_list)]
+    old_lst <- data_names[map_lgl(data, is_list)]
+    lst_cols <- setdiff(old_lst, new_lst)
+    # checking if the nested columns has `tbl_ts` class
+    tsbl_col <- map_lgl(data[lst_cols], validate_list_of_tsibble)
+    if (sum(tsbl_col) == 0) {
+      abort("Unnested columns contain no tsibble columns.")
+    }
     first_nested <- data[lst_cols][1L, ]
     eval_col <- purrr::imap(first_nested, dplyr::first)
-    tsbl_col <- map_lgl(eval_col, is_tsibble)
-    if (sum(tsbl_col) == 0) {
-      abort("Unnested columns contain no tsibble object.")
-    }
 
     tsbl <- eval_col[tsbl_col][[1L]]
     idx <- index(tsbl)
@@ -217,6 +215,10 @@ unnest_tsibble <- function(data, cols, key = NULL, validate = TRUE) {
     unnested_data, key = !! key, index = !! idx, index2 = !! index2(tsbl), 
     ordered = is_ordered(tsbl), interval = is_regular(tsbl), validate = validate
   )
+}
+
+validate_list_of_tsibble <- function(x) {
+  all(vapply(x, function(x) is_tsibble(x), logical(1)))
 }
 
 fill.tbl_ts <- function(data, ..., .direction = c("down", "up")) {

@@ -65,6 +65,8 @@ tourism <- tourism %>%
 
 test_that("nest() under tidyr 0.8.3", {
   skip_if(packageVersion("tidyr") > "0.8.3")
+  # 123
+  expect_named(tourism %>% nest(-Purpose, .key = "Trips"), c("Purpose", "Trips"))
   expect_is(pedestrian %>% nest(-Date_Time), "tbl_ts")
   expect_named(pedestrian %>% nest(-Date_Time), c("Date_Time", "data"))
   expect_is(pedestrian %>% nest(c(Date, Count)), "tbl_ts")
@@ -82,6 +84,7 @@ test_that("nest() under tidyr 0.8.3", {
 test_that("nest()", {
   skip_if(packageVersion("tidyr") <= "0.8.3")
   expect_is(pedestrian %>% nest(data = -Date_Time), "tbl_ts")
+  expect_named(tourism %>% nest(Trips = -Purpose), c("Purpose", "Trips"))
   expect_named(pedestrian %>% nest(data = -Date_Time), c("Date_Time", "data"))
   expect_is(pedestrian %>% nest(data = c(Date, Count)), "tbl_ts")
   expect_named(pedestrian %>% nest(), "data")
@@ -165,6 +168,16 @@ test_that("unnest_tsibble()", {
   )
 })
 
+test_that("unnest_tsibble() #123 for names", {
+  skip_if(packageVersion("tidyr") > "0.8.3")
+  nested_t <- tourism %>% nest(-Purpose, .key = "Trips")
+  expect_equal(
+    nested_t %>% 
+      unnest_tsibble(Trips, key = c(Purpose, Region, Trips)),
+    tourism
+  )
+})
+
 test_that("dplyr verbs for lst_ts", {
   if (packageVersion("tidyr") > "0.8.3") {
     nest_t <- tourism %>%
@@ -183,7 +196,7 @@ test_that("dplyr verbs for lst_ts", {
   # )
   expect_error(
     unnest_tsibble(nest_t %>% mutate(data = 1), cols = data),
-    "contain no tsibble object."
+    "contain no tsibble columns."
   )
   expect_is(nest_t %>% select(data2 = data), "lst_ts")
   expect_is(nest_t %>% group_by(State), "grouped_df")

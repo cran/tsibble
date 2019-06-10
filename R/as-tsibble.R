@@ -278,12 +278,21 @@ build_tsibble <- function(
   )
 }
 
+#' Low-level & high-performance constructor for a tsibble object
+#'
+#' `build_tsibble_meta()` does much less checks than `build_tsibble()` for
+#' high performance.
+#'
+#' @inheritParams build_tsibble
+#' @param index,index2 Strings for variable name.
+#'
+#' @keywords internal
+#' @export
 build_tsibble_meta <- function(
   x, key_data = NULL, index, index2, ordered = NULL, interval = TRUE
 ) {
-  stopifnot(is_string(index) && is_string(index2))
   stopifnot(!is_null(ordered))
-  tbl <- as_tibble(x)
+  tbl <- x
   attr(index, "ordered") <- ordered
 
   is_interval <- inherits(interval, "interval")
@@ -305,7 +314,7 @@ build_tsibble_meta <- function(
   if (!idx_lgl) {
     tbl <- group_by(tbl, !! sym(index2), add = TRUE)
   }
-  grp_data <- group_data(tbl)
+  grp_data <- tbl %@% "groups"
   tbl <- new_tibble(
     tbl, "key" = key_data, "index" = index, "index2" = index2,
     "interval" = interval, "groups" = NULL, nrow = NROW(tbl), class = "tbl_ts"
