@@ -24,6 +24,8 @@ append_row(.data, n = 1L, ...)
 and key, otherwise only index and key.}
 }
 \description{
+\Sexpr[results=rd, stage=render]{tsibble:::lifecycle("stable")}
+
 \code{append_row()}: add new rows to the end of a tsibble by filling a key-index
 pair and \code{NA} for measured variables.
 
@@ -34,7 +36,7 @@ new_data(pedestrian)
 new_data(pedestrian, keep_all = TRUE)
 new_data(pedestrian, n = 3)
 tsbl <- tsibble(
-  date = rep(as.Date("2017-01-01") + 0:2, each = 2), 
+  date = rep(as.Date("2017-01-01") + 0:2, each = 2),
   group = rep(letters[1:2], 3),
   value = rnorm(6),
   key = group

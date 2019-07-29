@@ -77,6 +77,8 @@ determines the number of arguments that \code{.f} will be called with. List
 names will be used if present.}
 }
 \description{
+\Sexpr[results=rd, stage=render]{tsibble:::lifecycle("stable")}
+
 Fixing an initial window and expanding more observations:
 \itemize{
 \item \code{stretch2()} and \code{pstretch()} always returns a list.
@@ -92,10 +94,10 @@ z <- 11:15
 lst <- list(x = x, y = y, z = z)
 df <- as.data.frame(lst)
 stretch2(x, y, sum, .step = 2)
-stretch2(lst, lst, ~ ., .step = 2)
-stretch2(df, df, ~ ., .step = 2)
+stretch2(lst, lst, ~., .step = 2)
+stretch2(df, df, ~., .step = 2)
 pstretch(lst, sum, .step = 1)
-pstretch(list(lst, lst), ~ ., .step = 2)
+pstretch(list(lst, lst), ~., .step = 2)
 
 ###
 # row-wise stretching over data frame

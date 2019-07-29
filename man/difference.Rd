@@ -22,7 +22,7 @@ difference(x, lag = 1, differences = 1, default = NA,
 A numeric vector of the same length as \code{x}.
 }
 \description{
-Lagged differences
+\Sexpr[results=rd, stage=render]{tsibble:::lifecycle("stable")}
 }
 \examples{
 # examples from base
@@ -33,7 +33,7 @@ difference(x, lag = 2)
 difference(x, differences = 2)
 # Use order_by if data not already ordered (example from dplyr)
 library(dplyr, warn.conflicts = FALSE)
-tsbl <- tsibble(year = 2000:2005, value = (0:5) ^ 2, index = year)
+tsbl <- tsibble(year = 2000:2005, value = (0:5)^2, index = year)
 scrambled <- tsbl \%>\% slice(sample(nrow(tsbl)))
 
 wrong <- mutate(scrambled, diff = difference(value))

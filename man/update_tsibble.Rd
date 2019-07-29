@@ -25,15 +25,15 @@ are sure that it's a valid input, specify \code{FALSE} to skip the checks.}
 \item{.drop}{If \code{TRUE}, empty key groups are dropped.}
 }
 \description{
-Update key and index for a tsibble
+\Sexpr[results=rd, stage=render]{tsibble:::lifecycle("maturing")}
 }
 \details{
 Unspecified arguments will inherit the attributes from \code{x}.
 }
 \examples{
 library(dplyr)
-pedestrian \%>\% 
-  group_by_key() \%>\% 
-  mutate(Hour_Since = Date_Time - min(Date_Time)) \%>\% 
+pedestrian \%>\%
+  group_by_key() \%>\%
+  mutate(Hour_Since = Date_Time - min(Date_Time)) \%>\%
   update_tsibble(index = Hour_Since)
 }

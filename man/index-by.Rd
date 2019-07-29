@@ -9,8 +9,10 @@ index_by(.data, ...)
 \arguments{
 \item{.data}{A \code{tbl_ts}.}
 
-\item{...}{If empty, grouping the current index. Or a single expression contains
-an existing variable or a name-value pair.
+\item{...}{If empty, grouping the current index. If not empty, a single
+expression is required for either an existing variable or a name-value pair.
+A lambda expression is supported, for example \code{~ as.Date(.)} where \code{.} refers
+to the index variable.
 The index functions that can be used, but not limited:
 \itemize{
 \item \link[lubridate:year]{lubridate::year}: yearly aggregation
@@ -20,10 +22,13 @@ The index functions that can be used, but not limited:
 \item \link{as.Date} or \link[lubridate:as_date]{lubridate::as_date}: daily aggregation
 \item \link[lubridate:ceiling_date]{lubridate::ceiling_date}, \link[lubridate:floor_date]{lubridate::floor_date}, or \link[lubridate:round_date]{lubridate::round_date}:
 fine-resolution aggregation
+\item Extract time components functions, such as \code{\link[lubridate:hour]{lubridate::hour()}} & \code{\link[lubridate:day]{lubridate::day()}}
 \item other index functions from other packages
 }}
 }
 \description{
+\Sexpr[results=rd, stage=render]{tsibble:::lifecycle("stable")}
+
 \code{index_by()} is the counterpart of \code{group_by()} in temporal context, but it
 only groups the time index. The following operation is applied to each partition
 of the index, similar to \code{group_by()} but dealing with index only.
@@ -40,9 +45,9 @@ displaying on the screen.
 pedestrian \%>\% index_by()
 # Monthly counts across sensors
 library(dplyr, warn.conflicts = FALSE)
-monthly_ped <- pedestrian \%>\% 
-  group_by_key() \%>\% 
-  index_by(Year_Month = yearmonth(Date_Time)) \%>\%
+monthly_ped <- pedestrian \%>\%
+  group_by_key() \%>\%
+  index_by(Year_Month = ~ yearmonth(.)) \%>\%
   summarise(
     Max_Count = max(Count),
     Min_Count = min(Count)
@@ -51,8 +56,8 @@ monthly_ped
 index(monthly_ped)
 
 # Using existing variable
-pedestrian \%>\% 
-  group_by_key() \%>\% 
+pedestrian \%>\%
+  group_by_key() \%>\%
   index_by(Date) \%>\%
   summarise(
     Max_Count = max(Count),
@@ -60,14 +65,14 @@ pedestrian \%>\%
   )
 
 # Attempt to aggregate to 4-hour interval, with the effects of DST
-pedestrian \%>\% 
-  group_by_key() \%>\% 
-  index_by(Date_Time4 = lubridate::floor_date(Date_Time, "4 hour")) \%>\%
+pedestrian \%>\%
+  group_by_key() \%>\%
+  index_by(Date_Time4 = ~ lubridate::floor_date(., "4 hour")) \%>\%
   summarise(Total_Count = sum(Count))
 
 # Annual trips by Region and State
-tourism \%>\% 
-  index_by(Year = lubridate::year(Quarter)) \%>\% 
-  group_by(Region, State) \%>\% 
+tourism \%>\%
+  index_by(Year = ~ lubridate::year(.)) \%>\%
+  group_by(Region, State) \%>\%
   summarise(Total = sum(Trips))
 }

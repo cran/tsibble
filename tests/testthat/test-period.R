@@ -26,15 +26,15 @@ test_that("units_since()", {
 test_that("diff()", {
   expect_is(diff(yw), "difftime")
   expect_equal(as.numeric(diff(yw)), rep(1, 2))
-  expect_identical(interval_pull(diff(yw) + 0:1), new_interval(week = 1L))
+  expect_identical(interval_pull(diff(yw) + 0:1), new_interval(week = 1))
   expect_equal(as.numeric(diff(ym)), rep(1, 2))
-  expect_identical(interval_pull(diff(ym) + c(2, 4)), new_interval(month = 2L))
+  expect_identical(interval_pull(diff(ym) + c(2, 4)), new_interval(month = 2))
   expect_equal(as.numeric(diff(yq)), rep(1, 2))
-  expect_identical(interval_pull(diff(yq) + c(3, 6)), new_interval(quarter = 3L))
+  expect_identical(interval_pull(diff(yq) + c(3, 6)), new_interval(quarter = 3))
 })
 
-test_that("Arit", {
-  expect_equal(format(+ yw), format(yw))
+test_that("Arithmetic", {
+  expect_equal(format(+yw), format(yw))
   expect_equal(format(yw + 1), c("1970 W02", "1970 W03", "1970 W04"))
   expect_equal(format(1 + yw), format(yw + 1))
   expect_equal(format(yw - 1), c("1969 W52", "1970 W01", "1970 W02"))
@@ -42,7 +42,7 @@ test_that("Arit", {
   expect_equal(as.integer(yw - yw), rep(0, 3))
   expect_equal(as.integer(yw[2] - yw[1]), 1)
   expect_equal(as.integer(yw[1] - yw[2]), -1)
-  expect_equal(format(+ ym), format(ym))
+  expect_equal(format(+ym), format(ym))
   expect_equal(format(ym + 1), c("1970 Feb", "1970 Mar", "1970 Apr"))
   expect_equal(format(1 + ym), format(ym + 1))
   expect_equal(format(ym - 1), c("1969 Dec", "1970 Jan", "1970 Feb"))
@@ -50,7 +50,7 @@ test_that("Arit", {
   expect_equal(as.integer(ym - ym), rep(0, 3))
   expect_equal(as.integer(ym[2] - ym[1]), 1)
   expect_equal(as.integer(ym[1] - ym[2]), -1)
-  expect_equal(format(+ yq), format(yq))
+  expect_equal(format(+yq), format(yq))
   expect_equal(format(yq + 1), c("1970 Q2", "1970 Q3", "1970 Q4"))
   expect_equal(format(1 + yq), format(yq + 1))
   expect_equal(format(yq - 1), c("1969 Q4", "1970 Q1", "1970 Q2"))
@@ -125,4 +125,26 @@ test_that("yearquarter() for characters #107", {
     yearquarter(c("2013 Q3", "2013 Qtr 3", "Quarter 3 2013")),
     rep(yearquarter("2013 Q3"), 3)
   )
+})
+
+test_that("yearquarter.character() underlying dates #129", {
+  expect_equal(as.Date(yearquarter("2017 Q1")), as.Date("2017-01-01"))
+})
+
+test_that("yearweek() for characters", {
+  expect_error(yearweek("2013 We 3"), "cannot be expressed as Date type")
+  expect_error(yearweek("Wee 5 2015"), "cannot be expressed as Date type")
+  expect_error(yearweek("W54 2015"), "can't be greater than 53.")
+  expect_error(yearweek(c("2015 W53", "2016 W53", "2017 W53")), "can't be 53 weeks.")
+  expect_error(yearweek("W2015"), "unambiguous")
+  expect_error(yearweek(c("W2015", "W2 2015")), "unambiguous")
+  expect_identical(
+    yearweek(c("2013 W3", "2013 Wk 3", "Week 3 2013")),
+    rep(yearweek("2013 W03"), 3)
+  )
+})
+
+test_that("yearweek.character() underlying dates", {
+  expect_equal(as.Date(yearweek("1970 W01")), as.Date("1969-12-29"))
+  expect_equal(as.Date(yearweek("2019 W12")), as.Date("2019-03-18"))
 })

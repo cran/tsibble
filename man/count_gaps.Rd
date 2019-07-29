@@ -24,10 +24,10 @@ A tibble contains:
 }
 }
 \description{
-Count implicit gaps
+\Sexpr[results=rd, stage=render]{tsibble:::lifecycle("maturing")}
 }
 \examples{
-ped_gaps <- pedestrian \%>\% 
+ped_gaps <- pedestrian \%>\%
   count_gaps(.full = TRUE)
 ped_gaps
 if (!requireNamespace("ggplot2", quietly = TRUE)) {

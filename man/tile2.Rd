@@ -66,6 +66,8 @@ determines the number of arguments that \code{.f} will be called with. List
 names will be used if present.}
 }
 \description{
+\Sexpr[results=rd, stage=render]{tsibble:::lifecycle("stable")}
+
 Tiling window without overlapping observations:
 \itemize{
 \item \code{tile2()} and \code{ptile()} always returns a list.
@@ -81,10 +83,10 @@ z <- 11:15
 lst <- list(x = x, y = y, z = z)
 df <- as.data.frame(lst)
 tile2(x, y, sum, .size = 2)
-tile2(lst, lst, ~ ., .size = 2)
-tile2(df, df, ~ ., .size = 2)
+tile2(lst, lst, ~., .size = 2)
+tile2(df, df, ~., .size = 2)
 ptile(lst, sum, .size = 1)
-ptile(list(lst, lst), ~ ., .size = 2)
+ptile(list(lst, lst), ~., .size = 2)
 }
 \seealso{
 \itemize{

@@ -100,6 +100,10 @@ is_ordered <- function(x) {
 
 #' If the object is a tsibble
 #'
+#' @description
+#' \Sexpr[results=rd, stage=render]{tsibble:::lifecycle("stable")}
+#'
+#'
 #' @param x An object.
 #'
 #' @return TRUE if the object inherits from the tbl_ts class.
@@ -136,4 +140,3 @@ is_grouped_ts <- function(x) {
 #' @usage NULL
 #' @export
 is.grouped_ts <- is_grouped_ts
-

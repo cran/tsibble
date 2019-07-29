@@ -86,7 +86,7 @@ test_that("From Date to year-week, year-month, year-quarter and year", {
     summarise(value = sum(value))
   expect_equal(res2, res4)
   res5 <- res2 %>%
-    index_by(yr= year(yrqtr)) %>%
+    index_by(yr = year(yrqtr)) %>%
     summarise(value = sum(value))
   expect_equal(res3, res5)
 })
@@ -208,4 +208,11 @@ test_that("index_by() with pedestrian", {
   ped_sum3 <- ped_mut %>%
     summarise(ttl_prop = sum(prop))
   expect_equal(format(interval(ped_sum3)), "1D")
+})
+
+test_that("index_by() with lambda expression", {
+  expect_identical(
+    pedestrian %>% index_by(yrmth = ~ yearmonth(.)),
+    pedestrian %>% index_by(yrmth = yearmonth(Date_Time))
+  )
 })

@@ -14,7 +14,7 @@ tile_tsibble(.x, .size = 1, .id = ".id")
 \item{.id}{A character naming the new column \code{.id} containing the partition.}
 }
 \description{
-Perform tiling windows on a tsibble by row
+\Sexpr[results=rd, stage=render]{tsibble:::lifecycle("questioning")}
 }
 \section{Rolling tsibble}{
 
@@ -38,7 +38,7 @@ harvest <- tsibble(
   kilo = sample(1:10, size = 6),
   key = fruit, index = year
 )
-harvest \%>\% 
+harvest \%>\%
   tile_tsibble(.size = 2)
 }
 \seealso{

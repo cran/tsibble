@@ -24,7 +24,9 @@ test_that("right_join()", {
   expect_identical(key(x), key(right))
   expect_identical(index(x), index(right))
 
-  grped_right <- x %>% group_by(grp) %>% right_join(y_key)
+  grped_right <- x %>%
+    group_by(grp) %>%
+    right_join(y_key)
   expect_is(grped_right, "grouped_ts")
   # expect_equal(n_groups(grped_right), 1)
   expect_equal(group_size(grped_right), 2)
@@ -55,7 +57,7 @@ test_that("semi_join()", {
 })
 
 test_that("semi_join() #122", {
-  semi <- pedestrian %>% 
+  semi <- pedestrian %>%
     semi_join(
       tibble(Sensor = "Birrarung Marr", Date_Time = Sys.time()),
       by = "Sensor"
@@ -79,4 +81,13 @@ test_that("mutual key and index #102", {
   expect_named(left_join(x, xx, by = "year"), c("year", "grp.x", "grp.y"))
   expect_named(left_join(x, yy, by = "grp"), c("year.x", "grp", "year.y"))
   expect_error(left_join(x, yy, by = "year"), "valid")
+})
+
+test_that("mutating joins abort for duplicates", {
+  x <- tsibble(id = c("x", "y"), time = rep(Sys.Date(), 2), key = id)
+  y <- tibble(id = rep("x", 2), time = rep(Sys.Date(), 2))
+  expect_error(left_join(x, y), "valid")
+  expect_error(right_join(x, y), "valid")
+  expect_error(inner_join(x, y), "valid")
+  expect_error(full_join(x, y), "valid")
 })

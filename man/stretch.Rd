@@ -61,6 +61,8 @@ Only applies to \code{_dfr} variant.}
 if \code{.fill != NULL}, it always returns the same length as input.
 }
 \description{
+\Sexpr[results=rd, stage=render]{tsibble:::lifecycle("stable")}
+
 Fixing an initial window and expanding more observations:
 \itemize{
 \item \code{stretch()} always returns a list.
@@ -74,7 +76,7 @@ x <- 1:5
 stretch_dbl(x, mean, .step = 2)
 stretch_lgl(x, ~ mean(.) > 2, .step = 2)
 lst <- list(x = x, y = 6:10, z = 11:15)
-stretch(lst, ~ ., .step = 2, .fill = NULL)
+stretch(lst, ~., .step = 2, .fill = NULL)
 }
 \seealso{
 \itemize{

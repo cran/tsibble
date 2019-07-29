@@ -1,5 +1,8 @@
 #' Lagged differences
-#' 
+#'
+#' @description
+#' \Sexpr[results=rd, stage=render]{tsibble:::lifecycle("stable")}
+#'
 #' @param x A numeric vector.
 #' @param lag An positive integer indicating which lag to use.
 #' @param differences An positive integer indicating the order of the difference.
@@ -18,24 +21,29 @@
 #' difference(x, differences = 2)
 #' # Use order_by if data not already ordered (example from dplyr)
 #' library(dplyr, warn.conflicts = FALSE)
-#' tsbl <- tsibble(year = 2000:2005, value = (0:5) ^ 2, index = year)
+#' tsbl <- tsibble(year = 2000:2005, value = (0:5)^2, index = year)
 #' scrambled <- tsbl %>% slice(sample(nrow(tsbl)))
-#' 
+#'
 #' wrong <- mutate(scrambled, diff = difference(value))
 #' arrange(wrong, year)
-#' 
+#'
 #' right <- mutate(scrambled, diff = difference(value, order_by = year))
 #' arrange(right, year)
-difference <- function(x, lag = 1, differences = 1, default = NA, 
-  order_by = NULL) {
+difference <- function(x, lag = 1, differences = 1, default = NA,
+                       order_by = NULL) {
   if (lag < 1 || differences < 1) {
-    abort("`lag` and `differences` must be positive integers.");
+    abort("`lag` and `differences` must be positive integers.")
   }
   if (is_null(order_by)) {
-    diff_cpp(x, lag = lag, differences = differences, fill = default)
+    diff_impl(x, lag = lag, differences = differences, fill = default)
   } else {
-    dplyr::with_order(order_by, diff_cpp, x, 
+    with_order(order_by, diff_impl, x,
       lag = lag, differences = differences, fill = default
     )
   }
+}
+
+diff_impl <- function(x, lag = 1, differences = 1, fill = NA) {
+  diff_x <- diff(x, lag = lag, differences = differences)
+  c(rep(fill, lag * differences), diff_x)
 }

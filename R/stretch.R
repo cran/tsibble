@@ -5,6 +5,9 @@ nrow2 <- function(.x) {
 
 #' Stretching window calculation
 #'
+#' @description
+#' \Sexpr[results=rd, stage=render]{tsibble:::lifecycle("stable")}
+#'
 #' Fixing an initial window and expanding more observations:
 #' * `stretch()` always returns a list.
 #' * `stretch_lgl()`, `stretch_int()`, `stretch_dbl()`, `stretch_chr()` use the same
@@ -29,14 +32,16 @@ nrow2 <- function(.x) {
 #' stretch_dbl(x, mean, .step = 2)
 #' stretch_lgl(x, ~ mean(.) > 2, .step = 2)
 #' lst <- list(x = x, y = 6:10, z = 11:15)
-#' stretch(lst, ~ ., .step = 2, .fill = NULL)
+#' stretch(lst, ~., .step = 2, .fill = NULL)
 stretch <- function(.x, .f, ..., .step = 1, .init = 1, .fill = NA,
-  .bind = FALSE) {
+                    .bind = FALSE) {
   abort_stretch_size(...)
   lst_x <- stretcher(.x, .step = .step, .init = .init, .bind = .bind)
   out <- map(lst_x, .f, ...)
-  pad_stretch(out, .init = .init, .step = .step, .fill = .fill,
-    expect_length = nrow2(.x))
+  pad_stretch(out,
+    .init = .init, .step = .step, .fill = .fill,
+    expect_length = nrow2(.x)
+  )
 }
 
 #' @evalRd paste0('\\alias{stretch_', c("lgl", "chr", "dbl", "int"), '}')
@@ -52,11 +57,11 @@ for (type in c("lgl", "chr", "dbl", "int")) {
 
 #' @rdname stretch
 #' @export
-stretch_dfr <- function(
-  .x, .f, ..., .step = 1, .init = 1, .fill = NA, .bind = FALSE, .id = NULL
-) {
+stretch_dfr <- function(.x, .f, ..., .step = 1, .init = 1, .fill = NA,
+                        .bind = FALSE, .id = NULL) {
   out <- stretch(
-    .x, .f = .f, ..., .step = .step, .init = .init, .fill = .fill,
+    .x,
+    .f = .f, ..., .step = .step, .init = .init, .fill = .fill,
     .bind = .bind
   )
   bind_df(out, .size = .init, .fill = .fill, .id = .id)
@@ -65,15 +70,19 @@ stretch_dfr <- function(
 #' @rdname stretch
 #' @export
 stretch_dfc <- function(.x, .f, ..., .step = 1, .init = 1, .fill = NA,
-  .bind = FALSE) {
+                        .bind = FALSE) {
   out <- stretch(
-    .x, .f = .f, ..., .step = .step, .init = .init, .fill = .fill,
+    .x,
+    .f = .f, ..., .step = .step, .init = .init, .fill = .fill,
     .bind = .bind
   )
   bind_df(out, .size = .init, .fill = .fill, byrow = FALSE)
 }
 
 #' Stretching window calculation over multiple simultaneously
+#'
+#' @description
+#' \Sexpr[results=rd, stage=render]{tsibble:::lifecycle("stable")}
 #'
 #' Fixing an initial window and expanding more observations:
 #' * `stretch2()` and `pstretch()` always returns a list.
@@ -98,10 +107,10 @@ stretch_dfc <- function(.x, .f, ..., .step = 1, .init = 1, .fill = NA,
 #' lst <- list(x = x, y = y, z = z)
 #' df <- as.data.frame(lst)
 #' stretch2(x, y, sum, .step = 2)
-#' stretch2(lst, lst, ~ ., .step = 2)
-#' stretch2(df, df, ~ ., .step = 2)
+#' stretch2(lst, lst, ~., .step = 2)
+#' stretch2(df, df, ~., .step = 2)
 #' pstretch(lst, sum, .step = 1)
-#' pstretch(list(lst, lst), ~ ., .step = 2)
+#' pstretch(list(lst, lst), ~., .step = 2)
 #'
 #' ###
 #' # row-wise stretching over data frame
@@ -114,12 +123,14 @@ stretch_dfc <- function(.x, .f, ..., .step = 1, .init = 1, .fill = NA,
 #'   data = pstretch(df, function(...) as_tibble(list(...)), .init = 10)
 #' )
 stretch2 <- function(.x, .y, .f, ..., .step = 1, .init = 1, .fill = NA,
-  .bind = FALSE) {
+                     .bind = FALSE) {
   abort_stretch_size(...)
   lst <- pstretcher(.x, .y, .step = .step, .init = .init, .bind = .bind)
   out <- map2(lst[[1]], lst[[2]], .f, ...)
-  pad_stretch(out, .init = .init, .step = .step, .fill = .fill,
-    expect_length = nrow2(recycle(list(.x, .y))[[1]]))
+  pad_stretch(out,
+    .init = .init, .step = .step, .fill = .fill,
+    expect_length = nrow2(recycle(list(.x, .y))[[1]])
+  )
 }
 
 #' @evalRd paste0('\\alias{stretch2_', c("lgl", "chr", "dbl", "int"), '}')
@@ -135,11 +146,11 @@ for (type in c("lgl", "chr", "dbl", "int")) {
 
 #' @rdname stretch2
 #' @export
-stretch2_dfr <- function(
-  .x, .y, .f, ..., .step = 1, .init = 1, .fill = NA, .bind = FALSE, .id = NULL
-) {
+stretch2_dfr <- function(.x, .y, .f, ..., .step = 1, .init = 1, .fill = NA,
+                         .bind = FALSE, .id = NULL) {
   out <- stretch2(
-    .x, .y, .f = .f, ..., .step = .step, .init = .init, .fill = .fill,
+    .x, .y,
+    .f = .f, ..., .step = .step, .init = .init, .fill = .fill,
     .bind = .bind
   )
   bind_df(out, .size = .init, .fill = .fill, .id = .id)
@@ -147,11 +158,11 @@ stretch2_dfr <- function(
 
 #' @rdname stretch2
 #' @export
-stretch2_dfc <- function(
-  .x, .y, .f, ..., .step = 1, .init = 1, .fill = NA, .bind = FALSE
-) {
+stretch2_dfc <- function(.x, .y, .f, ..., .step = 1, .init = 1, .fill = NA,
+                         .bind = FALSE) {
   out <- stretch2(
-    .x, .y, .f = .f, ..., .step = .step, .init = .init, .fill = .fill,
+    .x, .y,
+    .f = .f, ..., .step = .step, .init = .init, .fill = .fill,
     .bind = .bind
   )
   bind_df(out, .size = .init, .fill = .fill, byrow = FALSE)
@@ -160,13 +171,17 @@ stretch2_dfc <- function(
 #' @rdname stretch2
 #' @export
 pstretch <- function(.l, .f, ..., .step = 1, .init = 1, .fill = NA,
-  .bind = FALSE) {
+                     .bind = FALSE) {
   abort_stretch_size(...)
-  lst <- pstretcher(!!! .l, .step = .step, .init = .init,
-    .bind = .bind)
+  lst <- pstretcher(!!!.l,
+    .step = .step, .init = .init,
+    .bind = .bind
+  )
   out <- pmap(lst, .f, ...)
-  pad_stretch(out, .init = .init, .step = .step, .fill = .fill,
-    expect_length = nrow2(recycle(.l)[[1]]))
+  pad_stretch(out,
+    .init = .init, .step = .step, .fill = .fill,
+    expect_length = nrow2(recycle(.l)[[1]])
+  )
 }
 
 #' @evalRd paste0('\\alias{pstretch_', c("lgl", "chr", "dbl", "int"), '}')
@@ -182,20 +197,23 @@ for (type in c("lgl", "chr", "dbl", "int")) {
 
 #' @rdname stretch2
 #' @export
-pstretch_dfr <- function(
-  .l, .f, ..., .step = 1, .init = 1, .fill = NA, .bind = FALSE, .id = NULL
-) {
-  out <- pstretch(.l, .f, ..., .step = .step, .init = .init, .fill = .fill,
-    .bind = .bind)
+pstretch_dfr <- function(.l, .f, ..., .step = 1, .init = 1, .fill = NA,
+                         .bind = FALSE, .id = NULL) {
+  out <- pstretch(.l, .f, ...,
+    .step = .step, .init = .init, .fill = .fill,
+    .bind = .bind
+  )
   bind_df(out, .size = .init, .fill = .fill, .id = .id)
 }
 
 #' @rdname stretch2
 #' @export
 pstretch_dfc <- function(.l, .f, ..., .step = 1, .init = 1, .fill = NA,
-  .bind = FALSE) {
-  out <- pstretch(.l, .f, ..., .step = .step, .init = .init, .fill = .fill,
-    .bind = .bind)
+                         .bind = FALSE) {
+  out <- pstretch(.l, .f, ...,
+    .step = .step, .init = .init, .fill = .fill,
+    .bind = .bind
+  )
   bind_df(out, .size = .init, .fill = .fill, byrow = FALSE)
 }
 
@@ -248,6 +266,9 @@ pstretcher <- function(..., .step = 1, .init = 1, .bind = FALSE) { # parallel sl
 
 #' Perform stretching windows on a tsibble by row
 #'
+#' @description
+#' \Sexpr[results=rd, stage=render]{tsibble:::lifecycle("questioning")}
+#'
 #' @param .x A tsibble.
 #' @param .step A positive integer for incremental step.
 #' @inheritParams stretch
@@ -279,8 +300,10 @@ incr <- function(.init, .step) {
 }
 
 pad_stretch <- function(x, .init = 1, .step = 1, .fill = NA,
-  expect_length = NULL) {
-  if (is_null(.fill)) return(x)
+                        expect_length = NULL) {
+  if (is_null(.fill)) {
+    return(x)
+  }
 
   len_x <- length(x)
   fill_size <- abs(.init - .step)

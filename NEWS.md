@@ -1,3 +1,10 @@
+# tsibble 0.8.3
+
+* Added lifecycle badges to functions.
+* `index_by()` supports lambda expression (#91).
+* Defunct argument `gather` in `as_tsibble.mts()` in favour of `pivot_longer`.
+* `yearweek()` handles characters containing keywords "W"/"Wk"/"Week", for example `yearweek("2019 W03")`.
+
 # tsibble 0.8.2
 
 This is a patch release.

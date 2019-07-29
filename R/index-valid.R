@@ -1,10 +1,13 @@
 #' Add custom index support for a tsibble
 #'
+#' @description
+#' \Sexpr[results=rd, stage=render]{tsibble:::lifecycle("maturing")}
+#'
 #' S3 method to add an index type support for a tsibble.
 #'
 #' @param x An object of index type that the tsibble supports.
 #'
-#' @details This method is primarily used for adding an index type support in 
+#' @details This method is primarily used for adding an index type support in
 #' [as_tsibble].
 #' @seealso [interval_pull] for obtaining interval for regularly spaced time.
 #' @return `TRUE`/`FALSE` or `NA` (unsure)
@@ -16,8 +19,8 @@ index_valid <- function(x) {
 }
 
 #' @export
-index_valid.POSIXct <- function(x) { 
-  TRUE 
+index_valid.POSIXct <- function(x) {
+  TRUE
 }
 
 #' @export
@@ -59,4 +62,3 @@ index_valid.integer <- index_valid.numeric
 index_valid.default <- function(x) {
   FALSE
 }
-
