@@ -77,7 +77,10 @@ determines the number of arguments that \code{.f} will be called with. List
 names will be used if present.}
 }
 \description{
-\Sexpr[results=rd, stage=render]{tsibble:::lifecycle("stable")}
+\lifecycle{questioning}
+
+\strong{The rolling window family will be deprecated in the future. Please consider
+using the \href{https://davisvaughan.github.io/slide}{slide} package.}
 
 Fixing an initial window and expanding more observations:
 \itemize{

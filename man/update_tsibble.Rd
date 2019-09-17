@@ -11,7 +11,8 @@ update_tsibble(x, key, index, regular = is_regular(x), validate = TRUE,
 \item{x}{A tsibble.}
 
 \item{key}{Unquoted variable(s) that uniquely determine time indices. \code{NULL} for
-empty key, and works with tidy selector (e.g. \code{\link[dplyr:starts_with]{dplyr::starts_with()}}).}
+empty key, and \code{c()} for multiple variables. It works with tidy selector
+(e.g. \code{\link[dplyr:starts_with]{dplyr::starts_with()}}).}
 
 \item{index}{A bare (or unquoted) variable to specify the time index variable.}
 
@@ -25,15 +26,20 @@ are sure that it's a valid input, specify \code{FALSE} to skip the checks.}
 \item{.drop}{If \code{TRUE}, empty key groups are dropped.}
 }
 \description{
-\Sexpr[results=rd, stage=render]{tsibble:::lifecycle("maturing")}
+Update key and index for a tsibble
 }
 \details{
 Unspecified arguments will inherit the attributes from \code{x}.
 }
 \examples{
+# update index
 library(dplyr)
 pedestrian \%>\%
   group_by_key() \%>\%
   mutate(Hour_Since = Date_Time - min(Date_Time)) \%>\%
   update_tsibble(index = Hour_Since)
+
+# update key: drop the variable "State" from the key
+tourism \%>\% 
+  update_tsibble(key = c(Purpose, Region))
 }

@@ -2,11 +2,14 @@
 % Please edit documentation in R/deprecated.R
 \name{as.tsibble}
 \alias{as.tsibble}
+\alias{is.tsibble}
 \alias{fill_na}
 \alias{id}
 \title{Deprecated functions}
 \usage{
 as.tsibble(x, ...)
+
+is.tsibble(x)
 
 fill_na(.data, ..., .full = FALSE)
 
@@ -16,10 +19,15 @@ id(...)
 \item{x}{Other objects.}
 
 \item{...}{Variables passed to tsibble()/as_tsibble().}
+
+\item{.data}{A tsibble.}
 }
 \description{
-Deprecated functions
-
-Identifiers used for creating key
+\itemize{
+\item \code{is.tsibble()} \lifecycle{soft-deprecated}
+\item \code{as.tsibble()} \lifecycle{deprecated}
+\item \code{id()} \lifecycle{deprecated}
+\item \code{fill_na()} \lifecycle{defunct}
+}
 }
 \keyword{internal}

@@ -14,9 +14,9 @@ Status](https://codecov.io/gh/tidyverts/tsibble/branch/master/graph/badge.svg)](
 maturing](https://img.shields.io/badge/lifecycle-maturing-blue.svg)](https://www.tidyverse.org/lifecycle/#maturing)
 
 The **tsibble** package provides a data infrastructure for tidy temporal
-data with wrangling tools. Adhering to the [tidy data
+data with wrangling tools. Adapting the [tidy data
 principles](https://tidyr.tidyverse.org/articles/tidy-data.html),
-*tsibble* is an explicit data- and model-oriented object. In *tsibble*:
+*tsibble* is a data- and model-oriented object. In *tsibble*:
 
 1.  Index is a variable with inherent ordering from past to present.
 2.  Key is a set of variables that define observational units over time.
@@ -74,12 +74,18 @@ The **key** can be comprised of empty, one, or more variables. See
 [`vignette("intro-tsibble")`](http://tsibble.tidyverts.org/articles/intro-tsibble.html)
 for details.
 
-Given time indices, the interval is obtained based on their time
-representation, ranging from year to nanosecond, from numerics to
-ordered factors. The `POSIXct` corresponds to sub-daily series, `Date`
-to daily, `yearweek` to weekly, `yearmonth` to monthly, `yearquarter` to
-quarterly, and
-etc.
+The **interval** is computed from index based on the representation,
+ranging from year to nanosecond, from numerics to ordered factors. The
+table below shows how tsibble interprets the common time formats.
+
+| **Interval** | **Class**                 |
+| ------------ | ------------------------- |
+| Annual       | `integer`/`double`        |
+| Quarterly    | `yearquarter`             |
+| Monthly      | `yearmonth`               |
+| Weekly       | `yearweek`                |
+| Daily        | `Date`/`difftime`         |
+| Subdaily     | `POSIXt`/`difftime`/`hms` |
 
 ### `fill_gaps()` to turn implicit missing values into explicit missing values
 

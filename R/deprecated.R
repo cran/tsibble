@@ -1,6 +1,15 @@
 #' Deprecated functions
 #'
+#' @description
+#' * `is.tsibble()` \lifecycle{soft-deprecated}
+#' * `as.tsibble()` \lifecycle{deprecated}
+#' * `id()` \lifecycle{deprecated}
+#' * `fill_na()` \lifecycle{defunct}
+#'
 #' @param x Other objects.
+#' @param .data A tsibble.
+#' @param ... Variables passed to tsibble()/as_tsibble().
+#'
 #' @rdname deprecated
 #' @export
 #' @keywords internal
@@ -12,14 +21,18 @@ as.tsibble <- function(x, ...) {
 #' @rdname deprecated
 #' @export
 #' @keywords internal
-fill_na <- function(.data, ..., .full = FALSE) {
-  .Defunct("fill_gaps()")
+is.tsibble <- function(x) {
+  lifecycle::deprecate_soft("0.8.4", "is.tsibble()", "is_tsibble()")
+  is_tsibble(x)
 }
 
-#' Identifiers used for creating key
-#'
-#' @param ... Variables passed to tsibble()/as_tsibble().
-#'
+#' @rdname deprecated
+#' @export
+#' @keywords internal
+fill_na <- function(.data, ..., .full = FALSE) {
+  lifecycle::deprecate_stop("0.8.1", "fill_na()", "fill_gaps()")
+}
+
 #' @rdname deprecated
 #' @keywords internal
 #' @export
@@ -35,7 +48,7 @@ use_id <- function(x, key) {
     call_fn <- call_name(key_quo)
     if (call_fn == "id") {
       res <- eval_tidy(get_expr(key_quo), env = child_env(get_env(key_quo), id = id))
-      header <- "`id()` is deprecated for creating key.\n"
+      header <- "`id()` is deprecated for creating key as of tsibble 0.8.0.\n"
       if (is_empty(res)) {
         res_vars <- NULL
         warn(sprintf("%sPlease use `key = NULL`.", header))
@@ -50,20 +63,4 @@ use_id <- function(x, key) {
     }
   }
   vars_select(names(x), !!key_quo)
-}
-
-abort_stretch_size <- function(...) {
-  dots <- dots_list(...)
-  if (".size" %in% names(dots)) {
-    abort("Argument `.size` is retired. Please use `.step`.")
-  }
-}
-
-abort_gather <- function(..., pivot_longer = TRUE) {
-  dots <- dots_list(...)
-  if ("gather" %in% names(dots)) {
-    abort("Argument `gather` is defunct, please use `pivot_longer` instead.")
-  } else {
-    pivot_longer
-  }
 }

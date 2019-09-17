@@ -39,14 +39,41 @@ test_that("a tsibble with a single key", {
   expect_identical(x, y1)
 })
 
+harvest <- tsibble(
+  year = c(2010, 2011, 2013, 2011, 2012, 2014),
+  fruit = rep(c("kiwi", "cherry"), each = 3),
+  kilo = sample(1:10, size = 6), farm = 1L,
+  key = fruit, index = year
+)
+
+test_that("as.ts.tbl_ts()", {
+  expected <- ts(matrix(fill_gaps(harvest, .full = TRUE)$kilo, ncol = 2),
+    start = 2010, frequency = 1)
+  colnames(expected) <- c("cherry", "kiwi")
+  expect_equal(as.matrix(as.ts(harvest, value = kilo)), expected)
+  freq <- frequency(EuStockMarkets)
+  x <- as.ts(head(EuStockMarkets), frequency = freq)
+  y <- as_tsibble(x)
+  expect_equal(
+    as.double(as.ts(y, frequency = freq)),
+    as.double(x[,c(3, 1, 4, 2)])
+  )
+})
+
 test_that("a tsibble with more than one measured vars", {
-  expect_error(as.ts(pedestrian), "Can't determine column `value`:")
-  expect_error(as.ts(pedestrian, value = Date_Time), "`value` must be one of them:")
-  y <- as.ts(pedestrian, value = Count)
+  expect_error(as.ts(harvest), "Can't determine column `value`:")
+  expect_error(as.ts(harvest, value = year), "`value` must be one of them:")
+  y <- as.ts(harvest, value = kilo)
   expect_is(y, "mts")
-  expect_equal(frequency(y), 24)
-  expect_equal(frequency(pedestrian), 24)
-  expect_equal(ncol(y), 4)
+  expect_equal(frequency(y), 1)
+  expect_equal(ncol(y), 2)
+  expect_equal(nrow(y), length(unique(harvest[["year"]])))
+})
+
+test_that("as.ts.tbl_ts(fill = )", {
+  expect_error(as.ts(harvest, value = kilo, fill = NULL), "not TRUE")
+  y <- as.ts(harvest, value = kilo, fill = 0)
+  expect_false(anyNA(y))
 })
 
 test_that("time.* and guess_frequency.*", {

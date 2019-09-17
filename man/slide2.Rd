@@ -82,7 +82,10 @@ determines the number of arguments that \code{.f} will be called with. List
 names will be used if present.}
 }
 \description{
-\Sexpr[results=rd, stage=render]{tsibble:::lifecycle("stable")}
+\lifecycle{questioning}
+
+The rolling window family will be deprecated in the future. Please consider
+using the \href{https://davisvaughan.github.io/slide}{slide} package.
 
 Rolling window with overlapping observations:
 \itemize{
@@ -108,6 +111,9 @@ pslide(list(lst, lst), ~., .size = 2)
 # row-wise sliding over data frame
 ###
 
+if (!requireNamespace("tidyr", quietly = TRUE)) {
+  stop("Please install the 'tidyr' package to run these following examples.")
+}
 library(tidyr)
 library(dplyr)
 my_df <- data.frame(
@@ -132,7 +138,8 @@ my_df \%>\%
 pedestrian \%>\%
   filter(Sensor == "Southern Cross Station") \%>\%
   index_by(yrmth = yearmonth(Date_Time)) \%>\%
-  nest() \%>\%
+  nest(data = -yrmth) \%>\%
+  ungroup() \%>\% 
   mutate(ma = slide_dbl(data, ~ mean(.$Count), .size = 2, .bind = TRUE))
 # row-oriented workflow
 \dontrun{

@@ -12,7 +12,8 @@ build_tsibble(x, key = NULL, key_data = NULL, index, index2 = index,
 \item{x}{A \code{data.frame}, \code{tbl_df}, \code{tbl_ts}, or other tabular objects.}
 
 \item{key}{Unquoted variable(s) that uniquely determine time indices. \code{NULL} for
-empty key, and works with tidy selector (e.g. \code{\link[dplyr:starts_with]{dplyr::starts_with()}}).}
+empty key, and \code{c()} for multiple variables. It works with tidy selector
+(e.g. \code{\link[dplyr:starts_with]{dplyr::starts_with()}}).}
 
 \item{key_data}{A data frame containing key variables and \code{.rows}. When a data
 frame is supplied, the argument \code{key} will be ignored.}
@@ -36,8 +37,6 @@ are sure that it's a valid input, specify \code{FALSE} to skip the checks.}
 \item{.drop}{If \code{TRUE}, empty key groups are dropped.}
 }
 \description{
-\Sexpr[results=rd, stage=render]{tsibble:::lifecycle("maturing")}
-
 \code{build_tsibble()} creates a \code{tbl_ts} object with more controls. It is useful
 for creating a \code{tbl_ts} internally inside a function, and it allows developers to
 determine if the time needs ordering and the interval needs calculating.

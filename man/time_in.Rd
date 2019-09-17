@@ -10,7 +10,7 @@ time_in(x, ...)
 \item{x}{A vector of time index, such as classes \code{POSIXct}, \code{Date}, \code{yearweek},
 \code{yearmonth}, \code{yearquarter}, \code{hms}/\code{difftime}, and \code{numeric}.}
 
-\item{...}{Formulas that specify start and end periods (inclusive) or strings.
+\item{...}{Formulas that specify start and end periods (inclusive), or strings.
 \itemize{
 \item \code{~ end} or \code{. ~ end}: from the very beginning to a specified ending period.
 \item \code{start ~ end}: from specified beginning to ending periods.
@@ -23,8 +23,6 @@ Supported index type: \code{POSIXct} (to seconds), \code{Date}, \code{yearweek},
 logical vector
 }
 \description{
-\Sexpr[results=rd, stage=render]{tsibble:::lifecycle("maturing")}
-
 This function respects time zone and encourages compact expressions.
 }
 \section{System Time Zone ("Europe/London")}{

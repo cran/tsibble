@@ -32,10 +32,7 @@ arrange.grouped_ts <- arrange.tbl_ts
 
 #' @rdname tsibble-tidyverse
 filter.tbl_ts <- function(.data, ..., .preserve = FALSE) {
-  by_row(filter, .data,
-    ordered = is_ordered(.data),
-    interval = is_regular(.data), ..., .preserve = .preserve
-  )
+  by_row(filter, .data, ordered = is_ordered(.data), ..., .preserve = .preserve)
 }
 
 #' @rdname tsibble-tidyverse
@@ -47,10 +44,7 @@ slice.tbl_ts <- function(.data, ..., .preserve = FALSE) {
   }
   pos_df <- summarise(as_tibble(.data), !!".pos_col" := list2(!!pos[[1]]))
   ascending <- all(map_lgl(pos_df[[".pos_col"]], validate_order))
-  by_row(slice, .data,
-    ordered = ascending, interval = is_regular(.data), ...,
-    .preserve = .preserve
-  )
+  by_row(slice, .data, ordered = ascending, ..., .preserve = .preserve)
 }
 
 #' @rdname tsibble-tidyverse
@@ -198,9 +192,8 @@ group_by.tbl_ts <- function(.data, ..., add = FALSE,
   lst_quos <- enquos(..., .named = TRUE)
   grp_vars <- names(lst_quos)
   if (add) grp_vars <- union(group_vars(.data), grp_vars)
-  if (is_empty(grp_vars)) {
-    return(.data)
-  }
+  if (is_empty(grp_vars)) return(.data)
+
   index <- index_var(.data)
   if (index %in% grp_vars) {
     err <- sprintf("Column `%s` (index) can't be a grouping variable for a tsibble.", index)
@@ -227,7 +220,7 @@ group_by.tbl_ts <- function(.data, ..., add = FALSE,
 #' Group by key variables
 #'
 #' @description
-#' \Sexpr[results=rd, stage=render]{tsibble:::lifecycle("stable")}
+#' \lifecycle{stable}
 #'
 #' @param .data A `tbl_ts` object.
 #' @param ... Ignored.

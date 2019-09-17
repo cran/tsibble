@@ -16,7 +16,8 @@ duplicates(data, key = NULL, index)
 \item{data}{A data frame for creating a tsibble.}
 
 \item{key}{Unquoted variable(s) that uniquely determine time indices. \code{NULL} for
-empty key, and works with tidy selector (e.g. \code{\link[dplyr:starts_with]{dplyr::starts_with()}}).}
+empty key, and \code{c()} for multiple variables. It works with tidy selector
+(e.g. \code{\link[dplyr:starts_with]{dplyr::starts_with()}}).}
 
 \item{index}{A bare (or unquoted) variable to specify the time index variable.}
 
@@ -24,7 +25,7 @@ empty key, and works with tidy selector (e.g. \code{\link[dplyr:starts_with]{dpl
 elements.}
 }
 \description{
-\Sexpr[results=rd, stage=render]{tsibble:::lifecycle("stable")}
+\lifecycle{stable}
 \itemize{
 \item \code{is_duplicated()}: a logical scalar if the data exist duplicated observations.
 \item \code{are_duplicated()}: a logical vector, the same length as the row number of \code{data}.

@@ -1,7 +1,7 @@
 #' Group by time index and collapse with `summarise()`
 #'
 #' @description
-#' \Sexpr[results=rd, stage=render]{tsibble:::lifecycle("stable")}
+#' \lifecycle{stable}
 #'
 #' `index_by()` is the counterpart of `group_by()` in temporal context, but it
 #' only groups the time index. The following operation is applied to each partition
@@ -23,7 +23,7 @@
 #' * [lubridate::ceiling_date], [lubridate::floor_date], or [lubridate::round_date]:
 #' fine-resolution aggregation
 #' * Extract time components functions, such as [lubridate::hour()] & [lubridate::day()]
-#' * other index functions from other packages
+#' * other index functions from other packages or self-defined functions
 #'
 #' @details
 #' * A `index_by()`-ed tsibble is indicated by `@` in the "Groups" when
@@ -60,10 +60,20 @@
 #'   index_by(Date_Time4 = ~ lubridate::floor_date(., "4 hour")) %>%
 #'   summarise(Total_Count = sum(Count))
 #'
+#' library(lubridate, warn.conflicts = FALSE)
 #' # Annual trips by Region and State
 #' tourism %>%
-#'   index_by(Year = ~ lubridate::year(.)) %>%
+#'   index_by(Year = ~ year(.)) %>%
 #'   group_by(Region, State) %>%
+#'   summarise(Total = sum(Trips))
+#'
+#' # Rouding to financial year, using a custom function
+#' financial_year <- function(date) {
+#'   year <- year(date)
+#'   ifelse(quarter(date) <= 2, year, year + 1)
+#' }
+#' tourism %>%
+#'   index_by(Year = ~ financial_year(.)) %>%
 #'   summarise(Total = sum(Trips))
 index_by <- function(.data, ...) {
   UseMethod("index_by")
@@ -80,7 +90,7 @@ index_by.tbl_ts <- function(.data, ...) {
   if (identical(idx, names(exprs))) {
     abort(sprintf("Column `%s` (index) can't be overwritten.", idx))
   }
-  idx2_data <- ungrp <- ungroup(as_tibble(.data))
+  idx2_data <- ungrp <- new_data_frame(.data)
   if (is_empty(exprs)) {
     idx2 <- index(.data)
   } else {
@@ -95,8 +105,7 @@ index_by.tbl_ts <- function(.data, ...) {
     }
   }
   tbl <- group_by(idx2_data, !!!groups(.data), !!idx2, .drop = FALSE)
-  build_tsibble(
-    tbl,
+  build_tsibble(tbl,
     key_data = key_data(.data), index = !!idx, index2 = !!idx2,
     ordered = is_ordered(.data), interval = interval(.data),
     validate = FALSE

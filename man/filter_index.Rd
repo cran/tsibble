@@ -9,7 +9,7 @@ filter_index(.data, ..., .preserve = FALSE)
 \arguments{
 \item{.data}{A tsibble.}
 
-\item{...}{Formulas that specify start and end periods (inclusive) or strings.
+\item{...}{Formulas that specify start and end periods (inclusive), or strings.
 \itemize{
 \item \code{~ end} or \code{. ~ end}: from the very beginning to a specified ending period.
 \item \code{start ~ end}: from specified beginning to ending periods.
@@ -22,8 +22,6 @@ Supported index type: \code{POSIXct} (to seconds), \code{Date}, \code{yearweek},
 is recalculated based on the resulting data, otherwise it is kept as is.}
 }
 \description{
-\Sexpr[results=rd, stage=render]{tsibble:::lifecycle("maturing")}
-
 This shorthand respects time zones and encourages compact expressions.
 }
 \section{System Time Zone ("Europe/London")}{

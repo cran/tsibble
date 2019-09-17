@@ -13,15 +13,17 @@
   register_s3_method("pillar", "obj_sum", "yearquarter")
 
   register_s3_method("dplyr", "filter", "tbl_ts")
-  register_s3_method("dplyr", "filter", "lst_ts")
   register_s3_method("dplyr", "distinct", "tbl_ts")
   register_s3_method("dplyr", "group_split", "tbl_ts")
   register_s3_method("dplyr", "group_split", "grouped_ts")
   register_s3_method("dplyr", "group_trim", "grouped_ts")
 
+  register_s3_method("tidyr", "gather", "tbl_ts")
+  register_s3_method("tidyr", "spread", "tbl_ts")
   register_s3_method("tidyr", "fill", "grouped_ts")
   register_s3_method("tidyr", "fill", "tbl_ts")
-  register_s3_method("tidyr", "unnest", "lst_ts")
+  register_s3_method("tidyr", "nest", "tbl_ts")
+  register_s3_method("tidyr", "nest", "grouped_ts")
   register_s3_method("tidyr", "unnest", "tbl_ts")
 
   invisible()

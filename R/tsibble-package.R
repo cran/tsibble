@@ -2,7 +2,7 @@
 #'
 #' \if{html}{\figure{logo.png}{options: align='right'}}
 #' The **tsibble** package provides a data class of `tbl_ts` to represent tidy
-#' time series data. A tsibble consists of a time index, key, and other measured
+#' temporal data. A tsibble consists of a time index, key, and other measured
 #' variables in a data-centric format, which is built on top of the tibble.
 #'
 #' @section Index:
@@ -19,11 +19,8 @@
 #' using `Date`, a month containing days ranges from 28 to 31 days, which results
 #' in irregular time space. This is also applicable to year-week and year-quarter.
 #'
-#' Since the **tibble** that underlies the **tsibble** only accepts a 1d atomic
-#' vector or a list, the tsibble doesn't accept types of `POSIXlt` and `timeDate`.
-#'
 #' Tsibble supports arbitrary index classes, as long as they can be ordered from
-#' past to future. To support a custom class, one needs to define [index_valid()]
+#' past to future. To support a custom class, you need to define [index_valid()]
 #' for the class and calculate the interval through [interval_pull()].
 #'
 #' @section Key:
@@ -42,8 +39,8 @@
 #' "year". An unrecognisable time interval is labelled as "unit".
 #' * Irregular: `as_tsibble(regular = FALSE)` gives the irregular tsibble. It is
 #' marked with `!`.
-#' * Unknown: if there is only one entry for each key variable, the interval
-#' cannot be determined (`?`).
+#' * Unknown: Not determined (`?`), if it's an empty tsibble, or one entry for
+#' each key variable.
 #'
 #' An interval is obtained based on the corresponding index representation:
 #' * integerish numerics between 1582 and 2499: "year" (`Y`). Note the year of
@@ -54,9 +51,16 @@
 #' * `Date`: "day" (`D`)
 #' * `difftime`: "quarter" (`Q`), "month" (`M`), "week" (`W`), "day" (D),
 #' "hour" (`h`), "minute" (`m`), "second" (`s`)
-#' * `POSIXct`/`hms`: "hour" (`h`), "minute" (`m`), "second" (`s`), "millisecond" (`us`), "microsecond" (`ms`)
+#' * `POSIXt`/`hms`: "hour" (`h`), "minute" (`m`), "second" (`s`), "millisecond" (`us`), "microsecond" (`ms`)
 #' * `nanotime`: "nanosecond" (`ns`)
 #' * other numerics &`ordered` (ordered factor): "unit"
+#' When the interval cannot be obtained due to the mismatched index format, an
+#' error is issued.
+#'
+#' The interval is invariant to subsetting, such as `filter()`, `slice()`, and `[.tbl_ts`.
+#' But if the result is an empty tsibble, the interval is always unknown.
+#' When joining a tsibble with other data sources and aggregating to different
+#' time scales, the interval gets re-calculated.
 #'
 #' @section Time zone:
 #' Time zone corresponding to index will be displayed if index is `POSIXct`.
@@ -81,10 +85,10 @@
 #' @importFrom dplyr group_by ungroup group_data grouped_df group_vars
 #' @importFrom dplyr group_rows groups new_grouped_df is_grouped_df
 #' @importFrom dplyr anti_join left_join right_join full_join semi_join inner_join
-#' @importFrom dplyr bind_rows bind_cols combine with_order pull
-#' @importFrom tidyr gather spread nest unnest
+#' @importFrom dplyr bind_rows bind_cols combine with_order pull first
 #' @importFrom tibble new_tibble trunc_mat
-#' @import rlang tidyselect
+#' @importFrom lifecycle deprecated
+#' @import rlang tidyselect vctrs
 #' @examples
 #' # create a tsibble w/o a key ----
 #' tsibble(

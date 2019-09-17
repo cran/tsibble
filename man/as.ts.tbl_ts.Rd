@@ -4,7 +4,8 @@
 \alias{as.ts.tbl_ts}
 \title{Coerce a tsibble to a time series}
 \usage{
-\method{as.ts}{tbl_ts}(x, value, frequency = NULL, fill = NA, ...)
+\method{as.ts}{tbl_ts}(x, value, frequency = NULL, fill = NA_real_,
+  ...)
 }
 \arguments{
 \item{x}{A \code{tbl_ts} object.}
@@ -23,7 +24,7 @@ preferred frequency is passed to \code{ts()}.}
 A \code{ts} object.
 }
 \description{
-Coerce a tsibble to a time series
+\lifecycle{stable}
 }
 \examples{
 # a monthly series

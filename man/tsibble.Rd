@@ -7,11 +7,11 @@
 tsibble(..., key = NULL, index, regular = TRUE, .drop = TRUE)
 }
 \arguments{
-\item{...}{A set of name-value pairs. The names of "key" and "index" should
-be avoided as they are used as the arguments.}
+\item{...}{A set of name-value pairs.}
 
 \item{key}{Unquoted variable(s) that uniquely determine time indices. \code{NULL} for
-empty key, and works with tidy selector (e.g. \code{\link[dplyr:starts_with]{dplyr::starts_with()}}).}
+empty key, and \code{c()} for multiple variables. It works with tidy selector
+(e.g. \code{\link[dplyr:starts_with]{dplyr::starts_with()}}).}
 
 \item{index}{A bare (or unquoted) variable to specify the time index variable.}
 
@@ -24,7 +24,7 @@ interval is determined by the greatest common divisor of index column, if \code{
 A tsibble object.
 }
 \description{
-\Sexpr[results=rd, stage=render]{tsibble:::lifecycle("stable")}
+\lifecycle{stable}
 }
 \details{
 A tsibble is sorted by its key first and index.
@@ -44,11 +44,8 @@ months in a year ensures the regularity, 12 months every year. However, if
 using \code{Date}, a month containing days ranges from 28 to 31 days, which results
 in irregular time space. This is also applicable to year-week and year-quarter.
 
-Since the \strong{tibble} that underlies the \strong{tsibble} only accepts a 1d atomic
-vector or a list, the tsibble doesn't accept types of \code{POSIXlt} and \code{timeDate}.
-
 Tsibble supports arbitrary index classes, as long as they can be ordered from
-past to future. To support a custom class, one needs to define \code{\link[=index_valid]{index_valid()}}
+past to future. To support a custom class, you need to define \code{\link[=index_valid]{index_valid()}}
 for the class and calculate the interval through \code{\link[=interval_pull]{interval_pull()}}.
 }
 
@@ -74,8 +71,8 @@ The \link{interval} function returns the interval associated with the tsibble.
 "year". An unrecognisable time interval is labelled as "unit".
 \item Irregular: \code{as_tsibble(regular = FALSE)} gives the irregular tsibble. It is
 marked with \code{!}.
-\item Unknown: if there is only one entry for each key variable, the interval
-cannot be determined (\code{?}).
+\item Unknown: Not determined (\code{?}), if it's an empty tsibble, or one entry for
+each key variable.
 }
 
 An interval is obtained based on the corresponding index representation:
@@ -88,10 +85,17 @@ An interval is obtained based on the corresponding index representation:
 \item \code{Date}: "day" (\code{D})
 \item \code{difftime}: "quarter" (\code{Q}), "month" (\code{M}), "week" (\code{W}), "day" (D),
 "hour" (\code{h}), "minute" (\code{m}), "second" (\code{s})
-\item \code{POSIXct}/\code{hms}: "hour" (\code{h}), "minute" (\code{m}), "second" (\code{s}), "millisecond" (\code{us}), "microsecond" (\code{ms})
+\item \code{POSIXt}/\code{hms}: "hour" (\code{h}), "minute" (\code{m}), "second" (\code{s}), "millisecond" (\code{us}), "microsecond" (\code{ms})
 \item \code{nanotime}: "nanosecond" (\code{ns})
 \item other numerics &\code{ordered} (ordered factor): "unit"
+When the interval cannot be obtained due to the mismatched index format, an
+error is issued.
 }
+
+The interval is invariant to subsetting, such as \code{filter()}, \code{slice()}, and \code{[.tbl_ts}.
+But if the result is an empty tsibble, the interval is always unknown.
+When joining a tsibble with other data sources and aggregating to different
+time scales, the interval gets re-calculated.
 }
 
 \examples{
@@ -101,12 +105,29 @@ tsibble(
   value = rnorm(10)
 )
 
-# create a tsibble with one key
+# create a tsibble with a single variable for key
 tsibble(
-  qtr = rep(yearquarter("201001") + 0:9, 3),
+  qtr = rep(yearquarter("2010 Q1") + 0:9, 3),
   group = rep(c("x", "y", "z"), each = 10),
   value = rnorm(30),
   key = group
+)
+
+# create a tsibble with multiple variables for key
+tsibble(
+  mth = rep(yearmonth("2010 Jan") + 0:8, each = 3),
+  xyz = rep(c("x", "y", "z"), each = 9),
+  abc = rep(letters[1:3], times = 9),
+  value = rnorm(27),
+  key = c(xyz, abc)
+)
+
+# create a tsibble containing "key" and "index" as column names
+tsibble(!!!list(
+  index = rep(yearquarter("2010 Q1") + 0:9, 3),
+  key = rep(c("x", "y", "z"), each = 10),
+  value = rnorm(30)),
+  key = key, index = index
 )
 }
 \seealso{

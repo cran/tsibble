@@ -1,7 +1,6 @@
 #' New tsibble data and append new observations to a tsibble
 #'
-#' @description
-#' \Sexpr[results=rd, stage=render]{tsibble:::lifecycle("stable")}
+#' \lifecycle{stable}
 #'
 #' @param .data A `tbl_ts`.
 #' @param n An integer indicates the number of key-index pair to append.
@@ -10,10 +9,6 @@
 #' @rdname new-data
 #' @export
 new_data <- function(.data, n = 1L, ...) {
-  if (!is_integerish(n, 1) && any(n > 0)) {
-    abort("Argument `n` must be a positive integer.")
-  }
-
   UseMethod("new_data")
 }
 
@@ -26,28 +21,32 @@ new_data <- function(.data, n = 1L, ...) {
 #' new_data(pedestrian, keep_all = TRUE)
 #' new_data(pedestrian, n = 3)
 new_data.tbl_ts <- function(.data, n = 1L, keep_all = FALSE, ...) {
-  not_regular(.data)
+  if (!is_integerish(n, 1) && any(n > 0)) {
+    abort("Argument `n` must be a positive integer.")
+  }
+  abort_if_irregular(.data)
   abort_unknown_interval(int <- interval(.data))
 
   idx <- index(.data)
   tunit <- time_unit(int)
 
-  grped_df <- new_grouped_df(.data, groups = key_data(.data))
+  key_data <- key_data(.data)
+  grped_df <- new_grouped_df(.data, groups = key_data)
   last_entry <- summarise(grped_df, !!idx := max(!!idx))
-
-  nc <- NCOL(last_entry)
-  new_lst <- new_list(NROW(last_entry))
-  for (i in seq_len(NROW(last_entry))) {
-    lst_i <- new_lst[[i]] <- as.list(last_entry[i, ])
-    new_lst[[i]][[nc]] <- seq(lst_i[[nc]], by = tunit, length.out = n + 1)[-1]
-    new_lst[[i]] <- as_tibble(new_lst[[i]])
+  if (NCOL(key_data) == 1) { # no key
+    regrped_df <- last_entry
+  } else {
+    meta_grps <- mutate(key_data, .rows = list2(!!!vec_seq_along(last_entry)))
+    regrped_df <- new_grouped_df(last_entry, groups = meta_grps)
   }
-  out <- bind_rows(!!!new_lst)
+  new_lst <- mutate(regrped_df, 
+    !!idx := list2(tibble(!!idx := seq(!!idx, by = tunit, length.out = n + 1)[-1])))
+
+  out <- unwrap(ungroup(new_lst), .col = !!idx)
   if (keep_all) {
     out <- bind_rows(.data[0L, ], out)
   } else { # reorder column names according to the data input
-    cn <- setdiff(names(.data), measured_vars(.data))
-    out <- select(out, !!!cn)
+    out <- out[setdiff(names(.data), measured_vars(.data))]
   }
   update_meta(out, .data, ordered = TRUE, interval = interval(.data))
 }

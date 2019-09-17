@@ -1,5 +1,7 @@
 #' Coerce a tsibble to a time series
 #'
+#' \lifecycle{stable}
+#'
 #' @param x A `tbl_ts` object.
 #' @param value A measured variable of interest to be spread over columns, if
 #' multiple measures.
@@ -19,7 +21,7 @@
 #' # equally spaced over trading days, not smart enough to guess frequency
 #' x2 <- as_tsibble(EuStockMarkets)
 #' head(as.ts(x2, frequency = 260))
-as.ts.tbl_ts <- function(x, value, frequency = NULL, fill = NA, ...) {
+as.ts.tbl_ts <- function(x, value, frequency = NULL, fill = NA_real_, ...) {
   value <- enquo(value)
   key_vars <- key(x)
   if (length(key_vars) > 1) {
@@ -39,21 +41,38 @@ as.ts.tbl_ts <- function(x, value, frequency = NULL, fill = NA, ...) {
     }
   }
   idx <- index(x)
-  tsbl_sort <- arrange(x, !!!key_vars, !!idx)
-  tsbl_sel <-
-    as_tibble(select_tsibble(
-      tsbl_sort, !!idx, !!!key_vars, !!value_var,
-      validate = FALSE
-    ))
+  tsbl_sel <- select_tsibble(x, !!idx, !!!key_vars, !!value_var,
+    validate = FALSE)
+  tsbl_sel <- arrange(tsbl_sel, !!!key_vars, !!idx)
   if (is_empty(key_vars)) {
-    finalise_ts(tsbl_sel, index = index(x), frequency = frequency)
+    finalise_ts(tsbl_sel, index = idx, frequency = frequency)
   } else {
-    mat_ts <- spread(tsbl_sel,
-      key = !!key_vars[[1]],
-      value = !!value_var, fill = fill
-    )
+    mat_ts <- pivot_wider_ts(tsbl_sel, fill = fill)
     finalise_ts(mat_ts, index = idx, frequency = frequency)
   }
+}
+
+pivot_wider_ts <- function(data, fill = NA_real_) {
+  stopifnot(!is_null(fill))
+  index <- index_var(data)
+  df_rows <- data[[index]]
+  rows <- vec_sort(vec_unique(df_rows))
+  row_idx <- vec_match(df_rows, rows)
+  key_rows <- key_rows(data)
+  col_idx <- rep(seq_along(key_rows), times = map_int(key_rows, length))
+  col_idx <- vec_slice(col_idx, vec_c(!!!key_rows))
+  val_idx <- new_data_frame(list(row = row_idx, col = col_idx))
+  values <- data[[measured_vars(data)]]
+  nrow <- vec_size(rows)
+  ncol <- vec_size(key_rows)
+  vec <- vec_init(fill, n = nrow * ncol)
+  vec[] <- fill
+  vec_slice(vec, val_idx$row + nrow * (val_idx$col - 1L)) <- values
+  res <- set_names(vec_init(list(), ncol), key_data(data)[[1]])
+  for (i in 1:ncol) {
+    res[[i]] <- vec[((i - 1) * nrow + 1):(i * nrow)]
+  }
+  vec_cbind(!!index := rows, !!!res)
 }
 
 finalise_ts <- function(data, index, frequency = NULL) {
@@ -115,7 +134,7 @@ time.POSIXt <- function(x, frequency = NULL, ...) {
 #' Guess a time frequency from other index objects
 #'
 #' @description
-#' \Sexpr[results=rd, stage=render]{tsibble:::lifecycle("stable")}
+#' \lifecycle{stable}
 #'
 #' A possible frequency passed to the `ts()` function
 #'
@@ -123,9 +142,9 @@ time.POSIXt <- function(x, frequency = NULL, ...) {
 #'
 #' @details If a series of observations are collected more frequently than
 #' weekly, it is more likely to have multiple seasonalities. This function
-#' returns a frequency value at its nearest ceiling time resolution. For example,
-#' hourly data would have daily, weekly and annual frequencies of 24, 168 and 8766
-#' respectively, and hence it gives 24.
+#' returns a frequency value at its smallest. For example, hourly data would
+#' have daily, weekly and annual frequencies of 24, 168 and 8766 respectively,
+#' and hence it gives 24.
 #'
 #' @references <https://robjhyndman.com/hyndsight/seasonal-periods/>
 #'
@@ -211,6 +230,6 @@ guess_frequency.POSIXt <- function(x) {
 
 #' @export
 frequency.tbl_ts <- function(x, ...) {
-  not_regular(x)
-  guess_frequency(eval_tidy(index(x), data = x))
+  abort_if_irregular(x)
+  guess_frequency(x[[index_var(x)]])
 }

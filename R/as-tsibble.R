@@ -1,12 +1,13 @@
+globalVariables(c(".rows"))
+
 #' Create a tsibble object
 #'
-#' @description
-#' \Sexpr[results=rd, stage=render]{tsibble:::lifecycle("stable")}
+#' \lifecycle{stable}
 #'
-#' @param ... A set of name-value pairs. The names of "key" and "index" should
-#' be avoided as they are used as the arguments.
+#' @param ... A set of name-value pairs.
 #' @param key Unquoted variable(s) that uniquely determine time indices. `NULL` for
-#' empty key, and works with tidy selector (e.g. [dplyr::starts_with()]).
+#' empty key, and `c()` for multiple variables. It works with tidy selector
+#' (e.g. [dplyr::starts_with()]).
 #' @param index A bare (or unquoted) variable to specify the time index variable.
 #' @param regular Regular time interval (`TRUE`) or irregular (`FALSE`). The
 #' interval is determined by the greatest common divisor of index column, if `TRUE`.
@@ -30,20 +31,34 @@
 #'   value = rnorm(10)
 #' )
 #'
-#' # create a tsibble with one key
+#' # create a tsibble with a single variable for key
 #' tsibble(
-#'   qtr = rep(yearquarter("201001") + 0:9, 3),
+#'   qtr = rep(yearquarter("2010 Q1") + 0:9, 3),
 #'   group = rep(c("x", "y", "z"), each = 10),
 #'   value = rnorm(30),
 #'   key = group
+#' )
+#'
+#' # create a tsibble with multiple variables for key
+#' tsibble(
+#'   mth = rep(yearmonth("2010 Jan") + 0:8, each = 3),
+#'   xyz = rep(c("x", "y", "z"), each = 9),
+#'   abc = rep(letters[1:3], times = 9),
+#'   value = rnorm(27),
+#'   key = c(xyz, abc)
+#' )
+#'
+#' # create a tsibble containing "key" and "index" as column names
+#' tsibble(!!!list(
+#'   index = rep(yearquarter("2010 Q1") + 0:9, 3),
+#'   key = rep(c("x", "y", "z"), each = 10),
+#'   value = rnorm(30)),
+#'   key = key, index = index
 #' )
 #' @export
 tsibble <- function(..., key = NULL, index, regular = TRUE, .drop = TRUE) {
   stopifnot(is_logical(regular, n = 1))
   dots <- list2(...)
-  if (has_length(dots, 1) && is.data.frame(dots[[1]])) {
-    abort("Must not be a data frame, do you want `as_tsibble()`?")
-  }
   tbl <- tibble(!!!dots)
   index <- enquo(index)
   build_tsibble(tbl,
@@ -54,8 +69,7 @@ tsibble <- function(..., key = NULL, index, regular = TRUE, .drop = TRUE) {
 
 #' Coerce to a tsibble object
 #'
-#' @description
-#' \Sexpr[results=rd, stage=render]{tsibble:::lifecycle("stable")}
+#' \lifecycle{stable}
 #'
 #' @param x Other objects to be coerced to a tsibble (`tbl_ts`).
 #' @inheritParams tsibble
@@ -78,7 +92,7 @@ tsibble <- function(..., key = NULL, index, regular = TRUE, .drop = TRUE) {
 #' # supply the index to suppress the message
 #' as_tsibble(tbl1, index = date)
 #'
-#' # coerce tibble to tsibble with one key
+#' # coerce tibble to tsibble with a single variable for key
 #' # "date" is automatically considered as the index var, and "group" is the key
 #' tbl2 <- tibble(
 #'   mth = rep(yearmonth("2017-01") + 0:9, 3),
@@ -87,6 +101,15 @@ tsibble <- function(..., key = NULL, index, regular = TRUE, .drop = TRUE) {
 #' )
 #' as_tsibble(tbl2, key = group)
 #' as_tsibble(tbl2, key = group, index = mth)
+#'
+#' # create a tsibble with multiple variables for key
+#' tbl3 <- tibble(
+#'   mth = rep(yearmonth("2010 Jan") + 0:8, each = 3),
+#'   xyz = rep(c("x", "y", "z"), each = 9),
+#'   abc = rep(letters[1:3], times = 9),
+#'   value = rnorm(27)
+#' )
+#' as_tsibble(tbl3, key = c(xyz, abc))
 #' @export
 as_tsibble <- function(x, key = NULL, index, regular = TRUE,
                        validate = TRUE, .drop = TRUE, ...) {
@@ -99,8 +122,7 @@ as_tsibble <- function(x, key = NULL, index, regular = TRUE,
 as_tsibble.tbl_df <- function(x, key = NULL, index, regular = TRUE,
                               validate = TRUE, .drop = TRUE, ...) {
   index <- enquo(index)
-  build_tsibble(
-    x,
+  build_tsibble(x,
     key = !!enquo(key), index = !!index, interval = regular,
     validate = validate, .drop = .drop
   )
@@ -120,18 +142,13 @@ as_tsibble.tbl_ts <- function(x, ...) {
 #' @export
 as_tsibble.tbl <- as_tsibble.tbl_df
 
-#' @rdname as-tsibble
-#' @export
-as_tsibble.list <- as_tsibble.tbl_df
-
 #' @keywords internal
 #' @export
 as_tsibble.grouped_df <- function(x, key = NULL, index, regular = TRUE,
                                   validate = TRUE, .drop = key_drop_default(x),
                                   ...) {
   index <- enquo(index)
-  build_tsibble(
-    x,
+  build_tsibble(x,
     key = !!enquo(key), index = !!index, interval = regular,
     validate = validate, .drop = .drop
   )
@@ -155,20 +172,22 @@ as_tsibble.NULL <- function(x, ...) {
 
 #' Update key and index for a tsibble
 #'
-#' @description
-#' \Sexpr[results=rd, stage=render]{tsibble:::lifecycle("maturing")}
-#'
 #' @param x A tsibble.
 #' @inheritParams as_tsibble
 #' @details
 #' Unspecified arguments will inherit the attributes from `x`.
 #' @export
 #' @examples
+#' # update index
 #' library(dplyr)
 #' pedestrian %>%
 #'   group_by_key() %>%
 #'   mutate(Hour_Since = Date_Time - min(Date_Time)) %>%
 #'   update_tsibble(index = Hour_Since)
+#'
+#' # update key: drop the variable "State" from the key
+#' tourism %>% 
+#'   update_tsibble(key = c(Purpose, Region))
 update_tsibble <- function(x, key, index, regular = is_regular(x),
                            validate = TRUE, .drop = key_drop_default(x)) {
   not_tsibble(x)
@@ -182,7 +201,7 @@ update_tsibble <- function(x, key, index, regular = is_regular(x),
   if (quo_is_missing(idx)) {
     idx <- index_var(x)
   }
-  if (is_true(regular)) {
+  if (regular) {
     int <- interval(x)
     int <- if (unknown_interval(int)) int else TRUE
   } else {
@@ -204,8 +223,6 @@ update_tsibble <- function(x, key, index, regular = is_regular(x),
 #' Low-level constructor for a tsibble object
 #'
 #' @description
-#' \Sexpr[results=rd, stage=render]{tsibble:::lifecycle("maturing")}
-#'
 #' `build_tsibble()` creates a `tbl_ts` object with more controls. It is useful
 #' for creating a `tbl_ts` internally inside a function, and it allows developers to
 #' determine if the time needs ordering and the interval needs calculating.
@@ -255,30 +272,19 @@ build_tsibble <- function(x, key = NULL, key_data = NULL, index, index2 = index,
   # index cannot be part of the keys
   idx_chr <- c(index, index2)
   is_index_in_keys <- intersect(idx_chr, key_vars)
-  if (is_false(is_empty(is_index_in_keys))) {
+  if (!is_empty(is_index_in_keys)) {
     abort(sprintf("Column `%s` can't be both index and key.", idx_chr[[1]]))
   }
   # arrange index from past to future for each key value
-  if (NROW(tbl) == 0 || is_null(ordered)) { # first time to create a tsibble
+  if (vec_size(tbl) == 0 || is_null(ordered)) { # first time to create a tsibble
     tbl <- arrange(tbl, !!!key_vars, !!sym(index))
     ordered <- TRUE
   }
   if (!is_key_data) {
     key_data <- group_data(group_by(tbl, !!!key_vars, .drop = .drop))
   }
-  if (is_false(ordered)) { # false returns a warning
-    indices <- tbl[[index]]
-    idx_rows <- lapply(key_data[[".rows"]], function(x) indices[x])
-    actually_ordered <- all(vapply(idx_rows, validate_order, logical(1)))
-    if (is_false(actually_ordered)) {
-      idx_txt <- backticks(index)
-      key_txt <- lapply(key_vars, expr_label)
-      warn(sprintf(paste_inline(
-        "Unspecified temporal ordering may yield unexpected results.",
-        "Suggest to sort by %s first."
-      ), comma(c(key_txt, idx_txt), sep = "")))
-    }
-    ordered <- actually_ordered
+  if (!ordered) { # if false, double check
+    ordered <- validate_index_order(tbl, key_data, index)
   }
   # validate tbl_ts
   if (validate) {
@@ -287,8 +293,8 @@ build_tsibble <- function(x, key = NULL, key_data = NULL, index, index2 = index,
       index = index
     )
   }
-  build_tsibble_meta(
-    tbl,
+  interval <- validate_interval(tbl, key_data, index, interval)
+  build_tsibble_meta(tbl,
     key_data = key_data, index = index, index2 = index2,
     ordered = ordered, interval = interval
   )
@@ -297,59 +303,42 @@ build_tsibble <- function(x, key = NULL, key_data = NULL, index, index2 = index,
 #' Low-level & high-performance constructor for a tsibble object
 #'
 #' @description
-#' \Sexpr[results=rd, stage=render]{tsibble:::lifecycle("experimental")}
+#' \lifecycle{experimental}
 #'
 #' `build_tsibble_meta()` does much less checks than `build_tsibble()` for
 #' high performance.
 #'
 #' @inheritParams build_tsibble
-#' @param index,index2 Strings for variable name.
+#' @param index,index2 Quoted variable name.
 #'
 #' @keywords internal
 #' @export
 build_tsibble_meta <- function(x, key_data = NULL, index, index2,
-                               ordered = NULL, interval = TRUE) {
+                               ordered = NULL, interval = NULL) {
   stopifnot(!is_null(ordered))
-  tbl <- x
+  stopifnot(inherits(interval, "interval"))
   attr(index, "ordered") <- ordered
+  idx_lgl <- index != index2
+  is_grped <- is_grouped_df(x) || idx_lgl
 
-  is_interval <- inherits(interval, "interval")
-  msg_interval <- "Argument `interval` must be class interval, not %s."
-  if (is_false(interval) || is_null(interval)) {
-    interval <- irregular()
-  } else if (is_true(interval)) {
-    interval <- interval_pull(tbl[[index]])
-  } else if (!is_interval) {
-    abort(sprintf(msg_interval, class(interval)[1]))
-  }
-  if (unknown_interval(interval) && (NROW(tbl) > NROW(key_data))) {
-    warn("Can't obtain the interval, please see `?tsibble` for details.")
-  }
-
-  idx_lgl <- index == index2
   # convert grouped_df to tsibble:
   # the `groups` arg must be supplied, otherwise returns a `tbl_ts` not grouped
-  if (!idx_lgl) {
-    tbl <- group_by(tbl, !!sym(index2), add = TRUE)
+  if (idx_lgl) {
+    x <- group_by(x, !!sym(index2), add = TRUE)
   }
-  grp_data <- tbl %@% "groups"
-  tbl <- new_tibble(
-    tbl,
+  grp_data <- x %@% "groups"
+  x <- new_tibble(x,
     "key" = key_data, "index" = index, "index2" = index2,
-    "interval" = interval, "groups" = NULL, nrow = NROW(tbl), class = "tbl_ts"
-  )
-  is_grped <- is_grouped_df(x) || !idx_lgl
+    "interval" = interval, "groups" = NULL, nrow = vec_size(x),
+    class = "tbl_ts")
   if (is_grped) {
     cls <- c("grouped_ts", "grouped_df")
-    tbl <- new_tsibble(tbl, "groups" = grp_data, class = cls)
+    x <- new_tsibble(x, "groups" = grp_data, class = cls)
   }
-  tbl
+  x
 }
 
 #' Create a subclass of a tsibble
-#'
-#' @description
-#' \Sexpr[results=rd, stage=render]{tsibble:::lifecycle("maturing")}
 #'
 #' @param x A `tbl_ts`, required.
 #' @param ... Name-value pairs defining new attributes other than a tsibble.
@@ -358,9 +347,8 @@ build_tsibble_meta <- function(x, key_data = NULL, index, index2,
 #' @export
 new_tsibble <- function(x, ..., class = NULL) {
   not_tsibble(x)
-  x <- new_tibble(x, ..., nrow = NROW(x), class = "tbl_ts")
-  assert_key_data(x %@% key)
-  attr(x, "row.names") <- .set_row_names(NROW(x))
+  x <- new_tibble(x, ..., nrow = vec_size(x), class = "tbl_ts")
+  assert_key_data(attr(x, "key"))
   class(x) <- c(class, class(x))
   x
 }
@@ -372,20 +360,21 @@ validate_index <- function(data, index) {
   index <- enquo(index)
   if (quo_is_null(index)) abort("Argument `index` must not be `NULL`.")
 
+  names <- names2(data)
   if (quo_is_missing(index)) {
     if (sum(val_idx, na.rm = TRUE) != 1) {
       abort("Can't determine index and please specify argument `index`.")
     }
-    chr_index <- names(data)[val_idx]
+    chr_index <- names[val_idx]
     chr_index <- chr_index[!is.na(chr_index)]
     inform(sprintf("Using `%s` as index variable.", chr_index))
   } else {
-    chr_index <- vars_pull(names(data), !!index)
-    idx_pos <- names(data) %in% chr_index
+    chr_index <- vars_pull(names, !!index)
+    idx_pos <- vec_in(names, chr_index)
     val_lgl <- val_idx[idx_pos]
     if (is.na(val_lgl)) {
       return(chr_index)
-    } else if (!val_idx[idx_pos]) {
+    } else if (!val_lgl) {
       cls_idx <- vapply(data, function(x) class(x)[1], character(1))
       abort(sprintf("Unsupported index type: %s", cls_idx[idx_pos]))
     }
@@ -401,11 +390,51 @@ validate_order <- function(x) {
     x
   } else if (all(x < 0)) {
     TRUE
-  } else if ((pos_dup <- anyDuplicated.default(x)) > 0) {
-    abort(sprintf("Duplicated integers occur to the position of %i.", pos_dup))
+  } else if ((vec_duplicate_any(x)) > 0) {
+    abort(sprintf("Duplicated indices: %s", comma(x[vec_duplicate_detect(x)])))
   } else {
     is_ascending(x, na.rm = TRUE, strictly = TRUE)
   }
+}
+
+validate_index_order <- function(data, key_data, index) {
+  indices <- data[[index]]
+  validate_order_lst <- function(x, .rows) {
+    validate_order(x[.rows[[1]]])
+  }
+  ordered <- summarise(key_data,
+    ".rows" := any(validate_order_lst(indices, .rows)))[[".rows"]]
+  if (!ordered) {
+    idx_txt <- backticks(index)
+    key_txt <- backticks(head(names(key_data), -1L))
+    warn(sprintf(paste_inline(
+      "Current temporal ordering may yield unexpected results.",
+      "Suggest to sort by %s first."
+    ), comma(c(key_txt, idx_txt), sep = "")))
+  }
+  ordered
+}
+
+validate_interval <- function(data, key_data, index, interval) {
+  nrows <- vec_size(data)
+  is_interval <- inherits(interval, "interval")
+  msg_interval <- "Argument `interval` must be class interval, not %s."
+  if (is_false(interval) || is_null(interval)) {
+    interval <- irregular()
+  } else if (nrows == 0) {
+    interval <- new_interval()
+  } else if (is_true(interval)) {
+    interval <- interval_pull(data[[index]])
+  } else if (!is_interval) {
+    abort(sprintf(msg_interval, class(interval)[1]))
+  }
+  if (unknown_interval(interval) && (nrows > vec_size(key_data))) {
+    abort(paste_inline(
+      "Can't obtain the interval due to the mismatched index class.",
+      "Please see `vignette(\"FAQ\")` for details."
+    ))
+  }
+  interval
 }
 
 # check if a comb of key vars result in a unique data entry
@@ -466,20 +495,6 @@ as_tibble.grouped_df <- function(x, ...) {
   x
 }
 
-#' @keywords internal
-#' @export
-as_tibble.lst_ts <- function(x, ...) {
-  class(x) <- c("tbl_df", "tbl", "data.frame")
-  x
-}
-
-#' @keywords internal
-#' @export
-as.data.frame.lst_ts <- function(x, ...) {
-  class(x) <- "data.frame"
-  x
-}
-
 #' @rdname as-tibble
 #' @export
 as.data.frame.tbl_ts <- function(x, row.names = NULL, optional = FALSE, ...) {
@@ -490,7 +505,7 @@ as.data.frame.tbl_ts <- function(x, row.names = NULL, optional = FALSE, ...) {
 #' Test duplicated observations determined by key and index variables
 #'
 #' @description
-#' \Sexpr[results=rd, stage=render]{tsibble:::lifecycle("stable")}
+#' \lifecycle{stable}
 #'
 #' * `is_duplicated()`: a logical scalar if the data exist duplicated observations.
 #' * `are_duplicated()`: a logical vector, the same length as the row number of `data`.
@@ -514,7 +529,6 @@ as.data.frame.tbl_ts <- function(x, row.names = NULL, optional = FALSE, ...) {
 is_duplicated <- function(data, key = NULL, index) {
   key <- use_id(data, !!enquo(key))
   index <- sym(validate_index(data, !!enquo(index)))
-
   duplicated_key_index(data, key = key, index = index)
 }
 
@@ -526,7 +540,6 @@ is_duplicated <- function(data, key = NULL, index) {
 are_duplicated <- function(data, key = NULL, index, from_last = FALSE) {
   key <- use_id(data, !!enquo(key))
   index <- sym(validate_index(data, !!enquo(index)))
-
   res <-
     mutate(
       grouped_df(data, vars = key),
@@ -540,29 +553,16 @@ are_duplicated <- function(data, key = NULL, index, from_last = FALSE) {
 duplicates <- function(data, key = NULL, index) {
   key <- use_id(data, !!enquo(key))
   index <- sym(validate_index(data, !!enquo(index)))
-
-  ungroup(
-    filter(
-      grouped_df(data, vars = key),
-      duplicated.default(!!index) |
-        duplicated.default(!!index, fromLast = TRUE)
-    )
-  )
+  ungroup(filter(grouped_df(data, vars = key), vec_duplicate_detect(!!index)))
 }
 
 duplicated_key_index <- function(data, key, index, key_data = NULL) {
-  # NOTE: bug in anyDuplicated.data.frame() (fixed in R 3.5.0)
-  # identifiers <- c(key, idx)
-  # below calls anyDuplicated.data.frame():
-  # time zone associated with the index will be dropped,
-  # e.g. nycflights13::weather, thus result in duplicates.
-  # dup <- anyDuplicated(data[, identifiers, drop = FALSE])
   if (is_null(key_data)) {
     keyed_data <- grouped_df(as_tibble(data), key)
   } else {
     keyed_data <- new_grouped_df(data, groups = key_data)
   }
-  res <- summarise(keyed_data, !!"zzz" := anyDuplicated.default(!!sym(index)))
+  res <- summarise(keyed_data, !!"zzz" := vec_duplicate_any(!!sym(index)))
   any(res$zzz > 0)
 }
 
@@ -574,11 +574,12 @@ remove_tsibble_attrs <- function(x) {
 }
 
 assert_key_data <- function(x) {
+  nc <- NCOL(x)
   if (is_false(
     is.data.frame(x) &&
-      NCOL(x) > 0 &&
-      is.list(x[[NCOL(x)]]) &&
-      tail(names(x), 1L) == ".rows"
+    nc > 0 &&
+    is.list(x[[nc]]) &&
+    names(x)[[nc]] == ".rows"
   )) {
     abort("The `key` attribute must be a data frame with its last column called `.rows`.")
   }

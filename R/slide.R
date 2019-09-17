@@ -20,7 +20,10 @@ replace_fn_names <- function(fn, replace = list(), ns = NULL) {
 #' Sliding window calculation
 #'
 #' @description
-#' \Sexpr[results=rd, stage=render]{tsibble:::lifecycle("stable")}
+#' \lifecycle{questioning}
+#'
+#' **The rolling window family will be deprecated in the future. Please consider
+#' using the [slide](https://davisvaughan.github.io/slide) package.**
 #'
 #' Rolling window with overlapping observations:
 #' * `slide()` always returns a list.
@@ -127,7 +130,10 @@ slide_dfc <- function(.x, .f, ..., .size = 1, .step = 1, .fill = NA,
 #' Sliding window calculation over multiple inputs simultaneously
 #'
 #' @description
-#' \Sexpr[results=rd, stage=render]{tsibble:::lifecycle("stable")}
+#' \lifecycle{questioning}
+#'
+#' The rolling window family will be deprecated in the future. Please consider
+#' using the [slide](https://davisvaughan.github.io/slide) package.
 #'
 #' Rolling window with overlapping observations:
 #' * `slide2()` and `pslide()` always returns a list.
@@ -162,6 +168,9 @@ slide_dfc <- function(.x, .f, ..., .size = 1, .step = 1, .fill = NA,
 #' # row-wise sliding over data frame
 #' ###
 #'
+#' if (!requireNamespace("tidyr", quietly = TRUE)) {
+#'   stop("Please install the 'tidyr' package to run these following examples.")
+#' }
 #' library(tidyr)
 #' library(dplyr)
 #' my_df <- data.frame(
@@ -291,7 +300,8 @@ pslide_dfr <- function(.l, .f, ..., .size = 1, .step = 1, .fill = NA,
 #' pedestrian %>%
 #'   filter(Sensor == "Southern Cross Station") %>%
 #'   index_by(yrmth = yearmonth(Date_Time)) %>%
-#'   nest() %>%
+#'   nest(data = -yrmth) %>%
+#'   ungroup() %>% 
 #'   mutate(ma = slide_dbl(data, ~ mean(.$Count), .size = 2, .bind = TRUE))
 #' # row-oriented workflow
 #' \dontrun{
@@ -394,8 +404,7 @@ partial_pslider <- function(..., .size = 1, .step = 1, .fill = NA,
 
 #' Perform sliding windows on a tsibble by row
 #'
-#' @description
-#' \Sexpr[results=rd, stage=render]{tsibble:::lifecycle("questioning")}
+#' \lifecycle{questioning}
 #'
 #' @param .x A tsibble.
 #' @param .size A positive integer for window size.
@@ -457,8 +466,7 @@ roll_tsibble <- function(.x, indices, .id = ".id") {
       !!!groups(.x)
     )
   new_key <- c(.id, key_vars(.x))
-  build_tsibble(
-    res,
+  build_tsibble(res,
     key = !!new_key, index = !!index(.x), index2 = !!index2(.x),
     interval = interval(.x), validate = FALSE
   )
@@ -591,6 +599,12 @@ slider_msg <- function() {
 }
 
 #' Sliding window in parallel
+#'
+#' @description
+#' \lifecycle{questioning}
+#'
+#' **The rolling window family will be deprecated in the future. Please consider
+#' using the [slide](https://davisvaughan.github.io/slide) package.**
 #'
 #' Multiprocessing equivalents of [slide()], [tile()], [stretch()] prefixed by `future_`.
 #' * Variants for corresponding types: `future_*_lgl()`, `future_*_int()`,

@@ -11,8 +11,6 @@
 \alias{transmute.tbl_ts}
 \alias{summarise.tbl_ts}
 \alias{gather.tbl_ts}
-\alias{spread.tbl_ts}
-\alias{nest.tbl_ts}
 \title{Tidyverse methods for tsibble}
 \usage{
 \method{arrange}{tbl_ts}(.data, ...)
@@ -30,13 +28,6 @@
 \method{transmute}{tbl_ts}(.data, ...)
 
 \method{summarise}{tbl_ts}(.data, ...)
-
-\method{gather}{tbl_ts}(data, key = "key", value = "value", ...,
-  na.rm = FALSE, convert = FALSE, factor_key = FALSE)
-
-\method{spread}{tbl_ts}(data, key, value, ...)
-
-\method{nest}{tbl_ts}(.data, ...)
 }
 \arguments{
 \item{.data}{A \code{tbl_ts}.}
@@ -45,39 +36,6 @@
 
 \item{.preserve}{when \code{FALSE} (the default), the grouping structure
 is recalculated based on the resulting data, otherwise it is kept as is.}
-
-\item{data}{A data frame.}
-
-\item{key}{Names of new key and value columns, as strings or
-symbols.
-
-This argument is passed by expression and supports
-\link[rlang:quasiquotation]{quasiquotation} (you can unquote strings
-and symbols). The name is captured from the expression with
-\code{\link[rlang:ensym]{rlang::ensym()}} (note that this kind of interface where
-symbols do not represent actual objects is now discouraged in the
-tidyverse; we support it here for backward compatibility).}
-
-\item{value}{Names of new key and value columns, as strings or
-symbols.
-
-This argument is passed by expression and supports
-\link[rlang:quasiquotation]{quasiquotation} (you can unquote strings
-and symbols). The name is captured from the expression with
-\code{\link[rlang:ensym]{rlang::ensym()}} (note that this kind of interface where
-symbols do not represent actual objects is now discouraged in the
-tidyverse; we support it here for backward compatibility).}
-
-\item{na.rm}{If \code{TRUE}, will remove rows from output where the
-value column is \code{NA}.}
-
-\item{convert}{If \code{TRUE} will automatically run
-\code{\link[=type.convert]{type.convert()}} on the key column. This is useful if the column
-types are actually numeric, integer, or logical.}
-
-\item{factor_key}{If \code{FALSE}, the default, the key values will be
-stored as a character vector. If \code{TRUE}, will be stored as a factor,
-which preserves the original ordering of the columns.}
 }
 \description{
 \itemize{
@@ -112,7 +70,7 @@ pedestrian \%>\%
   as_tibble() \%>\%
   summarise(Total = sum(Count))
 library(tidyr)
-# example from tidyr
+# reshaping examples from tidyr
 stocks <- tsibble(
   time = as.Date("2009-01-01") + 0:9,
   X = rnorm(10, 0, 1),
@@ -121,9 +79,4 @@ stocks <- tsibble(
 )
 (stocksm <- stocks \%>\% gather(stock, price, -time))
 stocksm \%>\% spread(stock, price)
-nested_stock <- stocksm \%>\%
-  nest(-stock)
-stocksm \%>\%
-  group_by(stock) \%>\%
-  nest()
 }

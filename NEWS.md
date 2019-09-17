@@ -1,3 +1,17 @@
+# tsibble 0.8.4
+
+This is a maintenance release due to the changes in the upstream package.
+
+* Removed strong dependency of tidyr to `Suggests`.
+* Soft deprecated `is.tsibble()`.
+* `has_gaps()` & `count_gaps()` gained a new argument `.name` for naming new columns.
+* Improved the speed performance for `new_data()`/`append_row()`.
+* Improved the speed performance for `as.ts.tbl_ts()` for converting tsibble to `ts`.
+* Added the support for `POSIXlt` as index.
+* When the interval cannot be obtained due to the mismatched index class, an error is issued instead of a warning before.
+* The interval is invariant to subsetting, such as `filter()`, `slice()`, and `[.tbl_ts`.
+* Rolling window functions, like `slide()`, are slided into the "questioning" lifecycle, in favour of the **slide** package. (#143)
+
 # tsibble 0.8.3
 
 * Added lifecycle badges to functions.
@@ -34,7 +48,7 @@ This is a patch release.
 
 ## Defunct & deprecated functions/arguments
 
-* Deprecate `id()` for creating key for the consistence of tidy selectors, and will be defunct until August 2019.
+* Deprecate `id()` for creating key for the consistence of tidy selectors, and will be defunct as of v0.9.0.
 * Deprecate of `pull_interval()` in favour of `interval_pull()`.
 * Deprecate `as.tsibble()` in favour of `as_tsibble()`. The warning is displayed once per session.
 * Deprecate `gather = TRUE` in `as_tsibble.ts()` in favour of `pivot_longer = TRUE`.

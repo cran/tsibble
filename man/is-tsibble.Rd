@@ -2,9 +2,7 @@
 % Please edit documentation in R/tsibble-meta.R
 \name{is_tsibble}
 \alias{is_tsibble}
-\alias{is.tsibble}
 \alias{is_grouped_ts}
-\alias{is.grouped_ts}
 \title{If the object is a tsibble}
 \usage{
 is_tsibble(x)
@@ -18,7 +16,7 @@ is_grouped_ts(x)
 TRUE if the object inherits from the tbl_ts class.
 }
 \description{
-\Sexpr[results=rd, stage=render]{tsibble:::lifecycle("stable")}
+\lifecycle{stable}
 }
 \examples{
 # A tibble is not a tsibble ----

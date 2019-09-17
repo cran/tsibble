@@ -23,7 +23,7 @@ pedestrian_full %>%
 ## ----monthly-mv-pre------------------------------------------------------
 pedestrian_mth <- pedestrian_full %>% 
   mutate(YrMth = yearmonth(Date_Time)) %>% 
-  nest(-Sensor, -YrMth)
+  nest(data = c(-Sensor, -YrMth))
 pedestrian_mth
 
 ## ----monthly-mv----------------------------------------------------------

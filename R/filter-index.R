@@ -1,12 +1,10 @@
 #' A shorthand for filtering time index for a tsibble
 #'
 #' @description
-#' \Sexpr[results=rd, stage=render]{tsibble:::lifecycle("maturing")}
-#'
 #' This shorthand respects time zones and encourages compact expressions.
 #'
 #' @param .data A tsibble.
-#' @param ... Formulas that specify start and end periods (inclusive) or strings.
+#' @param ... Formulas that specify start and end periods (inclusive), or strings.
 #' * `~ end` or `. ~ end`: from the very beginning to a specified ending period.
 #' * `start ~ end`: from specified beginning to ending periods.
 #' * `start ~ .`: from a specified beginning to the very end of the data.
@@ -57,8 +55,6 @@ filter_index <- function(.data, ..., .preserve = FALSE) {
 #' If time falls in the ranges using compact expressions
 #'
 #' @description
-#' \Sexpr[results=rd, stage=render]{tsibble:::lifecycle("maturing")}
-#'
 #' This function respects time zone and encourages compact expressions.
 #'
 #' @param x A vector of time index, such as classes `POSIXct`, `Date`, `yearweek`,
@@ -89,9 +85,7 @@ filter_index <- function(.data, ..., .preserve = FALSE) {
 time_in <- function(x, ...) {
   formulas <- list2(...)
   n <- length(formulas)
-  if (n == 0) {
-    return(!logical(length(x)))
-  }
+  if (n == 0) return(!logical(length(x)))
 
   if (is.POSIXct(x)) {
     local_tz <- Sys.timezone()
@@ -136,7 +130,7 @@ start.difftime <- function(x, y = NULL, ...) {
     abort("Package `hms` required.\nPlease install and try again.")
   }
   if (is_null(y)) {
-    hms::as.hms(min(x))
+    hms::as_hms(min(x))
   } else {
     abort_not_chr(y, class = "hms/difftime")
     assert_difftime(y)
@@ -145,11 +139,11 @@ start.difftime <- function(x, y = NULL, ...) {
 
 end.difftime <- function(x, y = NULL, ...) {
   if (is_null(y)) {
-    hms::as.hms(max(x) + 1)
+    hms::as_hms(max(x) + 1)
   } else {
     abort_not_chr(y, class = "hms/difftime")
     y <- assert_difftime(y)
-    hms::as.hms(y + 1)
+    hms::as_hms(y + 1)
   }
 }
 
@@ -301,9 +295,7 @@ end.yearqtr <- function(x, y = NULL, ...) {
 }
 
 is_dot_null <- function(x) { # x is a sym
-  if (is_null(x)) {
-    NULL
-  } else if (x == sym(".")) {
+  if (is_null(x) || x == sym(".")) {
     NULL
   } else {
     x
@@ -317,7 +309,7 @@ abort_not_chr <- function(x, class) {
 }
 
 assert_difftime <- function(x) {
-  res <- hms::as.hms(x)
+  res <- hms::as_hms(x)
   if (is.na(res)) {
     abort(sprintf("Input data '%s' cannot be expressed as difftime type.", x))
   }

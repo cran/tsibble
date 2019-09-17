@@ -23,7 +23,7 @@ x <- ymd_h("2015-04-05 01", tz = "Australia/Melbourne")
 # base arithmetic respect tz
 tsibble(time = x + (c(0, 3, 6, 9)) * 60 * 60, index = time)
 # lubridate arithmetic doesn't respect tz
-tsibble(time = x + hours(c(0, 3, 6, 9)) , index = time)
+tsibble(time = x + hours(c(0, 3, 6, 9)), index = time)
 
 ## ------------------------------------------------------------------------
 tsbl1 <- tsibble(

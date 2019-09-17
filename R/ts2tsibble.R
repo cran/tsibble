@@ -13,14 +13,14 @@ as_tsibble.ts <- function(x, ..., tz = "UTC") {
   idx <- time_to_date(x, tz = tz)
   value <- as.numeric(x) # rm its ts class
   tbl <- tibble(index = idx, value = value)
-  build_tsibble(
-    tbl,
+  build_tsibble(tbl,
     key = NULL, index = index, ordered = TRUE, validate = FALSE
   )
 }
 
 #' @rdname as-tsibble
-#' @param pivot_longer TRUE gives a "longer" form of the data, otherwise as is.
+#' @param pivot_longer `TRUE` gives a "longer" form of the data, otherwise as is.
+#' @param gather \lifecycle{defunct} Please use `pivot_longer` instead.
 #'
 #' @examples
 #' # coerce mts to tsibble
@@ -28,22 +28,41 @@ as_tsibble.ts <- function(x, ..., tz = "UTC") {
 #' as_tsibble(z)
 #' as_tsibble(z, pivot_longer = FALSE)
 #' @export
-as_tsibble.mts <- function(x, ..., tz = "UTC", pivot_longer = TRUE) {
-  pivot_longer <- abort_gather(..., pivot_longer = pivot_longer)
+as_tsibble.mts <- function(x, ..., tz = "UTC", pivot_longer = TRUE, 
+                           gather = deprecated()) {
+  if (!is_missing(gather)) {
+    lifecycle::deprecate_stop("0.8.0", 
+      "as_tsibble(gather = )", "as_tsibble(pivot_longer = )")
+  }
   if (pivot_longer) {
-    long_tbl <- gather_ts(x, tz = tz)
+    long_tbl <- pivot_longer_tsibble(x, tz = tz)
     build_tsibble(
       long_tbl,
       key = key, index = index, ordered = TRUE, validate = FALSE
     )
   } else {
-    wide_tbl <- bind_time(x, tz = tz)
+    wide_tbl <- make_index_explicit(x, tz = tz)
     build_tsibble(
       wide_tbl,
       key = NULL, index = index, ordered = TRUE, validate = FALSE
     )
   }
 }
+
+make_index_explicit <- function(x, tz = "UTC") {
+  vec_cbind(index = time_to_date(x, tz = tz), as_tibble(x))
+}
+
+pivot_longer_tsibble <- function(x, tz = "UTC") {
+  idx <- time_to_date(x, tz = tz)
+  list2(
+    "index" := vec_repeat(idx, times = NCOL(x)), 
+    "key" := vec_repeat(colnames(x), each = vec_size(x)),
+    "value" := vec_c(!!!unclass(x))
+  )
+}
+
+# nocov start
 
 #' @keywords internal
 #' @export
@@ -60,57 +79,14 @@ as_tsibble.msts <- function(x, ..., tz = "UTC", pivot_longer = TRUE) {
 #' @export
 as_tsibble.hts <- function(x, ..., tz = "UTC") {
   full_labs <- extract_labels(x)
-  tbl <- gather_ts(x, tz = tz) %>%
-    select(index, "value")
-  tbl_hts <- bind_cols(tbl, full_labs)
+  tbl <- pivot_longer_tsibble(x$bts, tz = tz)[c("index", "value")]
+  tbl_hts <- vec_cbind(!!!full_labs, !!!tbl)
   # this would work around the special character issue in headers for parse()
-  key <- colnames(tbl_hts)[3:ncol(tbl_hts)]
+  key <- colnames(tbl_hts)[1:vec_size(full_labs)]
   build_tsibble(tbl_hts,
     key = !!key, index = index, ordered = TRUE,
     validate = FALSE
   )
-}
-
-# as_tsibble.gts <- function(x, tz = "UTC", ...) {
-#   bts <- x$bts
-#   group <- x$group[-1, , drop = FALSE]
-#   group <- group[-nrow(group), , drop = FALSE]
-#   labels <- x$labels
-#   if (is_empty(labels)) {
-#     abort("I don't know how to handle a grouped time series with no group.")
-#   }
-#   seq_labs <- seq_along(labels)
-#   grp_label <- map(seq_labs, ~ labels[[.]][group[., ]])
-#   chr_labs <- vector(mode = "list", length = length(labels))
-#   for (i in seq_labs) {
-#     chr_labs[[i]] <- map_chr(
-#       strsplit(grp_label[[i]], split = "/", fixed = TRUE), ~ .[2]
-#     )
-#   }
-#   nr <- nrow(bts)
-#   full_labs <- map(chr_labs, ~ rep(., each = nr))
-#   names(full_labs) <- names(labels)
-#
-#   tbl <- gather_ts(bts, tz = tz) %>%
-#     dplyr::select(time, value)
-#   colnames(tbl)[2] <- deparse(substitute(x))
-#   out_hts <- dplyr::bind_cols(tbl, full_labs)
-#   # this would work around the special character issue in headers for parse()
-#   sym_key <- syms(colnames(out_hts)[c(3, ncol(out_hts))])
-#   as_tsibble(out_hts, index = time, sym_key)
-# }
-
-as_tibble.gts <- function(x, ...) {
-  as_tibble(x$bts)
-}
-
-bind_time <- function(x, tz = "UTC") {
-  bind_cols(index = time_to_date(x, tz = tz), as_tibble(x))
-}
-
-gather_ts <- function(x, tz = "UTC") {
-  tbl <- bind_time(x, tz = tz)
-  gather(tbl, key = "key", value = "value", -index)
 }
 
 # recursive function to repeat nodes for hts
@@ -127,10 +103,6 @@ rep_nodes <- function(x, level = 1L, index = seq_along(x[[level]])) {
 }
 
 extract_labels <- function(x) {
-  UseMethod("extract_labels")
-}
-
-extract_labels.hts <- function(x) {
   nodes <- x$nodes
   old_labels <- x$labels
   btm_labels <- old_labels[[length(old_labels)]]
@@ -144,3 +116,4 @@ extract_labels.hts <- function(x) {
   names(full_labs) <- names(old_labels[-1])
   full_labs
 }
+# nocov end

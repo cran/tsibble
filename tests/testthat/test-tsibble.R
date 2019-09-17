@@ -24,7 +24,7 @@ test_that("A tsibble must not contain missing values in index", {
 })
 
 test_that("A tsibble with unknown interval due to unexpected index class", {
-  expect_warning(
+  expect_error(
     tsibble(date = as.POSIXct(Sys.Date() + 0:9)),
     "Can't obtain the interval"
   )
@@ -49,7 +49,6 @@ test_that("A tibble is not tsibble", {
 })
 
 test_that("Coerce to tbl_df and data.frame", {
-  expect_error(tsibble(dat_x), "not be a data frame,")
   tsbl <- as_tsibble(dat_x, index = date_time)
   expect_identical(as_tibble(tsbl), dat_x)
   expect_identical(as.data.frame(tsbl), as.data.frame(dat_x))
@@ -279,12 +278,12 @@ test_that("Difftime with 1 minute interval", {
   expect_identical(fill_gaps(tsbl[-2, ], value = tsbl$value[2]), tsbl)
 })
 
-test_that("Difftime with 3 millisecond interval", {
-  idx_time <- hms(seconds = c(1.001, 1.004, 1.007, 1.010, 1.013))
+test_that("Difftime with 5 millisecond interval", {
+  idx_time <- hms(seconds = seq(1.001, 1.021, by = 0.005))
   dat_x <- tibble(time = idx_time, value = rnorm(5))
   expect_message(tsbl <- as_tsibble(dat_x))
-  expect_identical(format(interval(tsbl)), "3ms")
-  # expect_identical(fill_gaps(tsbl[-2, ], value = tsbl$value[2]), tsbl)
+  expect_identical(format(interval(tsbl)), "5ms")
+  expect_identical(fill_gaps(tsbl[-2, ], value = tsbl$value[2]), tsbl)
 })
 
 test_that("Difftime with 1 day interval", {
@@ -409,23 +408,6 @@ test_that("build_tsibble()", {
     pedestrian %>%
       mutate(Date_Time = as.character(Date_Time)),
     "Unsupported index"
-  )
-})
-
-test_that("build_tsibble() for empty data frame", {
-  ped_null <- pedestrian[0, ]
-  expect_error(build_tsibble(
-    ped_null,
-    key = Sensor, index = Date_Time,
-    interval = list(hour = 1)
-  ), "Argument `interval` must be class interval,")
-  expect_identical(
-    interval(build_tsibble(
-      ped_null,
-      key = Sensor, index = Date_Time,
-      interval = new_interval(hour = 1)
-    )),
-    new_interval(hour = 1)
   )
 })
 

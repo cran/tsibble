@@ -51,7 +51,10 @@ variable will be created.
 Only applies to \code{_dfr} variant.}
 }
 \description{
-\Sexpr[results=rd, stage=render]{tsibble:::lifecycle("stable")}
+\lifecycle{questioning}
+
+\strong{The rolling window family will be deprecated in the future. Please consider
+using the \href{https://davisvaughan.github.io/slide}{slide} package.}
 
 Tiling window without overlapping observations:
 \itemize{
