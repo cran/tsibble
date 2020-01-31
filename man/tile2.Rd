@@ -69,7 +69,7 @@ names will be used if present.}
 \lifecycle{questioning}
 
 \strong{The rolling window family will be deprecated in the future. Please consider
-using the \href{https://davisvaughan.github.io/slide}{slide} package.}
+using the \href{https://davisvaughan.github.io/slider}{slider} package.}
 
 Tiling window without overlapping observations:
 \itemize{
@@ -97,7 +97,8 @@ ptile(list(lst, lst), ~., .size = 2)
 \item \link{stretch2} for expanding more observations
 }
 
-Other tiling window functions: \code{\link{tile}}
+Other tiling window functions: 
+\code{\link{tile}()}
 }
 \concept{tiling window functions}
 \alias{tile2_lgl}

@@ -1,4 +1,4 @@
-## ----initial, echo = FALSE, cache = FALSE, results = 'hide'--------------
+## ----initial, echo = FALSE, cache = FALSE, results = 'hide'-------------------
 knitr::opts_chunk$set(
   warning = FALSE, message = FALSE, echo = TRUE,
   fig.width = 7, fig.height = 6, fig.align = 'centre',
@@ -6,26 +6,26 @@ knitr::opts_chunk$set(
 )
 options(tibble.print_min = 5)
 
-## ----load----------------------------------------------------------------
+## ----load---------------------------------------------------------------------
 library(dplyr)
 library(tsibble)
 library(lubridate)
 
-## ------------------------------------------------------------------------
+## -----------------------------------------------------------------------------
 mth <- make_date("2018") + months(0:3)
 tsibble(mth = mth, index = mth)
 
-## ------------------------------------------------------------------------
+## -----------------------------------------------------------------------------
 tsibble(mth = yearmonth(mth), index = mth)
 
-## ------------------------------------------------------------------------
+## -----------------------------------------------------------------------------
 x <- ymd_h("2015-04-05 01", tz = "Australia/Melbourne")
 # base arithmetic respect tz
 tsibble(time = x + (c(0, 3, 6, 9)) * 60 * 60, index = time)
 # lubridate arithmetic doesn't respect tz
 tsibble(time = x + hours(c(0, 3, 6, 9)), index = time)
 
-## ------------------------------------------------------------------------
+## -----------------------------------------------------------------------------
 tsbl1 <- tsibble(
   time = make_datetime(2018) + hours(0:3),
   station = "A",
@@ -38,7 +38,7 @@ tsbl2 <- tsibble(
 ) %>% print()
 rbind(tsbl1, tsbl2)
 
-## ------------------------------------------------------------------------
+## -----------------------------------------------------------------------------
 x <- make_datetime(2018) + minutes(0:1)
 tbl <- tibble(  
   time = c(x, x + minutes(15)),
@@ -46,7 +46,7 @@ tbl <- tibble(
 )
 as_tsibble(tbl, index = time, key = station)
 
-## ------------------------------------------------------------------------
+## -----------------------------------------------------------------------------
 tbl %>% 
   mutate(time = floor_date(time, unit = "15 mins")) %>% 
   as_tsibble(index = time, key = station)

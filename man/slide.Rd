@@ -6,14 +6,42 @@
 \alias{slide_dfc}
 \title{Sliding window calculation}
 \usage{
-slide(.x, .f, ..., .size = 1, .step = 1, .fill = NA,
-  .partial = FALSE, .align = "right", .bind = FALSE)
+slide(
+  .x,
+  .f,
+  ...,
+  .size = 1,
+  .step = 1,
+  .fill = NA,
+  .partial = FALSE,
+  .align = "right",
+  .bind = FALSE
+)
 
-slide_dfr(.x, .f, ..., .size = 1, .step = 1, .fill = NA,
-  .partial = FALSE, .align = "right", .bind = FALSE, .id = NULL)
+slide_dfr(
+  .x,
+  .f,
+  ...,
+  .size = 1,
+  .step = 1,
+  .fill = NA,
+  .partial = FALSE,
+  .align = "right",
+  .bind = FALSE,
+  .id = NULL
+)
 
-slide_dfc(.x, .f, ..., .size = 1, .step = 1, .fill = NA,
-  .partial = FALSE, .align = "right", .bind = FALSE)
+slide_dfc(
+  .x,
+  .f,
+  ...,
+  .size = 1,
+  .step = 1,
+  .fill = NA,
+  .partial = FALSE,
+  .align = "right",
+  .bind = FALSE
+)
 }
 \arguments{
 \item{.x}{An object to slide over.}
@@ -72,7 +100,7 @@ if \code{.fill != NULL}, it always returns the same length as input.
 \lifecycle{questioning}
 
 \strong{The rolling window family will be deprecated in the future. Please consider
-using the \href{https://davisvaughan.github.io/slide}{slide} package.}
+using the \href{https://davisvaughan.github.io/slider}{slider} package.}
 
 Rolling window with overlapping observations:
 \itemize{
@@ -111,7 +139,8 @@ slide(lst, ~., .size = 2)
 \item \link{stretch} for expanding more observations
 }
 
-Other sliding window functions: \code{\link{slide2}}
+Other sliding window functions: 
+\code{\link{slide2}()}
 }
 \concept{sliding window functions}
 \alias{slide_lgl}

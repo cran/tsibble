@@ -7,11 +7,11 @@
 \lifecycle{questioning}
 
 \strong{The rolling window family will be deprecated in the future. Please consider
-using the \href{https://davisvaughan.github.io/slide}{slide} package.}
+using the \href{https://davisvaughan.github.io/slider}{slider} package.}
 Multiprocessing equivalents of \code{\link[=slide]{slide()}}, \code{\link[=tile]{tile()}}, \code{\link[=stretch]{stretch()}} prefixed by \code{future_}.
 \itemize{
-\item Variants for corresponding types: \code{future_*_lgl()}, \code{future_*_int()},
-\code{future_*_dbl()}, \code{future_*_chr()}, \code{future_*_dfr()}, \code{future_*_dfc()}.
+\item Variants for corresponding types: \verb{future_*_lgl()}, \verb{future_*_int()},
+\verb{future_*_dbl()}, \verb{future_*_chr()}, \verb{future_*_dfr()}, \verb{future_*_dfc()}.
 \item Extra arguments \code{.progress} and \code{.options} for enabling progress bar and the
 future specific options to use with the workers.
 }

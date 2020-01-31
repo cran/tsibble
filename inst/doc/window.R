@@ -1,11 +1,11 @@
-## ----setup, include = FALSE----------------------------------------------
+## ----setup, include = FALSE---------------------------------------------------
 knitr::opts_chunk$set(
   collapse = TRUE,
   comment = "#>"
 )
 options(tibble.print_min = 5)
 
-## ----full-data, message = FALSE------------------------------------------
+## ----full-data, message = FALSE-----------------------------------------------
 library(dplyr)
 library(tidyr)
 library(tsibble)
@@ -13,20 +13,20 @@ pedestrian_full <- pedestrian %>%
   fill_gaps(.full = TRUE)
 pedestrian_full
 
-## ----daily-mv------------------------------------------------------------
+## ----daily-mv-----------------------------------------------------------------
 pedestrian_full %>% 
   group_by_key() %>% 
   mutate(Daily_MA = slide_dbl(Count, 
     mean, na.rm = TRUE, .size = 24, .align = "center-left"
   ))
 
-## ----monthly-mv-pre------------------------------------------------------
+## ----monthly-mv-pre-----------------------------------------------------------
 pedestrian_mth <- pedestrian_full %>% 
   mutate(YrMth = yearmonth(Date_Time)) %>% 
   nest(data = c(-Sensor, -YrMth))
 pedestrian_mth
 
-## ----monthly-mv----------------------------------------------------------
+## ----monthly-mv---------------------------------------------------------------
 pedestrian_mth %>% 
   group_by(Sensor) %>% 
   # (1)
@@ -38,7 +38,7 @@ pedestrian_mth %>%
     ~ mean(.$Count, na.rm = TRUE), .size = 3, .align = "center", .bind = TRUE
   ))
 
-## ----lm------------------------------------------------------------------
+## ----lm-----------------------------------------------------------------------
 my_diag <- function(...) {
   data <- tibble(...)
   fit <- lm(Count ~ Time, data = data)
@@ -50,7 +50,7 @@ pedestrian %>%
   nest() %>%
   mutate(diag = purrr::map(data, ~ pslide_dfr(., my_diag, .size = 24 * 7)))
 
-## ----furrr, eval = FALSE-------------------------------------------------
+## ----furrr, eval = FALSE------------------------------------------------------
 #  library(furrr)
 #  plan(multiprocess)
 #  pedestrian %>%

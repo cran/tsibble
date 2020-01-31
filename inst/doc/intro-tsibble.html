@@ -1,15 +1,14 @@
 <!DOCTYPE html>
 
-<html xmlns="http://www.w3.org/1999/xhtml">
+<html>
 
 <head>
 
 <meta charset="utf-8" />
-<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 <meta name="generator" content="pandoc" />
 <meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
 
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1" />
 
 <meta name="author" content="Earo Wang" />
 
@@ -117,9 +116,6 @@ padding-right: 2em;
 font-family: "Open Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
 font-size: 14px;
 line-height: 1.35;
-}
-#header {
-text-align: center;
 }
 #TOC {
 clear: both;
@@ -288,7 +284,8 @@ code > span.st { color: #d14; }
 code > span.co { color: #888888; font-style: italic; } 
 code > span.ot { color: #007020; } 
 code > span.al { color: #ff0000; font-weight: bold; } 
-code > span.fu { color: #900; font-weight: bold; }  code > span.er { color: #a61717; background-color: #e3d2d2; } 
+code > span.fu { color: #900; font-weight: bold; } 
+code > span.er { color: #a61717; background-color: #e3d2d2; } 
 </style>
 
 
@@ -391,17 +388,17 @@ code > span.fu { color: #900; font-weight: bold; }  code > span.er { color: #a61
 <a class="sourceLine" id="cb10-7" data-line-number="7">flights_tsbl</a></code></pre></div>
 <pre><code>#&gt; # A tsibble: 336,776 x 20 [!] &lt;America/New_York&gt;
 #&gt; # Key:       carrier, flight [5,725]
-#&gt;    year month   day dep_time sched_dep_time dep_delay arr_time
-#&gt;   &lt;int&gt; &lt;int&gt; &lt;int&gt;    &lt;int&gt;          &lt;int&gt;     &lt;dbl&gt;    &lt;int&gt;
-#&gt; 1  2013    11     3     1531           1540        -9     1653
-#&gt; 2  2013    11     4     1539           1540        -1     1712
-#&gt; 3  2013    11     5     1548           1540         8     1708
-#&gt; 4  2013    11     6     1535           1540        -5     1657
-#&gt; 5  2013    11     7     1549           1540         9     1733
-#&gt; # … with 3.368e+05 more rows, and 13 more variables: sched_arr_time &lt;int&gt;,
-#&gt; #   arr_delay &lt;dbl&gt;, carrier &lt;chr&gt;, flight &lt;int&gt;, tailnum &lt;chr&gt;,
-#&gt; #   origin &lt;chr&gt;, dest &lt;chr&gt;, air_time &lt;dbl&gt;, distance &lt;dbl&gt;, hour &lt;dbl&gt;,
-#&gt; #   minute &lt;dbl&gt;, time_hour &lt;dttm&gt;, sched_dep_datetime &lt;dttm&gt;</code></pre>
+#&gt;    year month   day dep_time sched_dep_time dep_delay arr_time sched_arr_time
+#&gt;   &lt;int&gt; &lt;int&gt; &lt;int&gt;    &lt;int&gt;          &lt;int&gt;     &lt;dbl&gt;    &lt;int&gt;          &lt;int&gt;
+#&gt; 1  2013    11     3     1531           1540        -9     1653           1725
+#&gt; 2  2013    11     4     1539           1540        -1     1712           1725
+#&gt; 3  2013    11     5     1548           1540         8     1708           1725
+#&gt; 4  2013    11     6     1535           1540        -5     1657           1725
+#&gt; 5  2013    11     7     1549           1540         9     1733           1725
+#&gt; # … with 3.368e+05 more rows, and 12 more variables: arr_delay &lt;dbl&gt;,
+#&gt; #   carrier &lt;chr&gt;, flight &lt;int&gt;, tailnum &lt;chr&gt;, origin &lt;chr&gt;, dest &lt;chr&gt;,
+#&gt; #   air_time &lt;dbl&gt;, distance &lt;dbl&gt;, hour &lt;dbl&gt;, minute &lt;dbl&gt;, time_hour &lt;dttm&gt;,
+#&gt; #   sched_dep_datetime &lt;dttm&gt;</code></pre>
 <p>To regularise an irregular tsibble, it can be achieved with <code>index_by()</code> + <code>summarise()</code>.</p>
 </div>
 <div id="reference" class="section level2">
