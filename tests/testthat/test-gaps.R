@@ -1,5 +1,3 @@
-context("fill_gaps() & count_gaps() for a tsibble")
-
 idx_day <- seq.Date(ymd("2017-01-01"), ymd("2017-01-20"), by = 4)
 dat_x <- tibble(
   date = idx_day,
@@ -106,7 +104,7 @@ test_that("fill_gaps() for a grouped_ts", {
     group_by(group) %>%
     fill_gaps(value = sum(value), .full = TRUE)
   expect_identical(dim(full_tsbl), c(10L, 3L))
-  expect_equal(
+  expect_equivalent(
     as_tibble(full_tsbl[c(1, 9), ]),
     tibble(
       date = c(ymd("2017-01-01"), ymd("2017-01-13")),
@@ -121,7 +119,7 @@ test_that("fill.tbl_ts(.full = TRUE)", {
     fill_gaps(.full = TRUE) %>%
     group_by(group) %>%
     tidyr::fill(value, .direction = "up")
-  expect_equal(
+  expect_equivalent(
     as_tibble(full_tsbl[c(1, 9), ]),
     tibble(
       date = c(ymd("2017-01-01"), ymd("2017-01-13")),
@@ -136,7 +134,7 @@ test_that("fill.tbl_ts(.full = FALSE)", {
     fill_gaps() %>%
     group_by(group) %>%
     tidyr::fill(value, .direction = "up")
-  expect_equal(
+  expect_equivalent(
     as_tibble(full_tsbl[8, ]),
     tibble(
       date = ymd("2017-01-13"),
@@ -146,10 +144,10 @@ test_that("fill.tbl_ts(.full = FALSE)", {
   )
 })
 
-test_that("count_gaps(.full = TRUE)", {
-  full_tbl <- tsbl %>% count_gaps(.full = TRUE)
+test_that("count_gaps(.full = )", {
+  full_tbl_t <- tsbl %>% count_gaps(.full = TRUE)
   expect_equal(
-    full_tbl,
+    full_tbl_t,
     tibble(
       group = c("a", "b"),
       .from = c(ymd("2017-01-01"), ymd("2017-01-13")),
@@ -157,22 +155,27 @@ test_that("count_gaps(.full = TRUE)", {
       .n = c(1L, 1L)
     )
   )
-})
-
-test_that("count_gaps(.full = FALSE)", {
-  full_tbl <- tsbl %>% count_gaps()
+  full_tbl_f <- tsbl %>% count_gaps()
   b <- tibble(
     group = "b",
     .from = ymd("2017-01-13"),
     .to = ymd("2017-01-13"),
     .n = 1L
   )
-  expect_equal(full_tbl, b)
-  expect_error(count_gaps(tsbl, .name = NULL), "not TRUE")
-  expect_error(count_gaps(tsbl, .name = 1:4), "not TRUE")
+  expect_equal(full_tbl_f, b)
+  expect_error(count_gaps(tsbl, .name = NULL), class = "dplyr_error")
+  expect_error(count_gaps(tsbl, .name = 1:4), class = "dplyr_error")
   expect_named(
     count_gaps(tsbl, .name = c("from", "to", "n")),
     c("group", "from", "to", "n")
+  )
+  expect_equal(
+    count_gaps(tsbl, .full = start())$.from,
+    tsbl$date[c(5, 3)]
+  )
+  expect_equal(
+    count_gaps(tsbl, .full = end())$.from,
+    tsbl$date[c(3)]
   )
 })
 
@@ -188,6 +191,8 @@ test_that("has_gaps()", {
   expect_named(has_gaps(harvest, .name = "gap"), c("fruit", "gap"))
   expect_equal(has_gaps(harvest)$.gaps, c(FALSE, TRUE))
   expect_equal(has_gaps(harvest, .full = TRUE)$.gaps, c(TRUE, TRUE))
+  expect_equal(has_gaps(harvest, .full = start())$.gaps, c(TRUE, TRUE))
+  expect_equal(has_gaps(harvest, .full = end())$.gaps, c(FALSE, TRUE))
 })
 
 test_that("Error in tbl_gaps()", {
@@ -199,7 +204,7 @@ test_that("seq_generator()", {
   expect_length(seq_generator(x), 10)
   y <- structure(c("x", "y"), class = "xxx")
   interval_pull.xxx <- function(x) {
-    init_interval(unit = 1)
+    new_interval(unit = 1)
   }
   expect_error(seq_generator(y, interval_pull(y)), "defined")
 })

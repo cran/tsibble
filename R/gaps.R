@@ -10,14 +10,16 @@ globalVariables(c(".", ".gaps"))
 #' existing `NA` untouched.
 #' * empty: filled with default `NA`.
 #' * filled by values or functions.
-#' @param .full `FALSE` to insert `NA` for each series within its own period. `TRUE`
-#' to fill `NA` over the entire time span of the data (a.k.a. fully balanced panel).
+#' @param .full
+#' * `FALSE` inserts `NA` for each keyed unit within its own period.
+#' * `TRUE` fills `NA` over the entire time span of the data (a.k.a. fully balanced panel).
+#' * `start()` pad `NA` to the same starting point (i.e. `min(<index>)`) across units.
+#' * `end()` pad `NA` to the same ending point (i.e. `max(<index>)`) across units.
 #'
 #' @family implicit gaps handling
 #' @seealso [tidyr::fill], [tidyr::replace_na] for handling missing values `NA`.
 #' @export
 #' @examples
-#' library(dplyr)
 #' harvest <- tsibble(
 #'   year = c(2010, 2011, 2013, 2011, 2012, 2014),
 #'   fruit = rep(c("kiwi", "cherry"), each = 3),
@@ -27,6 +29,8 @@ globalVariables(c(".", ".gaps"))
 #'
 #' # gaps as default `NA`
 #' fill_gaps(harvest, .full = TRUE)
+#' fill_gaps(harvest, .full = start())
+#' fill_gaps(harvest, .full = end())
 #' full_harvest <- fill_gaps(harvest, .full = FALSE)
 #' full_harvest
 #'
@@ -60,7 +64,7 @@ globalVariables(c(".", ".gaps"))
 #' # use fill() to fill `NA` by previous/next entry
 #' pedestrian %>%
 #'   group_by_key() %>%
-#'   fill_gaps() %>% 
+#'   fill_gaps() %>%
 #'   tidyr::fill(Count, .direction = "down")
 fill_gaps <- function(.data, ..., .full = FALSE) {
   UseMethod("fill_gaps")
@@ -76,13 +80,13 @@ fill_gaps.tbl_ts <- function(.data, ..., .full = FALSE) {
   nrows <- vec_size(.data)
   if (nrows == 0L || nrows == 1L) return(.data)
 
-  gap_data <- scan_gaps(.data, .full = .full)
+  gap_data <- scan_gaps(.data, .full = !!enquo(.full))
   lst_exprs <- enquos(..., .named = TRUE)
   if (vec_size(gap_data) == 0 && !is_empty(lst_exprs)) return(.data)
 
   if (!is_empty(lst_exprs)) { # any replacement
     # error handling
-    vars_select(measured_vars(.data), !!!names(lst_exprs))
+    eval_select(names(lst_exprs), .data)
     replaced_df <- ungroup(summarise(as_tibble(.data), !!!lst_exprs))
     by_name <- intersect(names(gap_data), names(replaced_df))
     if (is_empty(by_name)) { # by value
@@ -92,7 +96,8 @@ fill_gaps.tbl_ts <- function(.data, ..., .full = FALSE) {
     }
   }
   grps <- groups(.data)
-  full_data <- group_by(bind_rows(as_tibble(gap_data), .data), !!!grps)
+  full_data <- group_by(vec_rbind(as_tibble(gap_data), as_tibble(.data)),
+    !!!grps)
   full_data <- full_data[names(.data)] # keep the original order
   update_meta(full_data, .data, ordered = NULL, interval = interval(.data))
 }
@@ -110,6 +115,7 @@ scan_gaps <- function(.data, .full = FALSE) {
 
 #' @export
 scan_gaps.tbl_ts <- function(.data, .full = FALSE) {
+  .full <- quo_get_expr(enquo(.full))
   int <- interval(.data)
   idx <- index(.data)
   idx_chr <- as_string(idx)
@@ -119,14 +125,30 @@ scan_gaps.tbl_ts <- function(.data, .full = FALSE) {
 
   key <- key(.data)
   keyed_tbl <- new_grouped_df(.data, groups = key_data(.data))
-  if (.full) {
+  if (is_true(.full)) {
     idx_full <- seq_generator(keyed_tbl[[idx_chr]], int)
     sum_data <-
       summarise(keyed_tbl, !!idx_chr := list2(tibble(!!idx_chr := idx_full)))
-  } else {
+  } else if (is_false(.full)) {
     sum_data <- summarise(keyed_tbl,
       !!idx_chr := list2(tibble(!!idx_chr := seq_generator(!!idx, int)))
     )
+  } else if (.full == expr("start()")) {
+    start <- min(keyed_tbl[[idx_chr]])
+    sum_data <- summarise(keyed_tbl,
+      !!idx_chr := list2(tibble(
+        !!idx_chr := seq_generator(c(start, max(!!idx)), int)
+      ))
+    )
+  } else if (.full == expr("end()")) {
+    end <- max(keyed_tbl[[idx_chr]])
+    sum_data <- summarise(keyed_tbl,
+      !!idx_chr := list2(tibble(
+        !!idx_chr := seq_generator(c(min(!!idx), end), int)
+      ))
+    )
+  } else {
+    abort_invalid_full_arg()
   }
   ref_data <- unwrap(sum_data, !!idx)
   if (vec_size(ref_data) == vec_size(.data)) {
@@ -139,9 +161,7 @@ scan_gaps.tbl_ts <- function(.data, .full = FALSE) {
 
 #' Count implicit gaps
 #'
-#' @param .data A `tbl_ts`.
-#' @param .full `FALSE` to find gaps for each series within its own period.
-#' `TRUE` to find gaps over the entire time span of the data.
+#' @inheritParams fill_gaps
 #' @param .name Strings to name new columns.
 #'
 #' @family implicit gaps handling
@@ -170,7 +190,7 @@ count_gaps <- function(.data, .full = FALSE, .name = c(".from", ".to", ".n")) {
   int <- interval(.data)
   idx <- index(.data)
 
-  gap_data <- scan_gaps(.data, .full = .full)
+  gap_data <- scan_gaps(.data, .full = !!enquo(.full))
   if (vec_size(gap_data) == 0L) {
     data_key <- .data[0L, key_vars(.data)]
     idx_vals <- .data[[as_string(idx)]][0L]
@@ -183,9 +203,7 @@ count_gaps <- function(.data, .full = FALSE, .name = c(".from", ".to", ".n")) {
   lst_out <- summarise(grped_tbl,
     !!".gaps" := list2(tbl_gaps(!!idx, idx_full, .name = .name)))
 
-  idx_type <- class(lst_out[[".gaps"]][[1]][[.name[1]]])
   out <- unwrap(lst_out, .gaps)
-  class(out[[.name[1]]]) <- class(out[[.name[2]]]) <- idx_type
   tibble(!!!out)
 }
 
@@ -204,6 +222,8 @@ count_gaps <- function(.data, .full = FALSE, .name = c(".from", ".to", ".n")) {
 #' )
 #' has_gaps(harvest)
 #' has_gaps(harvest, .full = TRUE)
+#' has_gaps(harvest, .full = start())
+#' has_gaps(harvest, .full = end())
 has_gaps <- function(.data, .full = FALSE, .name = ".gaps") {
   stopifnot(has_length(.name, 1))
   if (!is_regular(.data) || vec_size(.data) == 0L) {
@@ -211,17 +231,31 @@ has_gaps <- function(.data, .full = FALSE, .name = ".gaps") {
     return(tibble(!!!key_data, !!.name := FALSE))
   }
 
+  .full <- quo_get_expr(enquo(.full))
   int <- interval(.data)
   idx <- index(.data)
+  idx_chr <- as_string(idx)
   grped_tbl <- new_grouped_df(.data, groups = key_data(.data))
-  if (.full) {
-    idx_full <- seq_generator(.data[[as_string(idx)]], int)
+  if (is_true(.full)) {
+    idx_full <- seq_generator(.data[[idx_chr]], int)
     res <- summarise(grped_tbl,
       !!.name := (length(idx_full) - length(!!idx)) > 0)
-  } else {
+  } else if (is_false(.full)) {
     res <- summarise(grped_tbl,
       !!.name := (length(seq_generator(!!idx, int)) - length(!!idx)) > 0
     )
+  } else if (.full == sym("start()")) {
+    start <- min(.data[[idx_chr]])
+    res <- summarise(grped_tbl,
+      !!.name := (length(seq_generator(c(start, max(!!idx)), int)) - length(!!idx)) > 0
+    )
+  } else if (.full == sym("end()")) {
+    end <- max(.data[[idx_chr]])
+    res <- summarise(grped_tbl,
+      !!.name := (length(seq_generator(c(min(!!idx), end), int)) - length(!!idx)) > 0
+    )
+  } else {
+    abort_invalid_full_arg()
   }
   tibble(!!!res)
 }
@@ -262,7 +296,7 @@ seq_generator <- function(x, interval = NULL) {
   if (is_null(interval)) {
     interval <- interval_pull(x)
   }
-  tunit <- time_unit(interval)
+  tunit <- default_time_units(interval)
   if (tunit == 0) return(x)
 
   res <- tryCatch(
@@ -294,5 +328,9 @@ unwrap <- function(.data, .col) {
     vec_seq_along(.data), vapply(.data[[lst_col]], vec_size, integer(1))
   )
   res <- vec_slice(res, row_indices)[setdiff(names(.data), lst_col)]
-  vec_cbind(res, bind_rows(!!!.data[[lst_col]]))
+  vec_cbind(res, vec_rbind(!!!.data[[lst_col]]))
+}
+
+abort_invalid_full_arg <- function() {
+  abort("`.full` only accepts `TRUE`, `FALSE`, `start()`, or `end()`.")
 }

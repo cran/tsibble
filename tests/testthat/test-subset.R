@@ -1,5 +1,3 @@
-context("a tsibble for base subset")
-
 idx_day <- seq.Date(ymd("2017-02-01"), ymd("2017-02-05"), by = 1)
 dat_x <- tibble(
   date = rep(idx_day, 2),
@@ -53,6 +51,10 @@ test_that("if it's a tsibble", {
   tsbl2 <- tsbl[1, ]
   expect_is(tsbl2, "tbl_ts")
   expect_true(is_regular(tsbl2))
+})
+
+test_that("logical i inputs #162", {
+  expect_equal(tsbl[c(TRUE, TRUE, rep(FALSE, 8)), ], tsbl[1:2, ])
 })
 
 dat_x <- tibble::tribble(

@@ -1,5 +1,3 @@
-context("as_tsibble() w/o key for data of long form")
-
 idx_second <- seq(
   ymd_hms("2017-01-01 00:00:00"),
   ymd_hms("2017-01-01 00:00:04"),
@@ -105,9 +103,9 @@ test_that("POSIXt with 1 second interval", {
   expect_is(tsbl, "tbl_ts")
   expect_is(index(tsbl), "name")
   expect_identical(quo_text(index(tsbl)), "date_time")
-  expect_identical(time_unit(interval_pull(tsbl$date_time)), 1)
+  expect_identical(default_time_units(interval_pull(tsbl$date_time)), 1)
   expect_identical(key(tsbl), list())
-  expect_identical(format(groups(tsbl)), "NULL")
+  expect_identical(groups(tsbl), list())
   expect_identical(format(interval(tsbl)), "1s")
   expect_true(is_regular(tsbl))
   # expect_equal(key_size(tsbl), 5)
@@ -158,7 +156,7 @@ dat_x <- tibble(
 test_that("POSIXt with 2 minutes interval", {
   tsbl <- as_tsibble(dat_x)
   expect_identical(format(interval(tsbl)), "2m")
-  expect_identical(time_unit(interval_pull(tsbl$date_time)), 120)
+  expect_identical(default_time_units(interval_pull(tsbl$date_time)), 120)
 })
 
 idx_hour <- seq.POSIXt(
@@ -174,7 +172,7 @@ dat_x <- tibble(
 test_that("POSIXt with 3 hours interval", {
   tsbl <- as_tsibble(dat_x)
   expect_identical(format(interval(tsbl)), "3h")
-  expect_identical(time_unit(interval_pull(tsbl$date_time)), 3 * 60 * 60)
+  expect_identical(default_time_units(interval_pull(tsbl$date_time)), 3 * 60 * 60)
 })
 
 idx_day <- seq.Date(ymd("2017-01-01"), ymd("2017-01-20"), by = 4)
@@ -189,7 +187,7 @@ test_that("Date with 4 days interval", {
   expect_message(tsbl <- as_tsibble(dat_x))
   expect_is(tsbl, "tbl_ts")
   expect_identical(format(interval(tsbl)), "4D")
-  expect_identical(time_unit(interval_pull(tsbl$date)), 4)
+  expect_identical(default_time_units(interval_pull(tsbl$date)), 4)
 })
 
 idx_week <- seq(yearweek(ymd("2017-02-01")), length.out = 5, by = 1)
@@ -201,7 +199,7 @@ test_that("Year week with 1 week interval", {
   expect_output(print(tsbl), "A tsibble: 5 x 2 \\[1W\\]")
   expect_is(tsbl, "tbl_ts")
   expect_identical(format(interval(tsbl)), "1W")
-  expect_identical(time_unit(interval_pull(tsbl$yrwk)), 1)
+  expect_identical(default_time_units(interval_pull(tsbl$yrwk)), 1)
 })
 
 idx_month <- seq(
@@ -220,7 +218,7 @@ test_that("Year month with 1 month interval", {
   expect_is(tsbl, "tbl_ts")
   expect_is(as_tsibble(tsbl, validate = TRUE), "tbl_ts")
   expect_identical(format(interval(tsbl)), "1M")
-  expect_identical(time_unit(interval_pull(tsbl$yrmth)), 1)
+  expect_identical(default_time_units(interval_pull(tsbl$yrmth)), 1)
 })
 
 idx_qtr <- seq(
@@ -237,7 +235,7 @@ test_that("Year quarter with 1 quarter interval", {
   expect_message(tsbl <- as_tsibble(dat_x))
   expect_is(tsbl, "tbl_ts")
   expect_identical(format(interval(tsbl)), "1Q")
-  expect_identical(time_unit(interval_pull(tsbl$yrqtr)), 1)
+  expect_identical(default_time_units(interval_pull(tsbl$yrqtr)), 1)
 })
 
 idx_year <- seq.int(1970, 2010, by = 10)
@@ -252,7 +250,7 @@ test_that("Year with 10 years interval", {
   tsbl <- as_tsibble(dat_x, index = year)
   expect_is(tsbl, "tbl_ts")
   expect_identical(format(interval(tsbl)), "10Y")
-  expect_identical(time_unit(interval_pull(tsbl$year)), 10)
+  expect_identical(default_time_units(interval_pull(tsbl$year)), 10)
 })
 
 
@@ -307,8 +305,6 @@ test_that("ordered factor with 2 unit interval", {
   expect_identical(fill_gaps(tsbl), tsbl)
 })
 
-context("as_tsibble() with a single key for data of long form")
-
 idx_day <- seq.Date(ymd("2017-02-01"), ymd("2017-02-05"), by = 1)
 dat_x <- tibble(
   date = rep(idx_day, 2),
@@ -321,7 +317,7 @@ test_that("A single key", {
   tsbl <- as_tsibble(dat_x, key = group, index = date)
   expect_identical(as_tsibble(dat_x, key = "group", index = date), tsbl)
   expect_output(print(tsbl), "A tsibble: 10 x 3 \\[1D\\]")
-  expect_identical(format(groups(tsbl)), "NULL")
+  expect_identical(groups(tsbl), list())
   # expect_equal(key_size(tsbl), c(5, 5))
   expect_equal(n_keys(tsbl), 2)
 })
@@ -367,7 +363,7 @@ test_that("Use '-' and ':' in key vars", {
 })
 
 tbl <- tibble::tibble(
-  mth = rep(yearmonth(seq(2017, 2017 + 9 / 12, by = 1 / 12)), 3),
+  mth = rep(yearmonth("2017 Jan") + 0:9, 3),
   group = rep(c("x", "y", "z"), each = 10),
   value = rnorm(30)
 ) %>%
@@ -396,9 +392,6 @@ test_that("build_tsibble()", {
   idx2 <- index2_var(tsbl)
   expect_equal(idx2, "Date")
   expect_is(tsbl, "grouped_ts")
-
-  idx_drop <- dplyr::bind_rows(tsbl, tsbl)
-  expect_error(print(idx_drop), "dropped somehow")
 
   expect_error(
     build_tsibble(pedestrian, key = Sensor, index = NULL), "NULL."

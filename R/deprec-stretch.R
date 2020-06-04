@@ -6,10 +6,9 @@ nrow2 <- function(.x) {
 #' Stretching window calculation
 #'
 #' @description
-#' \lifecycle{questioning}
+#' \lifecycle{deprecated}
 #'
-#' **The rolling window family will be deprecated in the future. Please consider
-#' using the [slider](https://davisvaughan.github.io/slider) package.**
+#' Please consider using the [slider](https://davisvaughan.github.io/slider) package.
 #'
 #' Fixing an initial window and expanding more observations:
 #' * `stretch()` always returns a list.
@@ -20,17 +19,12 @@ nrow2 <- function(.x) {
 #' @inheritParams slide
 #' @param .init A positive integer for an initial window size.
 #' @param .step A positive integer for incremental step.
-#' @param .size \lifecycle{defunct} Please use `.step` instead.
 #'
 #' @return if `.fill != NULL`, it always returns the same length as input.
+#' @keywords internal
 #' @rdname stretch
 #' @export
 #' @family stretching window functions
-#' @seealso
-#' * [future_stretch] for stretching window in parallel
-#' * [slide] for sliding window with overlapping observations
-#' * [tile] for tiling window without overlapping observations
-#'
 #' @examples
 #' x <- 1:5
 #' stretch_dbl(x, mean, .step = 2)
@@ -38,10 +32,7 @@ nrow2 <- function(.x) {
 #' lst <- list(x = x, y = 6:10, z = 11:15)
 #' stretch(lst, ~., .step = 2, .fill = NULL)
 stretch <- function(.x, .f, ..., .step = 1, .init = 1, .fill = NA,
-                    .bind = FALSE, .size = deprecated()) {
-  if (!is_missing(.size)) {
-    lifecycle::deprecate_stop("0.8.0", "stretch(.size = )", "stretch(.step = )")
-  }
+                    .bind = FALSE) {
   lst_x <- stretcher(.x, .step = .step, .init = .init, .bind = .bind)
   out <- map(lst_x, .f, ...)
   pad_stretch(out,
@@ -88,10 +79,9 @@ stretch_dfc <- function(.x, .f, ..., .step = 1, .init = 1, .fill = NA,
 #' Stretching window calculation over multiple simultaneously
 #'
 #' @description
-#' \lifecycle{questioning}
+#' \lifecycle{deprecated}
 #'
-#' **The rolling window family will be deprecated in the future. Please consider
-#' using the [slider](https://davisvaughan.github.io/slider) package.**
+#' Please consider using the [slider](https://davisvaughan.github.io/slider) package.
 #'
 #' Fixing an initial window and expanding more observations:
 #' * `stretch2()` and `pstretch()` always returns a list.
@@ -102,6 +92,7 @@ stretch_dfc <- function(.x, .f, ..., .step = 1, .init = 1, .fill = NA,
 #' @inheritParams slide2
 #' @inheritParams stretch
 #'
+#' @keywords internal
 #' @rdname stretch2
 #' @export
 #' @family stretching window functions
@@ -229,6 +220,7 @@ pstretch_dfc <- function(.l, .f, ..., .step = 1, .init = 1, .fill = NA,
 #' @param .x An objects to be split.
 #' @param ... Multiple objects to be split in parallel.
 #' @inheritParams stretch
+#' @keywords internal
 #' @rdname stretcher
 #' @export
 #' @examples
@@ -243,14 +235,22 @@ pstretch_dfc <- function(.l, .f, ..., .step = 1, .init = 1, .fill = NA,
 #' stretcher(df, .step = 2)
 #' pstretcher(df, df, .step = 2)
 stretcher <- function(.x, .step = 1, .init = 1, .bind = FALSE) {
+  lifecycle::deprecate_warn("0.9.0", "stretch()", "slider::slide()")
+  stretcher2(.x, .step, .init, .bind)
+}
+
+stretcher2 <- function(.x, .step = 1, .init = 1, .bind = FALSE) {
   bad_window_function(.step)
   if (!is_integerish(.init, n = 1) || .init < 1) {
-    abort("`.init` must be a positive integer.")
+    abort("`.init` only accepts a positive integer.")
   }
   if (is.data.frame(.x)) .x <- as.list(.x)
   len_x <- NROW(.x)
+  if (len_x == 1) {
+    abort("`.x` of length one cannot be stretched.")
+  }
   if (len_x <= .init) {
-    abort(sprintf("`.init` must be less than %s.", len_x))
+    abort(sprintf("`.init` must be less than the length of `.x` (%s).", len_x))
   }
   abs_size <- abs(.step)
   counter <- incr(.init = .init, .step = abs_size)
@@ -291,16 +291,8 @@ pstretcher <- function(..., .step = 1, .init = 1, .bind = FALSE) { # parallel sl
 #' harvest %>%
 #'   stretch_tsibble()
 stretch_tsibble <- function(.x, .step = 1, .init = 1, .id = ".id") {
-  lst_indices <- map(key_rows(.x), stretcher, .step = .step, .init = .init)
+  lst_indices <- map(key_rows(.x), stretcher2, .step = .step, .init = .init)
   roll_tsibble(.x, indices = lst_indices, .id = .id)
-}
-
-incr <- function(.init, .step) {
-  .init
-  function() {
-    .init <<- .init + .step
-    .init
-  }
 }
 
 pad_stretch <- function(x, .init = 1, .step = 1, .fill = NA,
@@ -327,13 +319,20 @@ pad_stretch <- function(x, .init = 1, .step = 1, .fill = NA,
   }
 }
 
+incr <- function(.init, .step) {
+  .init
+  function() {
+    .init <<- .init + .step
+    .init
+  }
+}
+
 #' Stretching window in parallel
 #'
 #' @description
-#' \lifecycle{questioning}
+#' \lifecycle{deprecated}
 #'
-#' **The rolling window family will be deprecated in the future. Please consider
-#' using the [slider](https://davisvaughan.github.io/slider) package.**
+#' Please consider using the [slider](https://davisvaughan.github.io/slider) package.
 #'
 #' Multiprocessing equivalents of [slide()], [tile()], [stretch()] prefixed by `future_`.
 #' * Variants for corresponding types: `future_*_lgl()`, `future_*_int()`,
@@ -342,6 +341,7 @@ pad_stretch <- function(x, .init = 1, .step = 1, .fill = NA,
 #' future specific options to use with the workers.
 #'
 #' @evalRd {suffix <- c("lgl", "chr", "int", "dbl", "dfr", "dfc"); c(paste0('\\alias{future_', c("stretch", "stretch2", "pstretch"), '}'), paste0('\\alias{future_stretch_', suffix, '}'), paste0('\\alias{future_stretch2_', suffix, '}'), paste0('\\alias{future_pstretch_', suffix, '}'))}
+#' @keywords internal
 #' @name future_stretch()
 #' @rdname future-stretch
 #' @exportPattern ^future_

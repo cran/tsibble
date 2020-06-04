@@ -1,5 +1,3 @@
-context("tsibble to ts")
-
 test_that("a tsibble with different frequnecy", {
   x1 <- ts(1:10)
   tsbl1 <- as_tsibble(x1)
@@ -56,7 +54,7 @@ test_that("as.ts.tbl_ts()", {
   y <- as_tsibble(x)
   expect_equal(
     as.double(as.ts(y, frequency = freq)),
-    as.double(x[,c(3, 1, 4, 2)])
+    as.double(x)
   )
 })
 
@@ -100,4 +98,13 @@ test_that("guess_frequency() for one observation #124", {
   one_obs <- tsibble(date = as.Date("2017-01-01"), gdp = 5)
   expect_identical(frequency(as.ts(one_obs)), 7)
   expect_identical(frequency(as.ts(one_obs, frequency = 12)), 12)
+})
+
+test_that("as.ts() automatically fills implicit missings #160", {
+  my_tsbl <- as_tsibble(data.frame(
+    date = structure(c(18058, 18059, 18060, 18061, 18064, 18065, 18066, 18067, 18072, 18073), class = "Date"),
+    val = rnorm(10)), index = date)
+  expect_identical(
+    as.ts(fill_gaps(my_tsbl), frequency = 365.25),
+    as.ts((my_tsbl), frequency = 365.25))
 })

@@ -15,30 +15,44 @@
 
 <title>Introduction to tsibble</title>
 
+<script>// Pandoc 2.9 adds attributes on both header and div. We remove the former (to
+// be compatible with the behavior of Pandoc < 2.8).
+document.addEventListener('DOMContentLoaded', function(e) {
+  var hs = document.querySelectorAll("div.section[class*='level'] > :first-child");
+  var i, h, a;
+  for (i = 0; i < hs.length; i++) {
+    h = hs[i];
+    if (!/^h[1-6]$/i.test(h.tagName)) continue;  // it should be a header h1-h6
+    a = h.attributes;
+    while (a.length > 0) h.removeAttribute(a[0].name);
+  }
+});
+</script>
 
 
 <style type="text/css">code{white-space: pre;}</style>
 <style type="text/css" data-origin="pandoc">
-a.sourceLine { display: inline-block; line-height: 1.25; }
-a.sourceLine { pointer-events: none; color: inherit; text-decoration: inherit; }
-a.sourceLine:empty { height: 1.2em; }
-.sourceCode { overflow: visible; }
-code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
 div.sourceCode { margin: 1em 0; }
 pre.sourceCode { margin: 0; }
 @media screen {
 div.sourceCode { overflow: auto; }
 }
 @media print {
-code.sourceCode { white-space: pre-wrap; }
-a.sourceLine { text-indent: -1em; padding-left: 1em; }
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
 }
-pre.numberSource a.sourceLine
-  { position: relative; left: -4em; }
-pre.numberSource a.sourceLine::before
-  { content: attr(data-line-number);
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
     position: relative; left: -1em; text-align: right; vertical-align: baseline;
-    border: none; pointer-events: all; display: inline-block;
+    border: none; display: inline-block;
     -webkit-touch-callout: none; -webkit-user-select: none;
     -khtml-user-select: none; -moz-user-select: none;
     -ms-user-select: none; user-select: none;
@@ -47,9 +61,9 @@ pre.numberSource a.sourceLine::before
   }
 pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
 div.sourceCode
-  {  }
+  {   }
 @media screen {
-a.sourceLine::before { text-decoration: underline; }
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
 }
 code span.al { color: #ff0000; font-weight: bold; } /* Alert */
 code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
@@ -307,12 +321,12 @@ code > span.er { color: #a61717; background-color: #e3d2d2; }
 <div id="contextual-semantics-index-and-key" class="section level2">
 <h2>Contextual semantics: index and key</h2>
 <p><code>tsibble()</code> creates a tsibble object, and <code>as_tsibble()</code> is an S3 method to coerce other objects to a tsibble. An object that a vector/matrix underlies, such as <code>ts</code> and <code>mts</code>, can be automated to a tsibble using <code>as_tsibble()</code> without any specification. If it is a tibble or data frame, <code>as_tsibble()</code> requires a little more setup in order to declare the index and key variables.</p>
-<div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb1-1" data-line-number="1"><span class="kw">library</span>(dplyr)</a>
-<a class="sourceLine" id="cb1-2" data-line-number="2"><span class="kw">library</span>(lubridate)</a>
-<a class="sourceLine" id="cb1-3" data-line-number="3"><span class="kw">library</span>(tsibble)</a>
-<a class="sourceLine" id="cb1-4" data-line-number="4">weather &lt;-<span class="st"> </span>nycflights13<span class="op">::</span>weather <span class="op">%&gt;%</span><span class="st"> </span></a>
-<a class="sourceLine" id="cb1-5" data-line-number="5"><span class="st">  </span><span class="kw">select</span>(origin, time_hour, temp, humid, precip)</a>
-<a class="sourceLine" id="cb1-6" data-line-number="6">weather</a></code></pre></div>
+<div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1"></a><span class="kw">library</span>(dplyr)</span>
+<span id="cb1-2"><a href="#cb1-2"></a><span class="kw">library</span>(lubridate)</span>
+<span id="cb1-3"><a href="#cb1-3"></a><span class="kw">library</span>(tsibble)</span>
+<span id="cb1-4"><a href="#cb1-4"></a>weather &lt;-<span class="st"> </span>nycflights13<span class="op">::</span>weather <span class="op">%&gt;%</span><span class="st"> </span></span>
+<span id="cb1-5"><a href="#cb1-5"></a><span class="st">  </span><span class="kw">select</span>(origin, time_hour, temp, humid, precip)</span>
+<span id="cb1-6"><a href="#cb1-6"></a>weather</span></code></pre></div>
 <pre><code>#&gt; # A tibble: 26,115 x 5
 #&gt;   origin time_hour            temp humid precip
 #&gt;   &lt;chr&gt;  &lt;dttm&gt;              &lt;dbl&gt; &lt;dbl&gt;  &lt;dbl&gt;
@@ -321,12 +335,12 @@ code > span.er { color: #a61717; background-color: #e3d2d2; }
 #&gt; 3 EWR    2013-01-01 03:00:00  39.0  64.4      0
 #&gt; 4 EWR    2013-01-01 04:00:00  39.9  62.2      0
 #&gt; 5 EWR    2013-01-01 05:00:00  39.0  64.4      0
-#&gt; # … with 2.611e+04 more rows</code></pre>
+#&gt; # … with 26,110 more rows</code></pre>
 <p>The <code>weather</code> data included in the package <code>nycflights13</code> contains the hourly meteorological records (such as temperature, humid and precipitation) over the year of 2013 at three stations (i.e. JFK, LGA and EWR) in New York City. Since the <code>time_hour</code> is the only column involving the timestamps, <code>as_tsibble()</code> defaults it to the index variable; alternatively, the index can be specified by the argument <code>index = time_hour</code> to disable the verbose message.</p>
 <p>Except for index, a tsibble requires “key”, which defines subjects or individuals measured over time. In this example, the <code>origin</code> variable is the identifier, which is passed to the argument <code>key</code> in <code>as_tsibble()</code>. <strong>Each observation should be uniquely identified by index and key</strong> in a valid tsibble. Others—<code>temp</code>, <code>humid</code> and <code>precip</code>—are referred to as measured variables. When creating a tsibble, the key will be sorted first, followed by arranging time from past to recent.</p>
-<div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb3-1" data-line-number="1">weather_tsbl &lt;-<span class="st"> </span><span class="kw">as_tsibble</span>(weather, <span class="dt">key =</span> origin)</a></code></pre></div>
+<div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1"></a>weather_tsbl &lt;-<span class="st"> </span><span class="kw">as_tsibble</span>(weather, <span class="dt">key =</span> origin)</span></code></pre></div>
 <pre><code>#&gt; Using `time_hour` as index variable.</code></pre>
-<div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb5-1" data-line-number="1">weather_tsbl</a></code></pre></div>
+<div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1"></a>weather_tsbl</span></code></pre></div>
 <pre><code>#&gt; # A tsibble: 26,115 x 5 [1h] &lt;America/New_York&gt;
 #&gt; # Key:       origin [3]
 #&gt;   origin time_hour            temp humid precip
@@ -336,7 +350,7 @@ code > span.er { color: #a61717; background-color: #e3d2d2; }
 #&gt; 3 EWR    2013-01-01 03:00:00  39.0  64.4      0
 #&gt; 4 EWR    2013-01-01 04:00:00  39.9  62.2      0
 #&gt; 5 EWR    2013-01-01 05:00:00  39.0  64.4      0
-#&gt; # … with 2.611e+04 more rows</code></pre>
+#&gt; # … with 26,110 more rows</code></pre>
 <p>An interval is automatically obtained based on the corresponding time representation:</p>
 <ul>
 <li><code>integer</code>/<code>numeric</code>/<code>ordered</code>: either “unit” or “year” (<code>Y</code>)</li>
@@ -354,13 +368,13 @@ code > span.er { color: #a61717; background-color: #e3d2d2; }
 <div id="data-pipeline" class="section level2">
 <h2>Data pipeline</h2>
 <p>This tidy data representation most naturally supports thinking of operations on the data as building blocks, forming part of a “data pipeline” in time-based context. Users who are familiar with tidyverse would find it easier to perform common temporal analysis tasks. For example, <code>index_by()</code> is the counterpart of <code>group_by()</code> in temporal context, but it only groups the time index. <code>index_by()</code> + <code>summarise()</code> is used to summarise daily highs and lows at each station. As a result, the index is updated to the <code>date</code> with one-day interval from the index <code>time_hour</code>; two new variables are created and computed for daily maximum and minimum temperatures.</p>
-<div class="sourceCode" id="cb7"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb7-1" data-line-number="1">weather_tsbl <span class="op">%&gt;%</span></a>
-<a class="sourceLine" id="cb7-2" data-line-number="2"><span class="st">  </span><span class="kw">group_by_key</span>() <span class="op">%&gt;%</span></a>
-<a class="sourceLine" id="cb7-3" data-line-number="3"><span class="st">  </span><span class="kw">index_by</span>(<span class="dt">date =</span> <span class="op">~</span><span class="st"> </span><span class="kw">as_date</span>(.)) <span class="op">%&gt;%</span><span class="st"> </span></a>
-<a class="sourceLine" id="cb7-4" data-line-number="4"><span class="st">  </span><span class="kw">summarise</span>(</a>
-<a class="sourceLine" id="cb7-5" data-line-number="5">    <span class="dt">temp_high =</span> <span class="kw">max</span>(temp, <span class="dt">na.rm =</span> <span class="ot">TRUE</span>),</a>
-<a class="sourceLine" id="cb7-6" data-line-number="6">    <span class="dt">temp_low =</span> <span class="kw">min</span>(temp, <span class="dt">na.rm =</span> <span class="ot">TRUE</span>)</a>
-<a class="sourceLine" id="cb7-7" data-line-number="7">  )</a></code></pre></div>
+<div class="sourceCode" id="cb7"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1"></a>weather_tsbl <span class="op">%&gt;%</span></span>
+<span id="cb7-2"><a href="#cb7-2"></a><span class="st">  </span><span class="kw">group_by_key</span>() <span class="op">%&gt;%</span></span>
+<span id="cb7-3"><a href="#cb7-3"></a><span class="st">  </span><span class="kw">index_by</span>(<span class="dt">date =</span> <span class="op">~</span><span class="st"> </span><span class="kw">as_date</span>(.)) <span class="op">%&gt;%</span><span class="st"> </span></span>
+<span id="cb7-4"><a href="#cb7-4"></a><span class="st">  </span><span class="kw">summarise</span>(</span>
+<span id="cb7-5"><a href="#cb7-5"></a>    <span class="dt">temp_high =</span> <span class="kw">max</span>(temp, <span class="dt">na.rm =</span> <span class="ot">TRUE</span>),</span>
+<span id="cb7-6"><a href="#cb7-6"></a>    <span class="dt">temp_low =</span> <span class="kw">min</span>(temp, <span class="dt">na.rm =</span> <span class="ot">TRUE</span>)</span>
+<span id="cb7-7"><a href="#cb7-7"></a>  )</span></code></pre></div>
 <pre><code>#&gt; # A tsibble: 1,092 x 4 [1D]
 #&gt; # Key:       origin [3]
 #&gt;   origin date       temp_high temp_low
@@ -375,17 +389,17 @@ code > span.er { color: #a61717; background-color: #e3d2d2; }
 <div id="irregular-time-interval" class="section level2">
 <h2>Irregular time interval</h2>
 <p>Note that the tsibble handles regularly-spaced temporal data well, from seconds to years based on its time representation (see <code>?tsibble</code>). The option <code>regular</code>, by default, is set to <code>TRUE</code> in <code>as_tsibble()</code>. Specify <code>regular</code> to <code>FALSE</code> to create a tsibble for the data collected at irregular time interval. Below shows the scheduled date time of the flights in New York:</p>
-<div class="sourceCode" id="cb9"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb9-1" data-line-number="1">flights &lt;-<span class="st"> </span>nycflights13<span class="op">::</span>flights <span class="op">%&gt;%</span></a>
-<a class="sourceLine" id="cb9-2" data-line-number="2"><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">sched_dep_datetime =</span> </a>
-<a class="sourceLine" id="cb9-3" data-line-number="3">    <span class="kw">make_datetime</span>(year, month, day, hour, minute, <span class="dt">tz =</span> <span class="st">&quot;America/New_York&quot;</span>))</a></code></pre></div>
+<div class="sourceCode" id="cb9"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1"></a>flights &lt;-<span class="st"> </span>nycflights13<span class="op">::</span>flights <span class="op">%&gt;%</span></span>
+<span id="cb9-2"><a href="#cb9-2"></a><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">sched_dep_datetime =</span> </span>
+<span id="cb9-3"><a href="#cb9-3"></a>    <span class="kw">make_datetime</span>(year, month, day, hour, minute, <span class="dt">tz =</span> <span class="st">&quot;America/New_York&quot;</span>))</span></code></pre></div>
 <p>The key contains columns <code>carrier</code> and <code>flight</code> to identify observational units over time, from a passenger’s point of view. With <code>regular = FALSE</code>, it turns to an irregularly-spaced tsibble, where <code>[!]</code> highlights the irregularity.</p>
-<div class="sourceCode" id="cb10"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb10-1" data-line-number="1">flights_tsbl &lt;-<span class="st"> </span>flights <span class="op">%&gt;%</span></a>
-<a class="sourceLine" id="cb10-2" data-line-number="2"><span class="st">  </span><span class="kw">as_tsibble</span>(</a>
-<a class="sourceLine" id="cb10-3" data-line-number="3">    <span class="dt">key =</span> <span class="kw">c</span>(carrier, flight), </a>
-<a class="sourceLine" id="cb10-4" data-line-number="4">    <span class="dt">index =</span> sched_dep_datetime, </a>
-<a class="sourceLine" id="cb10-5" data-line-number="5">    <span class="dt">regular =</span> <span class="ot">FALSE</span></a>
-<a class="sourceLine" id="cb10-6" data-line-number="6">  )</a>
-<a class="sourceLine" id="cb10-7" data-line-number="7">flights_tsbl</a></code></pre></div>
+<div class="sourceCode" id="cb10"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1"></a>flights_tsbl &lt;-<span class="st"> </span>flights <span class="op">%&gt;%</span></span>
+<span id="cb10-2"><a href="#cb10-2"></a><span class="st">  </span><span class="kw">as_tsibble</span>(</span>
+<span id="cb10-3"><a href="#cb10-3"></a>    <span class="dt">key =</span> <span class="kw">c</span>(carrier, flight), </span>
+<span id="cb10-4"><a href="#cb10-4"></a>    <span class="dt">index =</span> sched_dep_datetime, </span>
+<span id="cb10-5"><a href="#cb10-5"></a>    <span class="dt">regular =</span> <span class="ot">FALSE</span></span>
+<span id="cb10-6"><a href="#cb10-6"></a>  )</span>
+<span id="cb10-7"><a href="#cb10-7"></a>flights_tsbl</span></code></pre></div>
 <pre><code>#&gt; # A tsibble: 336,776 x 20 [!] &lt;America/New_York&gt;
 #&gt; # Key:       carrier, flight [5,725]
 #&gt;    year month   day dep_time sched_dep_time dep_delay arr_time sched_arr_time
@@ -395,14 +409,11 @@ code > span.er { color: #a61717; background-color: #e3d2d2; }
 #&gt; 3  2013    11     5     1548           1540         8     1708           1725
 #&gt; 4  2013    11     6     1535           1540        -5     1657           1725
 #&gt; 5  2013    11     7     1549           1540         9     1733           1725
-#&gt; # … with 3.368e+05 more rows, and 12 more variables: arr_delay &lt;dbl&gt;,
+#&gt; # … with 336,771 more rows, and 12 more variables: arr_delay &lt;dbl&gt;,
 #&gt; #   carrier &lt;chr&gt;, flight &lt;int&gt;, tailnum &lt;chr&gt;, origin &lt;chr&gt;, dest &lt;chr&gt;,
 #&gt; #   air_time &lt;dbl&gt;, distance &lt;dbl&gt;, hour &lt;dbl&gt;, minute &lt;dbl&gt;, time_hour &lt;dttm&gt;,
 #&gt; #   sched_dep_datetime &lt;dttm&gt;</code></pre>
 <p>To regularise an irregular tsibble, it can be achieved with <code>index_by()</code> + <code>summarise()</code>.</p>
-</div>
-<div id="reference" class="section level2">
-<h2>Reference</h2>
 </div>
 
 

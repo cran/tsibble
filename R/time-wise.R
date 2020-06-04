@@ -3,11 +3,9 @@
 #' @description
 #' \lifecycle{stable}
 #'
-#' @param x A numeric vector.
-#' @param lag An positive integer indicating which lag to use.
-#' @param differences An positive integer indicating the order of the difference.
-#' @param default Value used for non-existent rows, defaults to `NA`.
-#' @param order_by Override the default ordering to use another vector.
+#' @inheritParams dplyr::lag
+#' @param lag A positive integer indicating which lag to use.
+#' @param differences A positive integer indicating the order of the difference.
 #'
 #' @return A numeric vector of the same length as `x`.
 #' @seealso [dplyr::lead] and [dplyr::lag]
@@ -35,15 +33,15 @@ difference <- function(x, lag = 1, differences = 1, default = NA,
     abort("`lag` and `differences` must be positive integers.")
   }
   if (is_null(order_by)) {
-    diff_impl(x, lag = lag, differences = differences, fill = default)
+    diff_impl(x, lag = lag, differences = differences, default = default)
   } else {
     with_order(order_by, diff_impl, x,
-      lag = lag, differences = differences, fill = default
+      lag = lag, differences = differences, default = default
     )
   }
 }
 
-diff_impl <- function(x, lag = 1, differences = 1, fill = NA) {
+diff_impl <- function(x, lag = 1, differences = 1, default = NA) {
   diff_x <- diff(x, lag = lag, differences = differences)
-  vec_c(vec_repeat(fill, lag * differences), diff_x)
+  vec_c(vec_rep(default, lag * differences), diff_x)
 }

@@ -18,8 +18,9 @@ Supported index type: \code{POSIXct} (to seconds), \code{Date}, \code{yearweek},
 \code{yearquarter}/\code{yearqtr}, \code{hms}/\code{difftime} & \code{numeric}.
 }}
 
-\item{.preserve}{when \code{FALSE} (the default), the grouping structure
-is recalculated based on the resulting data, otherwise it is kept as is.}
+\item{.preserve}{Relevant when the \code{.data} input is grouped.
+If \code{.preserve = FALSE} (the default), the grouping structure
+is recalculated based on the resulting data, otherwise the grouping is kept as is.}
 }
 \description{
 This shorthand respects time zones and encourages compact expressions.
@@ -38,7 +39,7 @@ documented in \code{?Sys.timezone()}, using \code{Sys.setenv(TZ = "GB")} for exa
 \examples{
 # from the starting time to the end of Feb, 2015
 pedestrian \%>\%
-  filter_index(~"2015-02")
+  filter_index(~ "2015-02")
 
 # entire Feb 2015, & from the beginning of Aug 2016 to the end
 pedestrian \%>\%

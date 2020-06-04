@@ -15,30 +15,44 @@
 
 <title>Frequently Asked Questions and Answers</title>
 
+<script>// Pandoc 2.9 adds attributes on both header and div. We remove the former (to
+// be compatible with the behavior of Pandoc < 2.8).
+document.addEventListener('DOMContentLoaded', function(e) {
+  var hs = document.querySelectorAll("div.section[class*='level'] > :first-child");
+  var i, h, a;
+  for (i = 0; i < hs.length; i++) {
+    h = hs[i];
+    if (!/^h[1-6]$/i.test(h.tagName)) continue;  // it should be a header h1-h6
+    a = h.attributes;
+    while (a.length > 0) h.removeAttribute(a[0].name);
+  }
+});
+</script>
 
 
 <style type="text/css">code{white-space: pre;}</style>
 <style type="text/css" data-origin="pandoc">
-a.sourceLine { display: inline-block; line-height: 1.25; }
-a.sourceLine { pointer-events: none; color: inherit; text-decoration: inherit; }
-a.sourceLine:empty { height: 1.2em; }
-.sourceCode { overflow: visible; }
-code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
 div.sourceCode { margin: 1em 0; }
 pre.sourceCode { margin: 0; }
 @media screen {
 div.sourceCode { overflow: auto; }
 }
 @media print {
-code.sourceCode { white-space: pre-wrap; }
-a.sourceLine { text-indent: -1em; padding-left: 1em; }
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
 }
-pre.numberSource a.sourceLine
-  { position: relative; left: -4em; }
-pre.numberSource a.sourceLine::before
-  { content: attr(data-line-number);
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
     position: relative; left: -1em; text-align: right; vertical-align: baseline;
-    border: none; pointer-events: all; display: inline-block;
+    border: none; display: inline-block;
     -webkit-touch-callout: none; -webkit-user-select: none;
     -khtml-user-select: none; -moz-user-select: none;
     -ms-user-select: none; user-select: none;
@@ -47,9 +61,9 @@ pre.numberSource a.sourceLine::before
   }
 pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
 div.sourceCode
-  {  }
+  {   }
 @media screen {
-a.sourceLine::before { text-decoration: underline; }
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
 }
 code span.al { color: #ff0000; font-weight: bold; } /* Alert */
 code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
@@ -303,17 +317,17 @@ code > span.er { color: #a61717; background-color: #e3d2d2; }
 
 
 
-<div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb1-1" data-line-number="1"><span class="kw">library</span>(dplyr)</a>
-<a class="sourceLine" id="cb1-2" data-line-number="2"><span class="kw">library</span>(tsibble)</a>
-<a class="sourceLine" id="cb1-3" data-line-number="3"><span class="kw">library</span>(lubridate)</a></code></pre></div>
+<div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1"></a><span class="kw">library</span>(dplyr)</span>
+<span id="cb1-2"><a href="#cb1-2"></a><span class="kw">library</span>(tsibble)</span>
+<span id="cb1-3"><a href="#cb1-3"></a><span class="kw">library</span>(lubridate)</span></code></pre></div>
 <blockquote>
 <p><em>Error: “Can’t obtain the interval due to the mismatched index class.”</em></p>
 </blockquote>
 <blockquote>
 <p><em>I have monthly data and coerce it to a tsibble. Why does tsibble give one-day interval <code>[1D]</code> instead of one-month <code>[1M]</code>?</em></p>
 </blockquote>
-<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb2-1" data-line-number="1">mth &lt;-<span class="st"> </span><span class="kw">make_date</span>(<span class="st">&quot;2018&quot;</span>) <span class="op">+</span><span class="st"> </span><span class="kw">months</span>(<span class="dv">0</span><span class="op">:</span><span class="dv">3</span>)</a>
-<a class="sourceLine" id="cb2-2" data-line-number="2"><span class="kw">tsibble</span>(<span class="dt">mth =</span> mth, <span class="dt">index =</span> mth)</a></code></pre></div>
+<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1"></a>mth &lt;-<span class="st"> </span><span class="kw">make_date</span>(<span class="st">&quot;2018&quot;</span>) <span class="op">+</span><span class="st"> </span><span class="kw">months</span>(<span class="dv">0</span><span class="op">:</span><span class="dv">3</span>)</span>
+<span id="cb2-2"><a href="#cb2-2"></a><span class="kw">tsibble</span>(<span class="dt">mth =</span> mth, <span class="dt">index =</span> mth)</span></code></pre></div>
 <pre><code>#&gt; # A tsibble: 4 x 1 [1D]
 #&gt;   mth       
 #&gt;   &lt;date&gt;    
@@ -321,8 +335,8 @@ code > span.er { color: #a61717; background-color: #e3d2d2; }
 #&gt; 2 2018-02-01
 #&gt; 3 2018-03-01
 #&gt; 4 2018-04-01</code></pre>
-<p>The interval depends on the index class. It is unclear for this case to tell if it’s daily data with implicit missingness or it’s monthly data. If using <code>Date</code> underlying monthly data, each month could range from 28 to 31 days, which isn’t regularly spaced. But class <code>yearmonth</code> puts emphasis on 12 months per year, which is clearly regularly spaced and the accurate representation for aggregations over months. This applies to <code>POSIXct</code> for sub-daily data, <code>Date</code> for daily, <code>yearquarter</code> for quarterly, and etc. If you encounter this error “Can’t obtain the interval due to mismatched index class.”, it’s the same underlying issue.</p>
-<div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb4-1" data-line-number="1"><span class="kw">tsibble</span>(<span class="dt">mth =</span> <span class="kw">yearmonth</span>(mth), <span class="dt">index =</span> mth)</a></code></pre></div>
+<p>The interval depends on the index class. It is unclear in this situation to tell if it’s daily data with implicit missingness or it’s monthly data. If using <code>Date</code> underlying monthly data, each month could range from 28 to 31 days, which isn’t regularly spaced. But class <code>yearmonth</code> puts emphasis on 12 months per year, which is clearly regularly spaced and the accurate representation for aggregations over months. This applies to <code>POSIXct</code> for sub-daily data, <code>Date</code> for daily, <code>yearquarter</code> for quarterly, and etc. If you encounter this error “Can’t obtain the interval due to mismatched index class.”, it’s the same underlying issue.</p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1"></a><span class="kw">tsibble</span>(<span class="dt">mth =</span> <span class="kw">yearmonth</span>(mth), <span class="dt">index =</span> mth)</span></code></pre></div>
 <pre><code>#&gt; # A tsibble: 4 x 1 [1M]
 #&gt;        mth
 #&gt;      &lt;mth&gt;
@@ -335,9 +349,9 @@ code > span.er { color: #a61717; background-color: #e3d2d2; }
 <p><em>Does tsibble respect time zones?</em></p>
 </blockquote>
 <p>Yes, tsibble respects time zones throughout the package. All index functions including <code>yearweek()</code>, <code>yearmonth()</code>, <code>yearquarter()</code>, and <code>time_in()</code> take care of time zones, and will NOT convert to “UTC”. The interval obtained from the data also respects the time zone, by converting to seconds. The following example demonstrates how tsibble handles daylight savings.</p>
-<div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb6-1" data-line-number="1">x &lt;-<span class="st"> </span><span class="kw">ymd_h</span>(<span class="st">&quot;2015-04-05 01&quot;</span>, <span class="dt">tz =</span> <span class="st">&quot;Australia/Melbourne&quot;</span>)</a>
-<a class="sourceLine" id="cb6-2" data-line-number="2"><span class="co"># base arithmetic respect tz</span></a>
-<a class="sourceLine" id="cb6-3" data-line-number="3"><span class="kw">tsibble</span>(<span class="dt">time =</span> x <span class="op">+</span><span class="st"> </span>(<span class="kw">c</span>(<span class="dv">0</span>, <span class="dv">3</span>, <span class="dv">6</span>, <span class="dv">9</span>)) <span class="op">*</span><span class="st"> </span><span class="dv">60</span> <span class="op">*</span><span class="st"> </span><span class="dv">60</span>, <span class="dt">index =</span> time)</a></code></pre></div>
+<div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1"></a>x &lt;-<span class="st"> </span><span class="kw">ymd_h</span>(<span class="st">&quot;2015-04-05 01&quot;</span>, <span class="dt">tz =</span> <span class="st">&quot;Australia/Melbourne&quot;</span>)</span>
+<span id="cb6-2"><a href="#cb6-2"></a><span class="co"># base arithmetic respect tz</span></span>
+<span id="cb6-3"><a href="#cb6-3"></a><span class="kw">tsibble</span>(<span class="dt">time =</span> x <span class="op">+</span><span class="st"> </span>(<span class="kw">c</span>(<span class="dv">0</span>, <span class="dv">3</span>, <span class="dv">6</span>, <span class="dv">9</span>)) <span class="op">*</span><span class="st"> </span><span class="dv">60</span> <span class="op">*</span><span class="st"> </span><span class="dv">60</span>, <span class="dt">index =</span> time)</span></code></pre></div>
 <pre><code>#&gt; # A tsibble: 4 x 1 [3h] &lt;Australia/Melbourne&gt;
 #&gt;   time               
 #&gt;   &lt;dttm&gt;             
@@ -345,8 +359,8 @@ code > span.er { color: #a61717; background-color: #e3d2d2; }
 #&gt; 2 2015-04-05 03:00:00
 #&gt; 3 2015-04-05 06:00:00
 #&gt; 4 2015-04-05 09:00:00</code></pre>
-<div class="sourceCode" id="cb8"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb8-1" data-line-number="1"><span class="co"># lubridate arithmetic doesn't respect tz</span></a>
-<a class="sourceLine" id="cb8-2" data-line-number="2"><span class="kw">tsibble</span>(<span class="dt">time =</span> x <span class="op">+</span><span class="st"> </span><span class="kw">hours</span>(<span class="kw">c</span>(<span class="dv">0</span>, <span class="dv">3</span>, <span class="dv">6</span>, <span class="dv">9</span>)), <span class="dt">index =</span> time)</a></code></pre></div>
+<div class="sourceCode" id="cb8"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1"></a><span class="co"># lubridate arithmetic doesn&#39;t respect tz</span></span>
+<span id="cb8-2"><a href="#cb8-2"></a><span class="kw">tsibble</span>(<span class="dt">time =</span> x <span class="op">+</span><span class="st"> </span><span class="kw">hours</span>(<span class="kw">c</span>(<span class="dv">0</span>, <span class="dv">3</span>, <span class="dv">6</span>, <span class="dv">9</span>)), <span class="dt">index =</span> time)</span></code></pre></div>
 <pre><code>#&gt; # A tsibble: 4 x 1 [1h] &lt;Australia/Melbourne&gt;
 #&gt;   time               
 #&gt;   &lt;dttm&gt;             
@@ -359,11 +373,11 @@ code > span.er { color: #a61717; background-color: #e3d2d2; }
 <blockquote>
 <p><em>I have multiple units measured at different time intervals. Can I put them into one tsibble?</em></p>
 </blockquote>
-<div class="sourceCode" id="cb10"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb10-1" data-line-number="1">tsbl1 &lt;-<span class="st"> </span><span class="kw">tsibble</span>(</a>
-<a class="sourceLine" id="cb10-2" data-line-number="2">  <span class="dt">time =</span> <span class="kw">make_datetime</span>(<span class="dv">2018</span>) <span class="op">+</span><span class="st"> </span><span class="kw">hours</span>(<span class="dv">0</span><span class="op">:</span><span class="dv">3</span>),</a>
-<a class="sourceLine" id="cb10-3" data-line-number="3">  <span class="dt">station =</span> <span class="st">&quot;A&quot;</span>,</a>
-<a class="sourceLine" id="cb10-4" data-line-number="4">  <span class="dt">index =</span> time, <span class="dt">key =</span> station</a>
-<a class="sourceLine" id="cb10-5" data-line-number="5">) <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">print</span>()</a></code></pre></div>
+<div class="sourceCode" id="cb10"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1"></a>tsbl1 &lt;-<span class="st"> </span><span class="kw">tsibble</span>(</span>
+<span id="cb10-2"><a href="#cb10-2"></a>  <span class="dt">time =</span> <span class="kw">make_datetime</span>(<span class="dv">2018</span>) <span class="op">+</span><span class="st"> </span><span class="kw">hours</span>(<span class="dv">0</span><span class="op">:</span><span class="dv">3</span>),</span>
+<span id="cb10-3"><a href="#cb10-3"></a>  <span class="dt">station =</span> <span class="st">&quot;A&quot;</span>,</span>
+<span id="cb10-4"><a href="#cb10-4"></a>  <span class="dt">index =</span> time, <span class="dt">key =</span> station</span>
+<span id="cb10-5"><a href="#cb10-5"></a>) <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">print</span>()</span></code></pre></div>
 <pre><code>#&gt; # A tsibble: 4 x 2 [1h] &lt;UTC&gt;
 #&gt; # Key:       station [1]
 #&gt;   time                station
@@ -372,11 +386,11 @@ code > span.er { color: #a61717; background-color: #e3d2d2; }
 #&gt; 2 2018-01-01 01:00:00 A      
 #&gt; 3 2018-01-01 02:00:00 A      
 #&gt; 4 2018-01-01 03:00:00 A</code></pre>
-<div class="sourceCode" id="cb12"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb12-1" data-line-number="1">tsbl2 &lt;-<span class="st"> </span><span class="kw">tsibble</span>(</a>
-<a class="sourceLine" id="cb12-2" data-line-number="2">  <span class="dt">time =</span> <span class="kw">make_datetime</span>(<span class="dv">2018</span>) <span class="op">+</span><span class="st"> </span><span class="kw">minutes</span>(<span class="kw">seq</span>(<span class="dv">0</span>, <span class="dv">90</span>, <span class="dt">by =</span> <span class="dv">30</span>)),</a>
-<a class="sourceLine" id="cb12-3" data-line-number="3">  <span class="dt">station =</span> <span class="st">&quot;B&quot;</span>,</a>
-<a class="sourceLine" id="cb12-4" data-line-number="4">  <span class="dt">index =</span> time, <span class="dt">key =</span> station</a>
-<a class="sourceLine" id="cb12-5" data-line-number="5">) <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">print</span>()</a></code></pre></div>
+<div class="sourceCode" id="cb12"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1"></a>tsbl2 &lt;-<span class="st"> </span><span class="kw">tsibble</span>(</span>
+<span id="cb12-2"><a href="#cb12-2"></a>  <span class="dt">time =</span> <span class="kw">make_datetime</span>(<span class="dv">2018</span>) <span class="op">+</span><span class="st"> </span><span class="kw">minutes</span>(<span class="kw">seq</span>(<span class="dv">0</span>, <span class="dv">90</span>, <span class="dt">by =</span> <span class="dv">30</span>)),</span>
+<span id="cb12-3"><a href="#cb12-3"></a>  <span class="dt">station =</span> <span class="st">&quot;B&quot;</span>,</span>
+<span id="cb12-4"><a href="#cb12-4"></a>  <span class="dt">index =</span> time, <span class="dt">key =</span> station</span>
+<span id="cb12-5"><a href="#cb12-5"></a>) <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">print</span>()</span></code></pre></div>
 <pre><code>#&gt; # A tsibble: 4 x 2 [30m] &lt;UTC&gt;
 #&gt; # Key:       station [1]
 #&gt;   time                station
@@ -385,9 +399,9 @@ code > span.er { color: #a61717; background-color: #e3d2d2; }
 #&gt; 2 2018-01-01 00:30:00 B      
 #&gt; 3 2018-01-01 01:00:00 B      
 #&gt; 4 2018-01-01 01:30:00 B</code></pre>
-<div class="sourceCode" id="cb14"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb14-1" data-line-number="1"><span class="kw">rbind</span>(tsbl1, tsbl2)</a></code></pre></div>
-<pre><code>#&gt; # A tsibble: 8 x 2 [30m] &lt;UTC&gt;
-#&gt; # Key:       station [2]
+<div class="sourceCode" id="cb14"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1"></a><span class="kw">rbind</span>(tsbl1, tsbl2)</span></code></pre></div>
+<pre><code>#&gt; # A tsibble: 8 x 2 [1h] &lt;UTC&gt;
+#&gt; # Key:       station [1]
 #&gt;   time                station
 #&gt;   &lt;dttm&gt;              &lt;chr&gt;  
 #&gt; 1 2018-01-01 00:00:00 A      
@@ -403,12 +417,12 @@ code > span.er { color: #a61717; background-color: #e3d2d2; }
 <blockquote>
 <p><em>I have multiple units measured at the same time interval. But the tsibble interval doesn’t look correct.</em></p>
 </blockquote>
-<div class="sourceCode" id="cb16"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb16-1" data-line-number="1">x &lt;-<span class="st"> </span><span class="kw">make_datetime</span>(<span class="dv">2018</span>) <span class="op">+</span><span class="st"> </span><span class="kw">minutes</span>(<span class="dv">0</span><span class="op">:</span><span class="dv">1</span>)</a>
-<a class="sourceLine" id="cb16-2" data-line-number="2">tbl &lt;-<span class="st"> </span><span class="kw">tibble</span>(  </a>
-<a class="sourceLine" id="cb16-3" data-line-number="3">  <span class="dt">time =</span> <span class="kw">c</span>(x, x <span class="op">+</span><span class="st"> </span><span class="kw">minutes</span>(<span class="dv">15</span>)),</a>
-<a class="sourceLine" id="cb16-4" data-line-number="4">  <span class="dt">station =</span> <span class="kw">rep</span>(<span class="kw">c</span>(<span class="st">&quot;A&quot;</span>, <span class="st">&quot;B&quot;</span>), <span class="dv">2</span>)</a>
-<a class="sourceLine" id="cb16-5" data-line-number="5">)</a>
-<a class="sourceLine" id="cb16-6" data-line-number="6"><span class="kw">as_tsibble</span>(tbl, <span class="dt">index =</span> time, <span class="dt">key =</span> station)</a></code></pre></div>
+<div class="sourceCode" id="cb16"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1"></a>x &lt;-<span class="st"> </span><span class="kw">make_datetime</span>(<span class="dv">2018</span>) <span class="op">+</span><span class="st"> </span><span class="kw">minutes</span>(<span class="dv">0</span><span class="op">:</span><span class="dv">1</span>)</span>
+<span id="cb16-2"><a href="#cb16-2"></a>tbl &lt;-<span class="st"> </span><span class="kw">tibble</span>(  </span>
+<span id="cb16-3"><a href="#cb16-3"></a>  <span class="dt">time =</span> <span class="kw">c</span>(x, x <span class="op">+</span><span class="st"> </span><span class="kw">minutes</span>(<span class="dv">15</span>)),</span>
+<span id="cb16-4"><a href="#cb16-4"></a>  <span class="dt">station =</span> <span class="kw">rep</span>(<span class="kw">c</span>(<span class="st">&quot;A&quot;</span>, <span class="st">&quot;B&quot;</span>), <span class="dv">2</span>)</span>
+<span id="cb16-5"><a href="#cb16-5"></a>)</span>
+<span id="cb16-6"><a href="#cb16-6"></a><span class="kw">as_tsibble</span>(tbl, <span class="dt">index =</span> time, <span class="dt">key =</span> station)</span></code></pre></div>
 <pre><code>#&gt; # A tsibble: 4 x 2 [1m] &lt;UTC&gt;
 #&gt; # Key:       station [2]
 #&gt;   time                station
@@ -418,9 +432,9 @@ code > span.er { color: #a61717; background-color: #e3d2d2; }
 #&gt; 3 2018-01-01 00:01:00 B      
 #&gt; 4 2018-01-01 00:16:00 B</code></pre>
 <p>Each station shares the common 15-minute interval, but the date-times don’t align. Rounding them is a quick way to fix it, if binning time doesn’t matter to the analysis. If it does, please organise them in different tables.</p>
-<div class="sourceCode" id="cb18"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb18-1" data-line-number="1">tbl <span class="op">%&gt;%</span><span class="st"> </span></a>
-<a class="sourceLine" id="cb18-2" data-line-number="2"><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">time =</span> <span class="kw">floor_date</span>(time, <span class="dt">unit =</span> <span class="st">&quot;15 mins&quot;</span>)) <span class="op">%&gt;%</span><span class="st"> </span></a>
-<a class="sourceLine" id="cb18-3" data-line-number="3"><span class="st">  </span><span class="kw">as_tsibble</span>(<span class="dt">index =</span> time, <span class="dt">key =</span> station)</a></code></pre></div>
+<div class="sourceCode" id="cb18"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb18-1"><a href="#cb18-1"></a>tbl <span class="op">%&gt;%</span><span class="st"> </span></span>
+<span id="cb18-2"><a href="#cb18-2"></a><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">time =</span> <span class="kw">floor_date</span>(time, <span class="dt">unit =</span> <span class="st">&quot;15 mins&quot;</span>)) <span class="op">%&gt;%</span><span class="st"> </span></span>
+<span id="cb18-3"><a href="#cb18-3"></a><span class="st">  </span><span class="kw">as_tsibble</span>(<span class="dt">index =</span> time, <span class="dt">key =</span> station)</span></code></pre></div>
 <pre><code>#&gt; # A tsibble: 4 x 2 [15m] &lt;UTC&gt;
 #&gt; # Key:       station [2]
 #&gt;   time                station

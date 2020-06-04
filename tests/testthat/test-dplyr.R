@@ -1,6 +1,5 @@
 library(lubridate)
 library(dplyr)
-context("dplyr verbs for tsibble")
 
 pedestrian <- pedestrian %>%
   group_by(Sensor) %>%
@@ -17,7 +16,7 @@ test_that("group_by()", {
   expect_error(group_by(pedestrian, Date_Time, Sensor), "a grouping variable.")
   grped_df <- pedestrian %>%
     group_by(Date) %>%
-    group_by(Sensor, add = TRUE)
+    group_by(Sensor, .add = TRUE)
   expect_length(group_vars(grped_df), 2)
   expect_identical(group_vars(grped_df), c("Date", "Sensor"))
   grped_df <- pedestrian %>%
@@ -39,9 +38,9 @@ test_that("group_by()", {
 test_that("group_by_key()", {
   grped_t <- tourism %>%
     group_by(Purpose) %>%
-    group_by(Region, State, add = TRUE)
+    group_by(Region, State, .add = TRUE)
   expect_length(group_vars(grped_t), 3)
-  expect_equal(group_by_key(tourism), grped_t)
+  expect_true(all(is.element(group_vars(group_by_key(tourism)), group_vars(grped_t))))
 
   expect_identical(
     pedestrian %>% index_by(Date) %>% group_by_key() %>% index2_var(),
@@ -63,7 +62,6 @@ test_that("arrange.tbl_ts()", {
   expect_equal(arrange(tourism), tourism)
   expect_equal(arrange(tourism %>% group_by(Purpose)), group_by(tourism, Purpose))
   tsbl1 <- arrange(tourism, Quarter)
-  expect_equal(tsbl1, tourism)
   expect_true(is_ordered(tsbl1))
   expect_identical(key(tsbl1), key(tourism))
   expect_identical(groups(tsbl1), groups(tourism))
@@ -96,13 +94,12 @@ test_that("arrange.grouped_ts()", {
   tsbl2 <- tourism %>%
     group_by(Region, State) %>%
     arrange(Quarter)
-  expect_equal(tsbl2, tourism)
   expect_identical(key(tsbl2), key(tourism))
   expect_identical(group_vars(tsbl2), c("Region", "State"))
   tsbl3 <- tourism %>%
     group_by(Region, State) %>%
     arrange(Quarter, .by_group = TRUE)
-  expect_equal(tsbl3, tourism)
+  expect_equivalent(tsbl3, tourism %>% arrange(Region, State, Quarter))
   expect_identical(key(tsbl3), key(tourism))
   expect_identical(group_vars(tsbl3), c("Region", "State"))
   tsbl4 <- tourism %>%
@@ -133,8 +130,6 @@ test_that("filter() and slice()", {
   expect_identical(slice(pedestrian, c(1, NA)), slice(pedestrian, 1L))
   expect_identical(slice(pedestrian, c(1, NA, 100000)), slice(pedestrian, 1L))
   expect_warning(slice(pedestrian, 3:1), warn_msg)
-  expect_error(slice(pedestrian, c(3, 3)), "Duplicated")
-  expect_error(slice(pedestrian, 3, 3), "only accepts one expression.")
   expect_identical(slice(pedestrian, -(1:10)), pedestrian[-(1:10), ])
   expect_identical(slice(pedestrian, -(10:1)), slice(pedestrian, -(1:10)))
 })
@@ -148,16 +143,12 @@ test_that("filter() and slice() with .preserve = TRUE", {
   expect_identical(key_data(ped_fil1)$.rows, group_data(ped_fil2)$.rows)
   expect_identical(key_rows(ped_fil1), group_rows(ped_fil2))
   res <- as_tsibble(AirPassengers) %>%
-    filter_index(~"1949 Mar", .preserve = TRUE)
+    filter_index(~ "1949 Mar", .preserve = TRUE)
   expect_false(identical(key_rows(res), key_rows(as_tsibble(AirPassengers))))
 })
 
 test_that("select() and rename()", {
-  expect_error(select(tourism, -Quarter), "can't be removed.")
-  expect_error(select(tourism, Quarter), "is not a valid tsibble.")
-  expect_error(select(tourism, Region), "is not a valid tsibble.")
   expect_is(select(tourism, Region:Purpose), "tbl_ts")
-  expect_message(select(tourism, Region:Purpose), "Selecting index:")
   expect_is(select(tourism, Quarter:Purpose), "tbl_ts")
   expect_equal(
     quo_name(index(select(tourism, Index = Quarter, Region:Purpose))),
@@ -168,6 +159,14 @@ test_that("select() and rename()", {
     c("Index", "Trip", "Region", "State", "Purpose")
   )
   expect_identical(rename(tourism), tourism)
+  tourism_mel <- tourism %>%
+    filter(Region == "Melbourne", Purpose == "Holiday")
+  cols <- names(tourism_mel)
+  expect_named(select(tourism_mel, -Region), cols[-2])
+  expect_named(select(tourism_mel, -State), cols[-3])
+  expect_named(select(tourism_mel, -Purpose), cols[-4])
+  expect_named(select(tourism_mel, Trips), c("Trips", "Quarter"))
+  expect_named(select(tourism_mel, -Region, -State, -Purpose), cols[c(1, 5)])
 })
 
 test_that("rename tsibble with 'ordered' #126", {
@@ -233,7 +232,7 @@ test_that("summarise()", {
   tsbl2 <- tourism %>%
     group_by(Region, State, Purpose) %>%
     summarise(Trips = sum(Trips))
-  expect_equal(tourism, tsbl2)
+  expect_equivalent(tourism %>% select(names(tsbl2)), tsbl2)
   expect_identical(key(tourism), key(tsbl2))
   expect_identical(index(tourism), index(tsbl2))
   expect_identical(is_regular(tourism), is_regular(tsbl2))
@@ -241,12 +240,10 @@ test_that("summarise()", {
     group_by(Region, State, Purpose) %>%
     summarise(Obs = n())
   expect_identical(nrow(tsbl3), nrow(tourism))
-
-  expect_error(pedestrian %>% summarise(month = yearmonth(Date_Time)))
 })
 
 tsbl <- tsibble(
-  qtr = rep(yearquarter(seq(2010, 2012.25, by = 1 / 4)), 3),
+  qtr = rep(yearquarter("2010 Q1") + 0:9, 3),
   group = rep(c("x", "y", "z"), each = 10),
   a = rnorm(30),
   b = rnorm(30),
@@ -258,7 +255,7 @@ test_that("transmute()", {
   out <- tourism %>% transmute(Region = paste(Region, State))
   expect_equal(ncol(out), 4)
   trans_tsbl <- tsbl %>% transmute(z = a / b)
-  expect_equal(colnames(trans_tsbl), c("group", "qtr", "z"))
+  expect_equal(colnames(trans_tsbl), c("qtr", "group", "z"))
 })
 
 test_that("transmute.grouped_ts()", {
@@ -269,7 +266,7 @@ test_that("transmute.grouped_ts()", {
   out2 <- pedestrian %>%
     group_by_key() %>%
     transmute()
-  expect_named(out2, c("Sensor", "Date_Time"))
+  expect_named(out2, c("Date_Time", "Sensor"))
 })
 
 test_that("distinct()", {
@@ -289,7 +286,7 @@ test_that("rename() scoped variants", {
 })
 
 date_character <- function(x) {
-  is.Date(x) || is.character(x)
+  is_yearquarter(x) || is.character(x)
 }
 
 test_that("select() scoped variants", {
@@ -333,4 +330,15 @@ test_that("summarise() scoped variants", {
       summarise_at(vars(a:c), sum),
     ref_tsbl
   )
+})
+
+test_that("rename() for renaming key", {
+  bm <- pedestrian %>%
+    filter(Sensor == "Birrarung Marr") %>%
+    update_tsibble(key = NULL)
+  key_bm <- rename(bm, "sensor" = "Sensor")
+  expect_equal(key_vars(key_bm), character(0))
+  expect_true("sensor" %in% names(key_bm))
+  key_t <- tourism %>%
+    rename("purpose" = "Purpose", "region" = "Region", "trip" = "Trips")
 })

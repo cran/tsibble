@@ -7,15 +7,15 @@
 difference(x, lag = 1, differences = 1, default = NA, order_by = NULL)
 }
 \arguments{
-\item{x}{A numeric vector.}
+\item{x}{Vector of values}
 
-\item{lag}{An positive integer indicating which lag to use.}
+\item{lag}{A positive integer indicating which lag to use.}
 
-\item{differences}{An positive integer indicating the order of the difference.}
+\item{differences}{A positive integer indicating the order of the difference.}
 
-\item{default}{Value used for non-existent rows, defaults to \code{NA}.}
+\item{default}{Value used for non-existent rows. Defaults to \code{NA}.}
 
-\item{order_by}{Override the default ordering to use another vector.}
+\item{order_by}{Override the default ordering to use another vector or column}
 }
 \value{
 A numeric vector of the same length as \code{x}.

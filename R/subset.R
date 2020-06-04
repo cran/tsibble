@@ -3,14 +3,6 @@
   NextMethod()
 }
 
-# #' @export
-# `$<-.tbl_ts` <- function(x, name, value) {
-#   exceed_rows(x, length(value))
-#   name <- vars_select(union(names(x), name), name)
-#   lst_i <- map(name, ~ (.x = value))
-#   mutate(x, !!! lst_i)
-# }
-
 #' @export
 `[[.tbl_ts` <- function(x, i, j, ..., exact = TRUE) {
   NextMethod()
@@ -21,18 +13,55 @@
   res <- NextMethod()
   if (!is.data.frame(res)) return(res)
 
-  cn <- names(res)
-  new_key <- cn[cn %in% key_vars(x)]
+  i_arg <- substitute(i)
+  j_arg <- substitute(j)
 
-  if (!missing(i)) {
-    if (vec_duplicate_any(i) > 0) return(as_tibble(res))
+  if (missing(i)) {
+    i <- NULL
+    i_arg <- NULL
+  } else if (is.null(i)) {
+    i <- integer()
   }
 
-  not_tsibble <- !(index_var(x) %in% cn) || vec_size(res) > vec_size(x)
+  if (missing(j)) {
+    j <- NULL
+    j_arg <- NULL
+  } else if (is.null(j)) {
+    j <- integer()
+  }
+
+  # Ignore drop as an argument for counting
+  n_real_args <- nargs() - !missing(drop)
+
+  # Column or matrix subsetting if nargs() == 2L
+  if (n_real_args <= 2L) {
+    j <- i
+    i <- NULL
+    j_arg <- i_arg
+    i_arg <- NULL
+  }
+
+  cn <- names(res)
+  nr <- vec_size(x)
+  not_tsibble <- !(index_var(x) %in% cn) || vec_size(res) > nr || any(i > nr)
+  if (not_tsibble) return(as_tibble(res))
+
+  if (!is_null(i)) {
+    if (is.numeric(i) && vec_duplicate_any(i) > 0) return(as_tibble(res))
+  }
+
+  new_key <- cn[cn %in% key_vars(x)]
   maybe_tsibble <- n_keys(x) > 1 && !all(is.element(key(x), new_key))
-  if (not_tsibble || maybe_tsibble) {
-    as_tibble(res)
-  } else if (index2_var(x) %in% names(res)) {
+
+  # Column subsetting only
+  if (is_null(i) && !is_null(j) && maybe_tsibble) return(as_tibble(res))
+
+  # TODO: Both row and column subsetting (not implemented for performance reason)
+  # pedestrian[1:3, 2:5] # should return tsibble
+  # pedestrian[1:14567, 2:5] # should return tibble
+  # if (!is_null(i) && !is_null(j) && maybe_tsibble) return(as_tibble(res))
+
+  if (index2_var(x) %in% names(res)) {
     build_tsibble(
       res,
       key = !!new_key, index = !!index(x), index2 = !!index2(x),
@@ -47,48 +76,14 @@
   }
 }
 
-# #' @export
-# `[<-.tbl_ts` <- function(x, i, j, value) {
-#   if (missing(i) && missing(j)) {
-#     abort("Oops! Do you need tsibble?")
-#   }
-#
-#   n_args <- nargs()
-#   x <- ungroup(x)
-#   exceed_rows(x, length(value))
-#
-#   if (n_args <= 3 && !missing(i)) { # x, i/j, value
-#     # x[i] <-
-#     # x[, j] <-
-#     if (i > NCOL(x)) {
-#       i <- as.character(i)
-#       i <- vars_select(union(i, names(x)), i)
-#     } else {
-#       i <- vars_select(names(x), i)
-#     }
-#     lst_i <- map(i, ~ (.x = value))
-#     mutate(x, !!! lst_i)
-#   } else { # x[i, j] <-
-#     if (missing(i)) {
-#       i <- seq_len(NROW(x))
-#       res <- x
-#     } else {
-#       exceed_rows(x, max(i))
-#       res <- x[i, ]
-#     }
-#     if (j > NCOL(x)) { # character always greater than numbers
-#       j <- as.character(j)
-#       j <- vars_select(union(j, names(x)), j)
-#     } else {
-#       j <- vars_select(names(x), j)
-#     }
-#     lst_j <- map(j, ~ (.x = value))
-#     out <- rbind.data.frame(mutate(res, !!! lst_j), x[-i, ])
-#     full_seq <- seq_len(NROW(x))
-#     orig_idx <- order(c(i, full_seq[-i]))
-#     build_tsibble_meta(
-#       out[orig_idx, ], key = key(x), index = !! index(x), index2 = !! index2(x),
-#       regular = is_regular(x), ordered = is_ordered(x)
-#     )
-#   }
-# }
+#' @export
+`[.grouped_ts` <- `[.tbl_ts`
+
+#' @export
+`$<-.tbl_ts` <- function(x, name, value) {
+  if (name %in% c(key_vars(x), index_var(x))) {
+    x <- as_tibble(x)
+    return(NextMethod())
+  }
+  NextMethod()
+}

@@ -26,7 +26,7 @@
 #' @examples
 #' # from the starting time to the end of Feb, 2015
 #' pedestrian %>%
-#'   filter_index(~"2015-02")
+#'   filter_index(~ "2015-02")
 #'
 #' # entire Feb 2015, & from the beginning of Aug 2016 to the end
 #' pedestrian %>%
@@ -94,7 +94,7 @@ time_in <- function(x, ...) {
     }
   }
 
-  lgl <- lhs <- rhs <- vector("list", n)
+  lgl <- lhs <- rhs <- vec_init(list(), n)
   for (i in seq_len(n)) {
     f <- formulas[[i]]
     if (is_atomic(f)) {
@@ -229,49 +229,55 @@ end.POSIXct <- function(x, y = NULL, ...) {
 start.yearweek <- function(x, y = NULL, ...) {
   x <- as_date(x)
   if (!is_null(y)) {
+    abort_not_chr(y, class = "yearweek")
     y <- as.character(as_date(yearweek(y)))
   }
-  start(x = x, y = y)
+  yearweek(start(x = x, y = y))
 }
 
 end.yearweek <- function(x, y = NULL, ...) {
   x <- as_date(x)
   if (!is_null(y)) {
+    abort_not_chr(y, class = "yearweek")
     y <- as.character(as_date(yearweek(y)))
   }
-  end(x = x, y = y)
+  yearweek(end(x = x, y = y)) + 1
 }
 
 start.yearmonth <- function(x, y = NULL, ...) {
   x <- as_date(x)
   if (!is_null(y)) {
+    abort_not_chr(y, class = "yearmonth")
     y <- as.character(as_date(yearmonth(y)))
   }
-  start(x = x, y = y)
+  yearmonth(start(x = x, y = y))
 }
 
 end.yearmonth <- function(x, y = NULL, ...) {
   x <- as_date(x)
   if (!is_null(y)) {
+    abort_not_chr(y, class = "yearmonth")
     y <- as.character(as_date(yearmonth(y)))
   }
-  end(x = x, y = y)
+  yearmonth(end(x = x, y = y)) + 1
 }
 
 start.yearquarter <- function(x, y = NULL, ...) {
   x <- as_date(x)
   if (!is_null(y)) {
+    abort_not_chr(y, class = "yearquarter")
     y <- as.character(as_date(yearquarter(y)))
   }
-  start(x = x, y = y)
+  yearquarter(start(x = x, y = y))
 }
 
 end.yearquarter <- function(x, y = NULL, ...) {
   x <- as_date(x)
   if (!is_null(y)) {
+    abort_not_chr(y, class = "yearquarter")
     y <- as.character(as_date(yearquarter(y)))
   }
-  end(x = x, y = y)
+  yearquarter(end(x = x, y = y)) + 1
 }
 
 start.yearmon <- function(x, y = NULL, ...) {

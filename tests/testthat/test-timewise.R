@@ -1,5 +1,3 @@
-context("time-wise functions")
-
 test_that("difference() input", {
   expect_error(difference(1:10, lag = -1), "must be positive integers.")
   expect_error(difference(1:10, differences = -1), "must be positive integers.")

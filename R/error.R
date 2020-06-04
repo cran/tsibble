@@ -14,13 +14,15 @@ dont_know <- function(x, FUN) {
 
 abort_unknown_interval <- function(x) {
   if (unknown_interval(x)) {
-    abort("Can't proceed with tsibble of unknown interval.")
+    abort(sprintf("`%s` can't proceed with tsibble of unknown interval.",
+      deparse(sys.call(-1))))
   }
 }
 
 abort_if_irregular <- function(x) {
   if (!is_regular(x)) {
-    abort("Can't handle tsibble of irregular interval.")
+    abort(sprintf("`%s` can't handle tsibble of irregular interval.",
+      deparse(sys.call(-1))))
   }
 }
 
@@ -30,32 +32,15 @@ not_tsibble <- function(x) {
   }
 }
 
-check_valid_window <- function(.size, .align) {
-  if (is_even(.size) && .align %in% c("c", "centre", "center")) {
+pkg_not_available <- function(pkg, min_version = NULL) {
+  pkg_lgl <- requireNamespace(pkg, quietly = TRUE)
+  if (!pkg_lgl) {
+    abort(sprintf("Package `%s` required.\nPlease install and try again.", pkg))
+  } else if (pkg_lgl && is_null(min_version)) {
+    return()
+  } else if (utils::packageVersion(pkg) < min_version) {
     abort(sprintf(
-      "Can't use `.align = %s` for even window `.size`.\nPlease specify `.align = 'center-left'` or `.align = 'center-right'`.",
-      .align
-    ))
-  }
-}
-
-abort_not_lst <- function(.x, .bind = FALSE) {
-  if (!is.list(.x) && .bind) {
-    abort(sprintf("`.bind = TRUE` only accepts list, not %s.", typeof(.x)))
-  }
-}
-
-bad_window_function <- function(.size) {
-  if (!is_integerish(.size, n = 1)) {
-    abort("`.size` must be an integer.")
-  }
-  if (.size == 0) {
-    abort("`.size` must not be 0.")
-  }
-}
-
-bad_step_function <- function(.step) {
-  if (.step <= 0 || !is_integerish(.step, n = 1)) {
-    abort("`.step` must be a positive integer.")
+      "Package `%s` (>= v%s) required.\nPlease install and try again.", 
+      pkg, min_version))
   }
 }

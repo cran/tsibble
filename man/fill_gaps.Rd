@@ -17,14 +17,17 @@ existing \code{NA} untouched.
 \item filled by values or functions.
 }}
 
-\item{.full}{\code{FALSE} to insert \code{NA} for each series within its own period. \code{TRUE}
-to fill \code{NA} over the entire time span of the data (a.k.a. fully balanced panel).}
+\item{.full}{\itemize{
+\item \code{FALSE} inserts \code{NA} for each keyed unit within its own period.
+\item \code{TRUE} fills \code{NA} over the entire time span of the data (a.k.a. fully balanced panel).
+\item \code{start()} pad \code{NA} to the same starting point (i.e. \verb{min(<index>)}) across units.
+\item \code{end()} pad \code{NA} to the same ending point (i.e. \verb{max(<index>)}) across units.
+}}
 }
 \description{
 \lifecycle{stable}
 }
 \examples{
-library(dplyr)
 harvest <- tsibble(
   year = c(2010, 2011, 2013, 2011, 2012, 2014),
   fruit = rep(c("kiwi", "cherry"), each = 3),
@@ -34,6 +37,8 @@ harvest <- tsibble(
 
 # gaps as default `NA`
 fill_gaps(harvest, .full = TRUE)
+fill_gaps(harvest, .full = start())
+fill_gaps(harvest, .full = end())
 full_harvest <- fill_gaps(harvest, .full = FALSE)
 full_harvest
 
@@ -67,7 +72,7 @@ if (!requireNamespace("tidyr", quietly = TRUE)) {
 # use fill() to fill `NA` by previous/next entry
 pedestrian \%>\%
   group_by_key() \%>\%
-  fill_gaps() \%>\% 
+  fill_gaps() \%>\%
   tidyr::fill(Count, .direction = "down")
 }
 \seealso{

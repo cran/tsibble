@@ -1,5 +1,3 @@
-context("dplyr join family in tsibble")
-
 x <- tsibble(
   year = rep(2016:2017, 2), grp = rep(letters[1:2], each = 2),
   key = grp, index = year
@@ -28,7 +26,7 @@ test_that("right_join()", {
     group_by(grp) %>%
     right_join(y_key)
   expect_is(grped_right, "grouped_ts")
-  # expect_equal(n_groups(grped_right), 1)
+  expect_equal(n_groups(grped_right), 1)
   expect_equal(group_size(grped_right), 2)
 })
 
