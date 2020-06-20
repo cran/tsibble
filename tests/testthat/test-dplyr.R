@@ -332,6 +332,16 @@ test_that("summarise() scoped variants", {
   )
 })
 
+test_that("index_by() + summarise() for grouping factors #197", {
+  expect_silent({
+    tourism %>%
+      mutate(across(where(is.character), as.factor)) %>% 
+      index_by(Year = year(Quarter)) %>%
+      group_by(Region, State) %>% 
+      summarise(Trips = sum(Trips))
+  }) 
+})
+
 test_that("rename() for renaming key", {
   bm <- pedestrian %>%
     filter(Sensor == "Birrarung Marr") %>%
@@ -341,4 +351,11 @@ test_that("rename() for renaming key", {
   expect_true("sensor" %in% names(key_bm))
   key_t <- tourism %>%
     rename("purpose" = "Purpose", "region" = "Region", "trip" = "Trips")
+})
+
+test_that("drop redundant key #196", {
+  sim_tourism <- tourism %>% 
+    filter(Purpose == "Holiday") %>% 
+    select(-Purpose)
+  expect_equal(key_vars(sim_tourism), c("Region", "State"))
 })

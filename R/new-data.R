@@ -54,11 +54,20 @@ new_data.tbl_ts <- function(.data, n = 1L, keep_all = FALSE, ...) {
 
   out <- unwrap(ungroup(new_lst), .col = !!idx)
   if (keep_all) {
-    out <- vec_rbind(new_data_frame(.data[0L, ]), out)
+    out <- vec_rbind(grped_df[0L, ], out)
   } else { # reorder column names according to the data input
     out <- out[setdiff(names(.data), measured_vars(.data))]
   }
   update_meta(out, .data, ordered = is_ord, interval = interval(.data))
+}
+
+#' @export
+new_data.grouped_ts <- function(.data, n = 1L, keep_all = FALSE, ...) {
+  inform(c(
+    "Grouping structure is ignored.",
+    i = "`ungroup()` to silence this message."
+  ))
+  NextMethod()
 }
 
 #' @description
