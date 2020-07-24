@@ -6,12 +6,11 @@
 #' Assuming regularly spaced time, the `interval_pull()` returns a list of time
 #' components as the "interval" class.
 #'
-#' @param x A vector of `POSIXct`, `Date`, `yearweek`, `yearmonth`, `yearquarter`,
-#' `difftime`/`hms`, `ordered`, `integer`, `numeric`, and `nanotime`.
+#' @param x A vector of index-like class.
 #'
 #' @details Extend tsibble to support custom time indexes by defining S3 generics
 #' `index_valid()` and `interval_pull()` for them.
-#' @return an "interval" class (a list) includes "year",
+#' @return An "interval" class (a list) includes "year",
 #' "quarter", "month", "week", "day", "hour", "minute", "second", "millisecond",
 #' "microsecond", "nanosecond", "unit".
 #'
@@ -86,6 +85,21 @@ interval_pull.hms <- function(x) { # for hms package
 }
 
 #' @export
+interval_pull.Period <- function(x) {
+  second_int <- gcd_interval(x$second)
+  new_interval(
+    year = gcd_interval(x$year),
+    month = gcd_interval(x$month),
+    day = gcd_interval(x$day),
+    hour = gcd_interval(x$hour),
+    minute = gcd_interval(x$minute),
+    second = second_int %/% 1,
+    millisecond = round(second_int %% 1 %/% 1e-3),
+    microsecond = round(second_int %% 1 %/% 1e-6 %% 1e+3)
+  )
+}
+
+#' @export
 interval_pull.Date <- function(x) {
   dttm <- as.numeric(x)
   ndays <- gcd_interval(dttm) # num of seconds
@@ -107,20 +121,10 @@ interval_pull.yearmonth <- function(x) {
 }
 
 #' @export
-interval_pull.yearmon <- function(x) {
-  interval_pull(yearmonth(x))
-}
-
-#' @export
 interval_pull.yearquarter <- function(x) {
   qtr <- as.double(x)
   nqtrs <- gcd_interval(qtr)
   new_interval(quarter = nqtrs)
-}
-
-#' @export
-interval_pull.yearqtr <- function(x) {
-  interval_pull(yearquarter(x))
 }
 
 #' @export
@@ -147,6 +151,8 @@ interval_pull.ordered <- function(x) {
 #' @description
 #' \lifecycle{stable}
 #' * `new_interval()` creates an interval object.
+#' * `gcd_interval()` computes the greatest common divisor for the difference
+#' of numerics.
 #' * `is_regular_interval()` checks if the interval is regular.
 #'
 #' @param ... A set of name-value pairs to specify default interval units: "year",
@@ -156,6 +162,7 @@ interval_pull.ordered <- function(x) {
 #' the `...` argument.
 #' @param .others A list name-value pairs that are not included in the `...`,
 #' to allow custom interval.
+#' @param x A vector of numerics.
 #'
 #' @return an "interval" class
 #' @rdname new-interval
@@ -177,7 +184,7 @@ new_interval <- function(..., .regular = TRUE, .others = list()) {
     x_units <- paste(names_default[is.na(pidx)], collapse = ", ")
     abort(sprintf("Invalid argument: %s.", x_units))
   }
-  default <- eval_tidy(call2("default_interval", !!!default))
+  default <- eval_bare(call2("default_interval", !!!default))
   out <- dots_list(!!!default, !!!.others, .homonyms = "error")
   if (!(all(map_lgl(out, ~ has_length(., 1))))) {
     abort("Only accepts one input for each argument, not empty or multiple.")
@@ -265,6 +272,10 @@ abort_not_interval <- function(x) {
   }
 }
 
+#' @rdname new-interval
+#' @export
+#' @examples
+#' gcd_interval(c(1, 3, 5, 6))
 # regular time interval is obtained from the greatest common divisor of positive
 # time distances.
 gcd_interval <- function(x) {
@@ -294,3 +305,23 @@ has_tz <- function(x) {
   tz <- attr(x, "tzone")[[1]]
   !(is_null(tz) && !inherits(x, "POSIXt"))
 }
+
+#' @importFrom methods setOldClass setMethod
+setOldClass(c("interval", "vctrs_rcrd", "vctrs_vctr"))
+
+#' @importMethodsFrom lubridate as.period
+setMethod("as.period", "interval", function(x, ...) {
+  period(
+    year = x$year, 
+    month = x$quarter * 3 + x$month,
+    week = x$week,
+    day = x$day,
+    hour = x$hour,
+    minute = x$minute,
+    second = x$second + x$millisecond / 1e3 + x$microsecond / 1e6 + x$nanosecond / 1e9)
+})
+
+#' @importMethodsFrom lubridate as.duration
+setMethod("as.duration", "interval", function(x, ...) {
+  as.duration(as.period(x))
+})

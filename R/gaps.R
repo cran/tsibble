@@ -120,39 +120,35 @@ scan_gaps.tbl_ts <- function(.data, .full = FALSE) {
   idx <- index(.data)
   idx_chr <- as_string(idx)
   if (unknown_interval(int) || !is_regular(.data)) {
-    return(.data[0L, c(key_vars(.data), idx_chr)])
+    data0 <- vec_slice(.data, 0)
+    return(data0[c(key_vars(.data), idx_chr)])
   }
+  int <- default_time_units(int)
 
   key <- key(.data)
   keyed_tbl <- new_grouped_df(.data, groups = key_data(.data))
   if (is_true(.full)) {
     idx_full <- seq_generator(keyed_tbl[[idx_chr]], int)
     sum_data <-
-      summarise(keyed_tbl, !!idx_chr := list2(tibble(!!idx_chr := idx_full)))
+      summarise(keyed_tbl, !!idx_chr := list2(!!idx_chr := idx_full))
   } else if (is_false(.full)) {
     sum_data <- summarise(keyed_tbl,
-      !!idx_chr := list2(tibble(!!idx_chr := seq_generator(!!idx, int)))
-    )
+      !!idx_chr := list2(!!idx_chr := seq_generator(!!idx, int)))
   } else if (.full == expr("start()")) {
     start <- min(keyed_tbl[[idx_chr]])
     sum_data <- summarise(keyed_tbl,
-      !!idx_chr := list2(tibble(
-        !!idx_chr := seq_generator(c(start, max(!!idx)), int)
-      ))
-    )
+      !!idx_chr := list2(!!idx_chr := seq_generator(c(start, max(!!idx)), int)))
   } else if (.full == expr("end()")) {
     end <- max(keyed_tbl[[idx_chr]])
     sum_data <- summarise(keyed_tbl,
-      !!idx_chr := list2(tibble(
-        !!idx_chr := seq_generator(c(min(!!idx), end), int)
-      ))
-    )
+      !!idx_chr := list2(!!idx_chr := seq_generator(c(min(!!idx), end), int)))
   } else {
     abort_invalid_full_arg()
   }
   ref_data <- unwrap(sum_data, !!idx)
   if (vec_size(ref_data) == vec_size(.data)) {
-    .data[0L, c(key_vars(.data), idx_chr)]
+    data0 <- vec_slice(.data, 0)
+    data0[c(key_vars(.data), idx_chr)]
   } else {
     gap_data <- anti_join(ref_data, .data, by = c(key_vars(.data), idx_chr))
     update_meta(gap_data, .data, ordered = NULL, interval = interval(.data))
@@ -187,12 +183,13 @@ scan_gaps.tbl_ts <- function(.data, .full = FALSE) {
 #'   coord_flip() +
 #'   theme(legend.position = "bottom")
 count_gaps <- function(.data, .full = FALSE, .name = c(".from", ".to", ".n")) {
-  int <- interval(.data)
+  int <- default_time_units(interval(.data))
   idx <- index(.data)
 
   gap_data <- scan_gaps(.data, .full = !!enquo(.full))
   if (vec_size(gap_data) == 0L) {
-    data_key <- .data[0L, key_vars(.data)]
+    data0 <- vec_slice(.data, 0)
+    data_key <- data0[key_vars(.data)]
     idx_vals <- .data[[as_string(idx)]][0L]
     out <- vec_cbind(data_key, tbl_gaps(idx_vals, idx_vals, .name = .name))
     return(out)
@@ -201,10 +198,9 @@ count_gaps <- function(.data, .full = FALSE, .name = c(".from", ".to", ".n")) {
   idx_full <- seq_generator(.data[[as_string(idx)]], int)
   grped_tbl <- new_grouped_df(gap_data, groups = key_data(gap_data))
   lst_out <- summarise(grped_tbl,
-    !!".gaps" := list2(tbl_gaps(!!idx, idx_full, .name = .name)))
+    !!".gaps" := tbl_gaps(!!idx, idx_full, .name = .name))
 
-  out <- unwrap(lst_out, .gaps)
-  tibble(!!!out)
+  vec_cbind(lst_out[key_vars(.data)], vec_cbind(!!!lst_out$.gaps))
 }
 
 #' Does a tsibble have implicit gaps in time?
@@ -232,7 +228,7 @@ has_gaps <- function(.data, .full = FALSE, .name = ".gaps") {
   }
 
   .full <- quo_get_expr(enquo(.full))
-  int <- interval(.data)
+  int <- default_time_units(interval(.data))
   idx <- index(.data)
   idx_chr <- as_string(idx)
   grped_tbl <- new_grouped_df(.data, groups = key_data(.data))
@@ -281,37 +277,43 @@ tbl_gaps <- function(x, y, .name = c(".from", ".to", ".n")) {
   to <- cumsum(gap_idx)
   from <- vec_c(1, to[-vec_size(to)] + 1)
   nobs <- gap_idx[lgl_rle]
-  tibble(
+  new_data_frame(list2(
     !!.name[1] := y[from][lgl_rle],
     !!.name[2] := y[to][lgl_rle],
     !!.name[3] := nobs
-  )
+  ))
 }
 
-seq_generator <- function(x, interval = NULL) {
+seq_generator <- function(x, time_units = NULL, length_out = NULL) {
   if (is_empty(x)) return(x)
 
-  min_x <- min(x)
-  max_x <- max(x)
-  if (is_null(interval)) {
-    interval <- interval_pull(x)
-  }
-  tunit <- default_time_units(interval)
-  if (tunit == 0) return(x)
+  if (time_units == 0) return(x)
 
+  min_x <- min(x)
+  seq_call <- quote(seq(from = min_x, to = max(x), by = time_units, 
+    length.out = length_out))
+  if (!is.null(length_out)) {
+    seq_call <- call_modify(seq_call, to = zap())
+  }
   res <- tryCatch(
-    seq(min_x, max_x, tunit),
+    eval_bare(seq_call),
     error = function(e) NULL,
     warning = function(w) NULL
   )
-  if (!is_null(res)) return(res)
+  if (!is.null(res)) return(res)
 
   # no seq.* available
+  seq_call2 <- quote(seq.int(from = 0, to = as.double(max(x) - min_x),
+    by = time_units, length.out = length_out))
+  if (!is.null(length_out)) {
+    seq_call2 <- call_modify(seq_call2, to = zap())
+  }
+  msg <- sprintf("Neither `+` nor `seq()` are defined for class %s", class(x)[1L])
   res2 <- tryCatch(
-    min_x + seq.int(0, as.double(max_x - min_x), tunit),
+    min_x + eval_bare(seq_call2),
     error = function(e) {
       e$call <- NULL
-      e$message <- sprintf("Neither `+` nor `seq()` are defined for class %s", class(x)[1L])
+      e$message <- msg
       stop(e)
     }
   )
@@ -328,7 +330,7 @@ unwrap <- function(.data, .col) {
     vec_seq_along(.data), vapply(.data[[lst_col]], vec_size, integer(1))
   )
   res <- vec_slice(res, row_indices)[setdiff(names(.data), lst_col)]
-  vec_cbind(res, vec_rbind(!!!.data[[lst_col]]))
+  vec_cbind(res, !!lst_col := vec_c(!!!.data[[lst_col]], .name_spec = zap()))
 }
 
 abort_invalid_full_arg <- function() {

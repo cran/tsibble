@@ -5,7 +5,7 @@
 #'
 #' S3 method to add an index type support for a tsibble.
 #'
-#' @param x An object of index type that the tsibble supports.
+#' @param x An object of index type supported by tsibble.
 #'
 #' @details This method is primarily used for adding an index type support in
 #' [as_tsibble].
@@ -36,19 +36,28 @@ index_valid.yearweek <- index_valid.POSIXt
 index_valid.yearmonth <- index_valid.POSIXt
 
 #' @export
-index_valid.yearmon <- index_valid.yearmonth
+index_valid.yearmon <- function(x) {
+  abort(c("No index support for class \"yearmon\".",
+    i = "Please use `yearmonth()` to convert first."))
+}
 
 #' @export
 index_valid.yearquarter <- index_valid.POSIXt
 
 #' @export
-index_valid.yearqtr <- index_valid.yearquarter
+index_valid.yearqtr <- function(x) {
+  abort(c("No index support for class \"yearqtr\".",
+    i = "Please use `yearquarter()` to convert first."))
+}
 
 #' @export
 index_valid.nanotime <- index_valid.POSIXt
 
 #' @export
 index_valid.ordered <- index_valid.POSIXt
+
+#' @export
+index_valid.Period <- index_valid.POSIXt
 
 #' @export
 index_valid.numeric <- function(x) {

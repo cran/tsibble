@@ -1,14 +1,30 @@
-globalVariables(c(".rows", "id"))
+#' Deprecated functions
+#'
+#' @description
+#' * `is.tsibble()` \lifecycle{defunct}
+#'
+#' @param x Other objects.
+#'
+#' @rdname deprecated
+#' @export
+#' @keywords internal
+is.tsibble <- function(x) {
+  lifecycle::deprecate_stop("0.8.4", "is.tsibble()", "is_tsibble()")
+}
+
+globalVariables(c(".rows"))
+
+setOldClass(c("tbl_ts", "tbl_df", "tbl", "data.frame"))
 
 #' Create a tsibble object
 #'
 #' \lifecycle{stable}
 #'
 #' @param ... A set of name-value pairs.
-#' @param key Unquoted variable(s) that uniquely determine time indices. `NULL` for
+#' @param key Variable(s) that uniquely determine time indices. `NULL` for
 #' empty key, and `c()` for multiple variables. It works with tidy selector
 #' (e.g. [dplyr::starts_with()]).
-#' @param index A bare (or unquoted) variable to specify the time index variable.
+#' @param index A variable to specify the time index variable.
 #' @param regular Regular time interval (`TRUE`) or irregular (`FALSE`). The
 #' interval is determined by the greatest common divisor of index column, if `TRUE`.
 #' @param .drop If `TRUE`, empty key groups are dropped.
@@ -400,7 +416,7 @@ validate_order <- function(x) {
     any(x)
   } else if (is_bare_numeric(x) && all(x < 0)) {
     TRUE
-  } else if ((vec_duplicate_any(x)) > 0) {
+  } else if (vec_duplicate_any(x) > 0) {
     abort(sprintf("Duplicated indices: %s", comma(x[vec_duplicate_detect(x)])))
   } else {
     is_ascending(x, na.rm = TRUE, strictly = TRUE)
@@ -575,7 +591,7 @@ duplicated_key_index <- function(data, key, index, key_data = NULL) {
 }
 
 assert_key_data <- function(x) {
-  nc <- NCOL(x)
+  nc <- length(x)
   if (is_false(
     is.data.frame(x) &&
     nc > 0 &&

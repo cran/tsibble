@@ -36,7 +36,7 @@ tsbl2 <- tsibble(
   station = "B",
   index = time, key = station
 ) %>% print()
-rbind(tsbl1, tsbl2)
+bind_rows(tsbl1, tsbl2)
 
 ## -----------------------------------------------------------------------------
 x <- make_datetime(2018) + minutes(0:1)

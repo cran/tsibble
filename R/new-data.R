@@ -43,18 +43,19 @@ new_data.tbl_ts <- function(.data, n = 1L, keep_all = FALSE, ...) {
     last_entry <- summarise(grped_df, !!idx := min(!!idx))
     tunit <- -tunit
   }
-  if (NCOL(key_data) == 1) { # no key
+  if (length(key_data) == 1) { # no key
     regrped_df <- last_entry
   } else {
     meta_grps <- mutate(key_data, .rows = list2(!!!vec_seq_along(last_entry)))
     regrped_df <- new_grouped_df(last_entry, groups = meta_grps)
   }
   new_lst <- mutate(regrped_df, 
-    !!idx := list2(tibble(!!idx := seq(!!idx, by = tunit, length.out = abs(n) + 1)[-1])))
+    !!idx := list2(
+      !!idx := seq_generator(!!idx, tunit, length_out = abs(n) + 1)[-1]))
 
   out <- unwrap(ungroup(new_lst), .col = !!idx)
   if (keep_all) {
-    out <- vec_rbind(grped_df[0L, ], out)
+    out <- vec_rbind(vec_slice(.data, 0L), out)
   } else { # reorder column names according to the data input
     out <- out[setdiff(names(.data), measured_vars(.data))]
   }

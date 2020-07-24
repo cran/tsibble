@@ -6,18 +6,18 @@
 #' variables in a data-centric format, which is built on top of the tibble.
 #'
 #' @section Index:
-#' An extensive range of indices are supported by tsibble: native time classes in R
-#' (such as `Date`, `POSIXct`, and `difftime`) and tsibble's new additions
-#' (such as [yearweek], [yearmonth], and [yearquarter]). Some commonly-used classes
-#' have built-in support too, including `ordered`, `hms::hms`, `zoo::yearmon`,
-#' `zoo::yearqtr`, and `nanotime`.
+#' An extensive range of indices are supported by tsibble:
+#' * native time classes in R (such as `Date`, `POSIXct`, and `difftime`)
+#' * tsibble's new additions (such as [yearweek], [yearmonth], and [yearquarter]).
+#' * other commonly-used classes: `ordered`, `hms::hms`, `lubridate::period`,
+#' and `nanotime::nanotime`.
 #'
 #' For a `tbl_ts` of regular interval, a choice of index representation has to
 #' be made. For example, a monthly data should correspond to time index created
-#' by [yearmonth] or `zoo::yearmon`, instead of `Date` or `POSIXct`. Because
-#' months in a year ensures the regularity, 12 months every year. However, if
-#' using `Date`, a month containing days ranges from 28 to 31 days, which results
-#' in irregular time space. This is also applicable to year-week and year-quarter.
+#' by [yearmonth], instead of `Date` or `POSIXct`. Because months in a year 
+#' ensures the regularity, 12 months every year. However, if using `Date`, a
+#' month containing days ranges from 28 to 31 days, which results in irregular
+#' time space. This is also applicable to year-week and year-quarter.
 #'
 #' Tsibble supports arbitrary index classes, as long as they can be ordered from
 #' past to future. To support a custom class, you need to define [index_valid()]
@@ -26,8 +26,7 @@
 #' @section Key:
 #' Key variable(s) together with the index uniquely identifies each record:
 #' * Empty: an implicit variable. `NULL` resulting in a univariate time series.
-#' * A single variable: For example, `data(pedestrian)` use the bare `Sensor` as
-#' the key.
+#' * A single variable: For example, `data(pedestrian)` uses `Sensor` as the key.
 #' * Multiple variables: For example, Declare `key = c(Region, State, Purpose)`
 #' for `data(tourism)`.
 #' Key can be created in conjunction with tidy selectors like `starts_with()`.
@@ -45,19 +44,22 @@
 #' An interval is obtained based on the corresponding index representation:
 #' * integerish numerics between 1582 and 2499: "year" (`Y`). Note the year of
 #' 1582 saw the beginning of the Gregorian Calendar switch.
-#' * `yearquarter`/`yearqtr`: "quarter" (`Q`)
-#' * `yearmonth`/`yearmon`: "month" (`M`)
+#' * `yearquarter`: "quarter" (`Q`)
+#' * `yearmonth`: "month" (`M`)
 #' * `yearweek`: "week" (`W`)
 #' * `Date`: "day" (`D`)
 #' * `difftime`: "week" (`W`), "day" (D), "hour" (`h`), "minute" (`m`), "second" (`s`)
-#' * `POSIXt`/`hms`: "hour" (`h`), "minute" (`m`), "second" (`s`), "millisecond" (`us`), "microsecond" (`ms`)
+#' * `POSIXt`/`hms`: "hour" (`h`), "minute" (`m`), "second" (`s`), "millisecond" (`us`),
+#' "microsecond" (`ms`)
+#' * `period`: "year" (`Y`), "month" (`M`), "day" (`D`), "hour" (`h`),
+#' "minute" (`m`), "second" (`s`), "millisecond" (`us`), "microsecond" (`ms`)
 #' * `nanotime`: "nanosecond" (`ns`)
 #' * other numerics &`ordered` (ordered factor): "unit"
 #' When the interval cannot be obtained due to the mismatched index format, an
 #' error is issued.
 #'
 #' The interval is invariant to subsetting, such as `filter()`, `slice()`, and `[.tbl_ts`.
-#' But if the result is an empty tsibble, the interval is always unknown.
+#' However, if the result is an empty tsibble, the interval is always unknown.
 #' When joining a tsibble with other data sources and aggregating to different
 #' time scales, the interval gets re-calculated.
 #'
@@ -73,7 +75,8 @@
 #' @importFrom utils head tail
 #' @importFrom stats frequency start end time ts as.ts tsp<-
 #' @importFrom anytime assertTime assertDate utcdate utctime anydate
-#' @importFrom lubridate make_date wday floor_date year month period
+#' @importFrom lubridate make_date wday floor_date year month period as.period
+#' @importFrom lubridate as.duration
 #' @importFrom lubridate quarter is.POSIXct rollback force_tz tz is.POSIXt is.Date
 #' @importFrom lubridate decimal_date date_decimal round_date
 #' @importFrom lubridate seconds_to_period month<- weeks days as_date
