@@ -1,3 +1,10 @@
+# tsibble 0.9.3
+
+* Defunct rolling functions in favour of {slider}.
+* Dropped the support of `summarise_all()`, and made `dplyr::across()` compatible with `summarise.tbl_ts()`.
+* Fixed bug in custom ggplot scaling functions for out-of-limit breaks. (#195, #219, @TylerGrantSmith)
+* Fixed crashing bug in `grouped_ts[0L, ]`. (#194, @TylerGrantSmith)
+
 # tsibble 0.9.2
 
 * Fixed bug in `new_data()` for the `yearweek` class. (#199)
