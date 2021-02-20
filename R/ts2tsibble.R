@@ -92,7 +92,7 @@ time_to_date <- function(x, tz = "UTC") {
 #' @keywords internal
 #' @export
 as_tsibble.msts <- function(x, ..., tz = "UTC", pivot_longer = TRUE) {
-  if (ncol(x) == 1) {
+  if (NCOL(x) == 1) {
     as_tsibble.ts(x, ..., tz = tz)
   } else {
     as_tsibble.mts(x, ..., tz = tz, pivot_longer = pivot_longer)
@@ -132,10 +132,11 @@ extract_labels <- function(x) {
   btm_labels <- old_labels[[length(old_labels)]]
   new_labels <- old_labels[-c(1, length(old_labels))]
   chr_labs <- map2(
-    new_labels, seq_along(new_labels), ~ .x[rep_nodes(nodes, level = .y)]
+    new_labels, seq_along(new_labels),
+    function(.x, .y) .x[rep_nodes(nodes, level = .y)]
   )
   nr <- nrow(x$bts)
-  full_labs <- map(chr_labs, ~ rep(., each = nr))
+  full_labs <- map(chr_labs, function(.x) rep(.x, each = nr))
   full_labs <- c(full_labs, list(rep(btm_labels, each = nr)))
   names(full_labs) <- names(old_labels[-1])
   full_labs

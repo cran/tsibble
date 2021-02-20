@@ -46,7 +46,7 @@ yearweek.default <- function(x,
 }
 
 #' @export
-yearweek.NULL <- function(x, 
+yearweek.NULL <- function(x,
                           week_start = getOption("lubridate.week.start", 1)) {
   new_yearweek(double(), week_start = week_start)
 }
@@ -77,14 +77,14 @@ yearweek.character <- function(x,
   key_words <- regmatches(x, gregexpr("[[:alpha:]]+", x))
   if (all(grepl("^(w|wk|week)$", key_words, ignore.case = TRUE))) {
     yr_week <- regmatches(x, gregexpr("[[:digit:]]+", x))
-    digits_lgl <- map_lgl(yr_week, ~ !has_length(.x, 2))
-    digits_len <- map_int(yr_week, ~ sum(nchar(.x)))
+    digits_lgl <- map_lgl(yr_week, function(.x) !has_length(.x, 2))
+    digits_len <- map_int(yr_week, function(.x) sum(nchar(.x)))
     if (any(digits_lgl) || any(digits_len < 5)) {
       abort("Character strings are not in a standard unambiguous format.")
     }
-    yr_lgl <- map(yr_week, ~ grepl("[[:digit:]]{4}", .x))
-    yr <- as.integer(map2_chr(yr_week, yr_lgl, ~ .x[.y]))
-    week <- as.integer(map2_chr(yr_week, yr_lgl, ~ .x[!.y]))
+    yr_lgl <- map(yr_week, function(.x) grepl("[[:digit:]]{4}", .x))
+    yr <- as.integer(map2_chr(yr_week, yr_lgl, function(.x, .y) .x[.y]))
+    week <- as.integer(map2_chr(yr_week, yr_lgl, function(.x, .y) .x[!.y]))
     if (any(week > 53)) {
       abort("Weeks can't be greater than 53.")
     }
@@ -280,7 +280,7 @@ format.yearweek <- function(x, format = "%Y W%V", ...) {
   vec_slice(x, lgl1) <- vec_slice(x, lgl1) - shift_year
   vec_slice(x, lgl2) <- vec_slice(x, lgl2) + shift_year
   wk_chr <- formatC(wk, width = 2, flag = "0")
-  wk_sub <- map_chr(wk_chr, ~ gsub("%V", ., x = format))
+  wk_sub <- map_chr(wk_chr, function(.x) gsub("%V", .x, x = format))
   wk_sub[is.na(wk_sub)] <- "-"
   format.Date(x, format = wk_sub)
 }
@@ -316,17 +316,24 @@ vec_ptype_abbr.yearweek <- function(x, ...) {
 #' @export
 seq.yearweek <- function(from, to, by, length.out = NULL, along.with = NULL,
                          ...) {
-  bad_by(by)
-  by_mth <- paste(by, "week")
   wk_start <- week_start(from)
   from <- vec_cast(from, new_date())
   if (!is_missing(to)) {
     to <- vec_cast(to, new_date())
   }
-  new_yearweek(seq_date(
-    from = from, to = to, by = by_mth, length.out = length.out,
-    along.with = along.with, ...
-  ), wk_start)
+  if (is_missing(by)) {
+    new_yearweek(seq_date(
+      from = from, to = to, length.out = length.out,
+      along.with = along.with, ...
+    ), wk_start)
+  } else {
+    bad_by(by)
+    by_week <- paste(by, "week")
+    new_yearweek(seq_date(
+      from = from, to = to, by = by_week, length.out = length.out,
+      along.with = along.with, ...
+    ), wk_start)
+  }
 }
 
 #' @rdname year-week
@@ -378,3 +385,12 @@ convert_week_to_date <- function(year, week, week_start) {
   }
   yearweek(0, week_start) + shift_num
 }
+
+#' @export
+union.yearweek <- set_ops("yearweek", op = "union")
+
+#' @export
+intersect.yearweek <- set_ops("yearweek", op = "intersect")
+
+#' @export
+setdiff.yearweek <- set_ops("yearweek", op = "setdiff")

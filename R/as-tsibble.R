@@ -337,6 +337,8 @@ build_tsibble <- function(x, key = NULL, key_data = NULL, index, index2 = index,
 #' high performance.
 #'
 #' @inheritParams build_tsibble
+#' @param ordered `TRUE` suggests to skip the ordering as `x` in
+#' the correct order. `FALSE` checks the ordering and may give a warning.
 #' @param index,index2 Quoted variable name.
 #'
 #' @keywords internal
@@ -401,7 +403,7 @@ validate_index <- function(data, index) {
     idx_pos <- vec_in(names, chr_index)
     val_lgl <- val_idx[idx_pos]
     if (is.na(val_lgl)) {
-      return(chr_index)
+      NULL
     } else if (!val_lgl) {
       cls_idx <- vapply(data, function(x) class(x)[1], character(1))
       abort(sprintf("Unsupported index type: %s", cls_idx[idx_pos]))

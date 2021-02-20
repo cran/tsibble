@@ -65,8 +65,12 @@ yearmonth.Date <- function(x) {
 
 #' @export
 yearmonth.character <- function(x) {
+  fmts <- c("%B %Y", "%b %Y", "%Y M%m", "%Y m%m")
+  addFormats(fmts)
   assertDate(x)
-  new_yearmonth(anydate(x))
+  dates <- anydate(x)
+  removeFormats(fmts)
+  yearmonth(dates)
 }
 
 #' @export
@@ -259,17 +263,61 @@ vec_ptype_abbr.yearmonth <- function(x, ...) {
 #' @export
 seq.yearmonth <- function(from, to, by, length.out = NULL, along.with = NULL,
                           ...) {
-  bad_by(by)
-  by_mth <- paste(by, "month")
   from <- vec_cast(from, new_date())
   if (!is_missing(to)) {
     to <- vec_cast(to, new_date())
   }
-  new_yearmonth(seq_date(
-    from = from, to = to, by = by_mth, length.out = length.out,
-    along.with = along.with, ...
-  ))
+  if (is_missing(by)) {
+    new_yearmonth(seq_date(
+      from = from, to = to, length.out = length.out,
+      along.with = along.with, ...
+    ))
+  } else {
+    bad_by(by)
+    by_mth <- paste(by, "month")
+    new_yearmonth(seq_date(
+      from = from, to = to, by = by_mth, length.out = length.out,
+      along.with = along.with, ...
+    ))
+  }
 }
+
+
+#' @importFrom generics union
+#' @export
+generics::union
+
+#' @importFrom generics intersect
+#' @export
+generics::intersect
+
+#' @importFrom generics setdiff
+#' @export
+generics::setdiff
+
+set_ops <- function(class = "yearmonth", op = "intersect") {
+  force(class)
+  force(op)
+  fun <- switch(op,
+    "union" = function(x, y, ...) vec_unique(vec_c(x, y)),
+    "intersect" = function(x, y, ...) vec_slice(x, vec_in(x, y)),
+    "setdiff" = function(x, y, ...)
+      vec_unique(if (length(x) || length(y)) x[is.na(vec_match(x, y))] else x)
+  )
+  function(x, y, ...) {
+    abort_if_not(y, class)
+    fun(x, y, ...)
+  }
+}
+
+#' @export
+union.yearmonth <- set_ops("yearmonth", op = "union")
+
+#' @export
+intersect.yearmonth <- set_ops("yearmonth", op = "intersect")
+
+#' @export
+setdiff.yearmonth <- set_ops("yearmonth", op = "setdiff")
 
 bad_by <- function(by) {
   if (!is_bare_numeric(by, n = 1)) {

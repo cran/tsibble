@@ -97,3 +97,31 @@ test_that("fiscal_year()", {
   expect_equal(fiscal_year(yearquarter("2020 Q1", fiscal_start = 6)), 2020)
   expect_equal(lubridate::year(yearquarter("2020 Q1", fiscal_start = 6)), 2019)
 })
+
+test_that("yearquarter() with missing `by` #228", {
+  expect_length(seq(yearquarter("2020-01-01"), yearquarter("2020-12-01"),
+    length.out = 3), 3)
+})
+
+test_that("yearquarter() set operations", {
+  expect_identical(
+    intersect(yearquarter("2020 Q1") + 0:6, yearquarter("2020 Q1") + 3:9),
+    yearquarter("2020 Q1") + intersect(0:6, 3:9))
+  expect_error(intersect(
+    yearquarter("2020 Q1"),
+    yearquarter("2020 Q1", fiscal_start = 2)
+  ))
+
+  expect_identical(
+    union(yearquarter("2020 Q1") + 0:6, yearquarter("2020 Q1") + 3:9),
+    yearquarter("2020 Q1") + 0:9)
+  expect_error(union(
+    yearquarter("2020 Q1"),
+    yearquarter("2020 Q1", fiscal_start = 2)
+  ))
+
+  expect_identical(
+    setdiff(yearquarter("2020 Q1") + 0:6, yearquarter("2020 Q1") + 3:9),
+    yearquarter("2020 Q1") + setdiff(0:6, 3:9))
+})
+

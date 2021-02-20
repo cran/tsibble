@@ -186,7 +186,7 @@ new_interval <- function(..., .regular = TRUE, .others = list()) {
   }
   default <- eval_bare(call2("default_interval", !!!default))
   out <- dots_list(!!!default, !!!.others, .homonyms = "error")
-  if (!(all(map_lgl(out, ~ has_length(., 1))))) {
+  if (!(all(map_lgl(out, function(x) has_length(x, 1))))) {
     abort("Only accepts one input for each argument, not empty or multiple.")
   }
   new_rcrd(fields = out, .regular = .regular, class = "interval")
@@ -264,9 +264,6 @@ default_time_units <- function(x) {
 }
 
 abort_not_interval <- function(x) {
-  if (!inherits(x, "vctrs_rcrd")) {
-    abort("Detecting a corrupt tsibble object, and please reconstruct with `as_tsibble()`.")
-  }
   if (is_false(inherits(x, "interval"))) {
     abort("`x` must be class 'interval'.")
   }

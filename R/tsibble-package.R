@@ -14,7 +14,7 @@
 #'
 #' For a `tbl_ts` of regular interval, a choice of index representation has to
 #' be made. For example, a monthly data should correspond to time index created
-#' by [yearmonth], instead of `Date` or `POSIXct`. Because months in a year 
+#' by [yearmonth], instead of `Date` or `POSIXct`. Because months in a year
 #' ensures the regularity, 12 months every year. However, if using `Date`, a
 #' month containing days ranges from 28 to 31 days, which results in irregular
 #' time space. This is also applicable to year-week and year-quarter.
@@ -75,14 +75,12 @@
 #' @importFrom utils head tail
 #' @importFrom stats frequency start end time ts as.ts tsp<-
 #' @importFrom anytime assertTime assertDate utcdate utctime anydate
+#' @importFrom anytime addFormats removeFormats
 #' @importFrom lubridate make_date wday floor_date year month period as.period
 #' @importFrom lubridate as.duration
 #' @importFrom lubridate quarter is.POSIXct rollback force_tz tz is.POSIXt is.Date
 #' @importFrom lubridate decimal_date date_decimal round_date
 #' @importFrom lubridate seconds_to_period month<- weeks days as_date
-#' @importFrom purrr map map_dbl map_int map_chr map_lgl reduce imap
-#' @importFrom purrr map2 map2_dbl map2_int map2_chr map2_lgl
-#' @importFrom purrr pmap pmap_dbl pmap_int pmap_chr pmap_lgl
 #' @importFrom dplyr arrange filter select mutate transmute summarise rename
 #' @importFrom dplyr group_by ungroup group_data grouped_df group_vars
 #' @importFrom dplyr group_rows groups new_grouped_df is_grouped_df

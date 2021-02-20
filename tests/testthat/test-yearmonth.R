@@ -62,3 +62,34 @@ test_that("yearmonth() #89", {
     ))))
   )
 })
+
+test_that("yearmonth() #226", {
+  expect_equal(yearmonth("2020-01-01"), yearmonth("2020-01-02"))
+})
+
+test_that("yearmonth() with missing `by` #228", {
+  expect_length(seq(yearmonth("2020-01-01"), yearmonth("2020-06-01"),
+    length.out = 3), 3)
+})
+
+test_that("yearmonth() set operations", {
+  date <- as.Date("2020-01-01")
+  expect_identical(
+    intersect(yearmonth(date) + 0:6, yearmonth(date) + 3:9),
+    yearmonth(date) + intersect(0:6, 3:9))
+
+  expect_error(intersect(yearmonth(date) + 0:6, date),
+    "`y` must be of class \"yearmonth\".")
+
+  expect_identical(
+    union(yearmonth(date) + 0:6, yearmonth(date) + 3:9),
+    yearmonth(date) + 0:9)
+
+  expect_identical(
+    setdiff(yearmonth(date) + 0:6, yearmonth(date) + 3:9),
+    yearmonth(date) + setdiff(0:6, 3:9))
+})
+
+test_that("yearmonth() for `2019 M01` #142", {
+  expect_identical(yearmonth("2019 M01"), yearmonth("2019-01-01"))
+})

@@ -71,14 +71,14 @@ yearquarter.character <- function(x, fiscal_start = 1) {
   key_words <- regmatches(x, gregexpr("[[:alpha:]]+", x))
   if (all(grepl("^(q|qtr|quarter)$", key_words, ignore.case = TRUE))) {
     yr_qtr <- regmatches(x, gregexpr("[[:digit:]]+", x))
-    digits_lgl <- map_lgl(yr_qtr, ~ !has_length(.x, 2))
-    digits_len <- map_int(yr_qtr, ~ sum(nchar(.x)))
+    digits_lgl <- map_lgl(yr_qtr, function(.x) !has_length(.x, 2))
+    digits_len <- map_int(yr_qtr, function(.x) sum(nchar(.x)))
     if (any(digits_lgl) || any(digits_len != 5)) {
       abort("Character strings are not in a standard unambiguous format.")
     }
-    yr_lgl <- map(yr_qtr, ~ grepl("[[:digit:]]{4}", .x))
-    yr <- as.integer(map2_chr(yr_qtr, yr_lgl, ~ .x[.y]))
-    qtr <- as.integer(map2_chr(yr_qtr, yr_lgl, ~ .x[!.y]))
+    yr_lgl <- map(yr_qtr, function(.x) grepl("[[:digit:]]{4}", .x))
+    yr <- as.integer(map2_chr(yr_qtr, yr_lgl, function(.x, .y) .x[.y]))
+    qtr <- as.integer(map2_chr(yr_qtr, yr_lgl, function(.x, .y) .x[!.y]))
     if (any(qtr > 4)) {
       abort("Quarters can't be greater than 4.")
     }
@@ -317,17 +317,24 @@ vec_ptype_abbr.yearquarter <- function(x, ...) {
 #' @export
 seq.yearquarter <- function(from, to, by, length.out = NULL, along.with = NULL,
                             ...) {
-  bad_by(by)
-  by_mth <- paste(by, "quarter")
   fs <- fiscal_start(from)
   from <- vec_cast(from, new_date())
   if (!is_missing(to)) {
     to <- vec_cast(to, new_date())
   }
-  new_yearquarter(seq_date(
-    from = from, to = to, by = by_mth, length.out = length.out,
-    along.with = along.with, ...
-  ), fs)
+  if (is_missing(by)) {
+    new_yearquarter(seq_date(
+      from = from, to = to, length.out = length.out,
+      along.with = along.with, ...
+    ), fs)
+  } else {
+    bad_by(by)
+    by_qtr <- paste(by, "quarter")
+    new_yearquarter(seq_date(
+      from = from, to = to, by = by_qtr, length.out = length.out,
+      along.with = along.with, ...
+    ), fs)
+  }
 }
 
 seq.ordered <- function(from, to, by, ...) {
@@ -351,3 +358,13 @@ fiscal_year <- function(x) {
   stopifnot(is_yearquarter(x))
   trunc(quarter(x, TRUE, fiscal_start(x)))
 }
+
+#' @export
+union.yearquarter <- set_ops("yearquarter", op = "union")
+
+#' @export
+intersect.yearquarter <- set_ops("yearquarter", op = "intersect")
+
+#' @export
+setdiff.yearquarter <- set_ops("yearquarter", op = "setdiff")
+
