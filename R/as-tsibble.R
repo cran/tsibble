@@ -604,3 +604,19 @@ assert_key_data <- function(x) {
     abort("The `key` attribute must be a data frame with its last column called `.rows`.")
   }
 }
+
+#' @keywords internal
+#' @export
+rbind.tbl_ts <- function(...) {
+  abort(c(
+    "Not supported for tsibble.", 
+    i = "Please use `dplyr::bind_rows()` instead."))
+}
+
+#' @keywords internal
+#' @export
+cbind.tbl_ts <- function(...) {
+  abort(c(
+    "Not supported for tsibble.", 
+    i = "Please use `dplyr::bind_cols()` instead."))
+}

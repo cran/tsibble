@@ -1,6 +1,6 @@
 ## ----initial, echo = FALSE, cache = FALSE, results = 'hide'-------------------
 knitr::opts_chunk$set(
-  warning = FALSE, message = FALSE, echo = TRUE,
+  warning = FALSE, message = FALSE, echo = TRUE, collapse = TRUE,
   fig.width = 7, fig.height = 6, fig.align = 'centre',
   comment = "#>"
 )

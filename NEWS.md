@@ -1,3 +1,14 @@
+# tsibble 1.1.0
+
+* Abort `rbind()` and `cbind()` for tsibble, and suggest to use `bind_rows()` and `bind_cols()` instead. (#256)
+* Fixed bug in `filter_in()` for `yearweek` class with different week starts of than the default. (#261)
+* Improved `as.ts.tbl_ts()` to better handle a tsibble of multiple key variables but single value. (#258)
+* Added new arguments `.start` and `.end` to `*_gaps()` for custom starting and ending time. (#259)
+* Fixed bug in `holiday_aus()` for Boxing Day. If falling on Sat/Sun, the holiday should be forwarded to 2 days. (#251)
+* Added `count()` and `tally()` S3 methods for tsibble to behave like tibble input, and hence `add_count()` and `add_tally()`. (#232)
+* Added a warning to `yearmonth.character()` when inputs are all numbers without delimiter. (#264)
+* `NA` is accepted in `year*()`, instead of errors before.
+
 # tsibble 1.0.1
 
 * Fixed format bug in `yearmonth()`. (#250, @mitchelloharawild)

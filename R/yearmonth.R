@@ -11,6 +11,8 @@
 #' Please see [`strptime()`] details for supported conversion specifications.
 #'
 #' @param x Other object.
+#' @param format A vector of strings to specify additional formats of `x` (e.g. `%Y%m`),
+#' if a warning or an error occurs.
 #' @param ... Further arguments to methods.
 #'
 #' @return year-month (`yearmonth`) objects.
@@ -52,6 +54,15 @@ yearmonth.NULL <- function(x, ...) {
 }
 
 #' @export
+yearmonth.logical <- function(x, ...) {
+  if (is.logical(x) && all(is.na(x))) {
+    new_yearmonth(0) + NA_real_
+  } else {
+    dont_know(x, "yearmonth")
+  }
+}
+
+#' @export
 yearmonth.POSIXct <- function(x, ...) {
   new_yearmonth(floor_date(as_date(x), unit = "months"))
 }
@@ -64,6 +75,7 @@ yearmonth.Date <- function(x, ...) {
   new_yearmonth(floor_date(x, unit = "months"))
 }
 
+#' @rdname year-month
 #' @export
 yearmonth.character <- function(x, format = NULL, ...) {
   fmts <- c("%B %Y", "%b %Y", "%Y M%m", "%Y m%m")
@@ -71,6 +83,13 @@ yearmonth.character <- function(x, format = NULL, ...) {
     assertDate(x)
     anydate(x)
   }, formats_before = format, formats_after = fmts)
+  if (is_null(format)) {
+    if (any(!grepl("\\D", x))) { # all numbers without delimiter
+      warn(c(
+        "`yearmonth()` may yield unexpected results.", 
+        i = "Please use arg `format` to supply formats."))
+    }
+  }
   yearmonth(dates)
 }
 

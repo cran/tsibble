@@ -1,7 +1,7 @@
 Type: Package
 Package: tsibble
 Title: Tidy Temporal Data Frames and Tools
-Version: 1.0.1
+Version: 1.1.0
 Authors@R: 
     c(person(given = "Earo",
              family = "Wang",
@@ -51,7 +51,7 @@ Language: en-GB
 LazyData: true
 RoxygenNote: 7.1.1
 NeedsCompilation: no
-Packaged: 2021-04-12 09:18:26 UTC; earo
+Packaged: 2021-10-22 10:39:04 UTC; earo
 Author: Earo Wang [aut, cre] (<https://orcid.org/0000-0001-6448-5260>),
   Di Cook [aut, ths] (<https://orcid.org/0000-0002-3813-7155>),
   Rob Hyndman [aut, ths] (<https://orcid.org/0000-0002-2140-5352>),
@@ -60,4 +60,4 @@ Author: Earo Wang [aut, cre] (<https://orcid.org/0000-0001-6448-5260>),
   Wil Davis [ctb]
 Maintainer: Earo Wang <earo.wang@gmail.com>
 Repository: CRAN
-Date/Publication: 2021-04-12 09:50:02 UTC
+Date/Publication: 2021-10-22 11:10:01 UTC

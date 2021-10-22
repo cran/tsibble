@@ -153,122 +153,122 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <p><em>I have monthly data and coerce it to a tsibble. Why does tsibble give one-day interval <code>[1D]</code> instead of one-month <code>[1M]</code>?</em></p>
 </blockquote>
 <div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>mth <span class="ot">&lt;-</span> <span class="fu">make_date</span>(<span class="st">&quot;2018&quot;</span>) <span class="sc">+</span> <span class="fu">months</span>(<span class="dv">0</span><span class="sc">:</span><span class="dv">3</span>)</span>
-<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="fu">tsibble</span>(<span class="at">mth =</span> mth, <span class="at">index =</span> mth)</span></code></pre></div>
-<pre><code>#&gt; # A tsibble: 4 x 1 [1D]
-#&gt;   mth       
-#&gt;   &lt;date&gt;    
-#&gt; 1 2018-01-01
-#&gt; 2 2018-02-01
-#&gt; 3 2018-03-01
-#&gt; 4 2018-04-01</code></pre>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="fu">tsibble</span>(<span class="at">mth =</span> mth, <span class="at">index =</span> mth)</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; # A tsibble: 4 x 1 [1D]</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;   mth       </span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;   &lt;date&gt;    </span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 1 2018-01-01</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 2 2018-02-01</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 3 2018-03-01</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 4 2018-04-01</span></span></code></pre></div>
 <p>The interval depends on the index class. It is unclear in this situation to tell if it’s daily data with implicit missingness or it’s monthly data. If using <code>Date</code> underlying monthly data, each month could range from 28 to 31 days, which isn’t regularly spaced. But class <code>yearmonth</code> puts emphasis on 12 months per year, which is clearly regularly spaced and the accurate representation for aggregations over months. This applies to <code>POSIXct</code> for sub-daily data, <code>Date</code> for daily, <code>yearquarter</code> for quarterly, and etc. If you encounter this error “Can’t obtain the interval due to mismatched index class.”, it’s the same underlying issue.</p>
-<div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="fu">tsibble</span>(<span class="at">mth =</span> <span class="fu">yearmonth</span>(mth), <span class="at">index =</span> mth)</span></code></pre></div>
-<pre><code>#&gt; # A tsibble: 4 x 1 [1M]
-#&gt;        mth
-#&gt;      &lt;mth&gt;
-#&gt; 1 2018 Jan
-#&gt; 2 2018 Feb
-#&gt; 3 2018 Mar
-#&gt; 4 2018 Apr</code></pre>
+<div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="fu">tsibble</span>(<span class="at">mth =</span> <span class="fu">yearmonth</span>(mth), <span class="at">index =</span> mth)</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; # A tsibble: 4 x 1 [1M]</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;        mth</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;      &lt;mth&gt;</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 1 2018 Jan</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 2 2018 Feb</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 3 2018 Mar</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 4 2018 Apr</span></span></code></pre></div>
 <hr />
 <blockquote>
 <p><em>Does tsibble respect time zones?</em></p>
 </blockquote>
 <p>Yes, tsibble respects time zones throughout the package. All index functions including <code>yearweek()</code>, <code>yearmonth()</code>, <code>yearquarter()</code>, and <code>time_in()</code> take care of time zones, and will NOT convert to “UTC”. The interval obtained from the data also respects the time zone, by converting to seconds. The following example demonstrates how tsibble handles daylight savings.</p>
-<div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>x <span class="ot">&lt;-</span> <span class="fu">ymd_h</span>(<span class="st">&quot;2015-04-05 01&quot;</span>, <span class="at">tz =</span> <span class="st">&quot;Australia/Melbourne&quot;</span>)</span>
-<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a><span class="co"># base arithmetic respect tz</span></span>
-<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a><span class="fu">tsibble</span>(<span class="at">time =</span> x <span class="sc">+</span> (<span class="fu">c</span>(<span class="dv">0</span>, <span class="dv">3</span>, <span class="dv">6</span>, <span class="dv">9</span>)) <span class="sc">*</span> <span class="dv">60</span> <span class="sc">*</span> <span class="dv">60</span>, <span class="at">index =</span> time)</span></code></pre></div>
-<pre><code>#&gt; # A tsibble: 4 x 1 [3h] &lt;Australia/Melbourne&gt;
-#&gt;   time               
-#&gt;   &lt;dttm&gt;             
-#&gt; 1 2015-04-05 01:00:00
-#&gt; 2 2015-04-05 03:00:00
-#&gt; 3 2015-04-05 06:00:00
-#&gt; 4 2015-04-05 09:00:00</code></pre>
-<div class="sourceCode" id="cb8"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="co"># lubridate arithmetic doesn&#39;t respect tz</span></span>
-<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a><span class="fu">tsibble</span>(<span class="at">time =</span> x <span class="sc">+</span> <span class="fu">hours</span>(<span class="fu">c</span>(<span class="dv">0</span>, <span class="dv">3</span>, <span class="dv">6</span>, <span class="dv">9</span>)), <span class="at">index =</span> time)</span></code></pre></div>
-<pre><code>#&gt; # A tsibble: 4 x 1 [1h] &lt;Australia/Melbourne&gt;
-#&gt;   time               
-#&gt;   &lt;dttm&gt;             
-#&gt; 1 2015-04-05 01:00:00
-#&gt; 2 2015-04-05 04:00:00
-#&gt; 3 2015-04-05 07:00:00
-#&gt; 4 2015-04-05 10:00:00</code></pre>
+<div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>x <span class="ot">&lt;-</span> <span class="fu">ymd_h</span>(<span class="st">&quot;2015-04-05 01&quot;</span>, <span class="at">tz =</span> <span class="st">&quot;Australia/Melbourne&quot;</span>)</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="co"># base arithmetic respect tz</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="fu">tsibble</span>(<span class="at">time =</span> x <span class="sc">+</span> (<span class="fu">c</span>(<span class="dv">0</span>, <span class="dv">3</span>, <span class="dv">6</span>, <span class="dv">9</span>)) <span class="sc">*</span> <span class="dv">60</span> <span class="sc">*</span> <span class="dv">60</span>, <span class="at">index =</span> time)</span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; # A tsibble: 4 x 1 [3h] &lt;Australia/Melbourne&gt;</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;   time               </span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;   &lt;dttm&gt;             </span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 1 2015-04-05 01:00:00</span></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 2 2015-04-05 03:00:00</span></span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 3 2015-04-05 06:00:00</span></span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 4 2015-04-05 09:00:00</span></span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a><span class="co"># lubridate arithmetic doesn&#39;t respect tz</span></span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a><span class="fu">tsibble</span>(<span class="at">time =</span> x <span class="sc">+</span> <span class="fu">hours</span>(<span class="fu">c</span>(<span class="dv">0</span>, <span class="dv">3</span>, <span class="dv">6</span>, <span class="dv">9</span>)), <span class="at">index =</span> time)</span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; # A tsibble: 4 x 1 [1h] &lt;Australia/Melbourne&gt;</span></span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;   time               </span></span>
+<span id="cb4-15"><a href="#cb4-15" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;   &lt;dttm&gt;             </span></span>
+<span id="cb4-16"><a href="#cb4-16" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 1 2015-04-05 01:00:00</span></span>
+<span id="cb4-17"><a href="#cb4-17" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 2 2015-04-05 04:00:00</span></span>
+<span id="cb4-18"><a href="#cb4-18" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 3 2015-04-05 07:00:00</span></span>
+<span id="cb4-19"><a href="#cb4-19" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 4 2015-04-05 10:00:00</span></span></code></pre></div>
 <p>I would say both are correct. The displayed interval may suggest the actual time is different from what you think it is.</p>
 <hr />
 <blockquote>
 <p><em>I have multiple units measured at different time intervals. Can I put them into one tsibble?</em></p>
 </blockquote>
-<div class="sourceCode" id="cb10"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>tsbl1 <span class="ot">&lt;-</span> <span class="fu">tsibble</span>(</span>
-<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">time =</span> <span class="fu">make_datetime</span>(<span class="dv">2018</span>) <span class="sc">+</span> <span class="fu">hours</span>(<span class="dv">0</span><span class="sc">:</span><span class="dv">3</span>),</span>
-<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">station =</span> <span class="st">&quot;A&quot;</span>,</span>
-<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">index =</span> time, <span class="at">key =</span> station</span>
-<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a>) <span class="sc">%&gt;%</span> <span class="fu">print</span>()</span></code></pre></div>
-<pre><code>#&gt; # A tsibble: 4 x 2 [1h] &lt;UTC&gt;
-#&gt; # Key:       station [1]
-#&gt;   time                station
-#&gt;   &lt;dttm&gt;              &lt;chr&gt;  
-#&gt; 1 2018-01-01 00:00:00 A      
-#&gt; 2 2018-01-01 01:00:00 A      
-#&gt; 3 2018-01-01 02:00:00 A      
-#&gt; 4 2018-01-01 03:00:00 A</code></pre>
-<div class="sourceCode" id="cb12"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>tsbl2 <span class="ot">&lt;-</span> <span class="fu">tsibble</span>(</span>
-<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">time =</span> <span class="fu">make_datetime</span>(<span class="dv">2018</span>) <span class="sc">+</span> <span class="fu">minutes</span>(<span class="fu">seq</span>(<span class="dv">0</span>, <span class="dv">90</span>, <span class="at">by =</span> <span class="dv">30</span>)),</span>
-<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">station =</span> <span class="st">&quot;B&quot;</span>,</span>
-<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">index =</span> time, <span class="at">key =</span> station</span>
-<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a>) <span class="sc">%&gt;%</span> <span class="fu">print</span>()</span></code></pre></div>
-<pre><code>#&gt; # A tsibble: 4 x 2 [30m] &lt;UTC&gt;
-#&gt; # Key:       station [1]
-#&gt;   time                station
-#&gt;   &lt;dttm&gt;              &lt;chr&gt;  
-#&gt; 1 2018-01-01 00:00:00 B      
-#&gt; 2 2018-01-01 00:30:00 B      
-#&gt; 3 2018-01-01 01:00:00 B      
-#&gt; 4 2018-01-01 01:30:00 B</code></pre>
-<div class="sourceCode" id="cb14"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="fu">bind_rows</span>(tsbl1, tsbl2)</span></code></pre></div>
-<pre><code>#&gt; # A tsibble: 8 x 2 [30m] &lt;UTC&gt;
-#&gt; # Key:       station [2]
-#&gt;   time                station
-#&gt;   &lt;dttm&gt;              &lt;chr&gt;  
-#&gt; 1 2018-01-01 00:00:00 A      
-#&gt; 2 2018-01-01 01:00:00 A      
-#&gt; 3 2018-01-01 02:00:00 A      
-#&gt; 4 2018-01-01 03:00:00 A      
-#&gt; 5 2018-01-01 00:00:00 B      
-#&gt; 6 2018-01-01 00:30:00 B      
-#&gt; 7 2018-01-01 01:00:00 B      
-#&gt; 8 2018-01-01 01:30:00 B</code></pre>
+<div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>tsbl1 <span class="ot">&lt;-</span> <span class="fu">tsibble</span>(</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">time =</span> <span class="fu">make_datetime</span>(<span class="dv">2018</span>) <span class="sc">+</span> <span class="fu">hours</span>(<span class="dv">0</span><span class="sc">:</span><span class="dv">3</span>),</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">station =</span> <span class="st">&quot;A&quot;</span>,</span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">index =</span> time, <span class="at">key =</span> station</span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>) <span class="sc">%&gt;%</span> <span class="fu">print</span>()</span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; # A tsibble: 4 x 2 [1h] &lt;UTC&gt;</span></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; # Key:       station [1]</span></span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;   time                station</span></span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;   &lt;dttm&gt;              &lt;chr&gt;  </span></span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 1 2018-01-01 00:00:00 A      </span></span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 2 2018-01-01 01:00:00 A      </span></span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 3 2018-01-01 02:00:00 A      </span></span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 4 2018-01-01 03:00:00 A</span></span>
+<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a>tsbl2 <span class="ot">&lt;-</span> <span class="fu">tsibble</span>(</span>
+<span id="cb5-15"><a href="#cb5-15" aria-hidden="true" tabindex="-1"></a>  <span class="at">time =</span> <span class="fu">make_datetime</span>(<span class="dv">2018</span>) <span class="sc">+</span> <span class="fu">minutes</span>(<span class="fu">seq</span>(<span class="dv">0</span>, <span class="dv">90</span>, <span class="at">by =</span> <span class="dv">30</span>)),</span>
+<span id="cb5-16"><a href="#cb5-16" aria-hidden="true" tabindex="-1"></a>  <span class="at">station =</span> <span class="st">&quot;B&quot;</span>,</span>
+<span id="cb5-17"><a href="#cb5-17" aria-hidden="true" tabindex="-1"></a>  <span class="at">index =</span> time, <span class="at">key =</span> station</span>
+<span id="cb5-18"><a href="#cb5-18" aria-hidden="true" tabindex="-1"></a>) <span class="sc">%&gt;%</span> <span class="fu">print</span>()</span>
+<span id="cb5-19"><a href="#cb5-19" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; # A tsibble: 4 x 2 [30m] &lt;UTC&gt;</span></span>
+<span id="cb5-20"><a href="#cb5-20" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; # Key:       station [1]</span></span>
+<span id="cb5-21"><a href="#cb5-21" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;   time                station</span></span>
+<span id="cb5-22"><a href="#cb5-22" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;   &lt;dttm&gt;              &lt;chr&gt;  </span></span>
+<span id="cb5-23"><a href="#cb5-23" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 1 2018-01-01 00:00:00 B      </span></span>
+<span id="cb5-24"><a href="#cb5-24" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 2 2018-01-01 00:30:00 B      </span></span>
+<span id="cb5-25"><a href="#cb5-25" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 3 2018-01-01 01:00:00 B      </span></span>
+<span id="cb5-26"><a href="#cb5-26" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 4 2018-01-01 01:30:00 B</span></span>
+<span id="cb5-27"><a href="#cb5-27" aria-hidden="true" tabindex="-1"></a><span class="fu">bind_rows</span>(tsbl1, tsbl2)</span>
+<span id="cb5-28"><a href="#cb5-28" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; # A tsibble: 8 x 2 [30m] &lt;UTC&gt;</span></span>
+<span id="cb5-29"><a href="#cb5-29" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; # Key:       station [2]</span></span>
+<span id="cb5-30"><a href="#cb5-30" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;   time                station</span></span>
+<span id="cb5-31"><a href="#cb5-31" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;   &lt;dttm&gt;              &lt;chr&gt;  </span></span>
+<span id="cb5-32"><a href="#cb5-32" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 1 2018-01-01 00:00:00 A      </span></span>
+<span id="cb5-33"><a href="#cb5-33" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 2 2018-01-01 01:00:00 A      </span></span>
+<span id="cb5-34"><a href="#cb5-34" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 3 2018-01-01 02:00:00 A      </span></span>
+<span id="cb5-35"><a href="#cb5-35" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 4 2018-01-01 03:00:00 A      </span></span>
+<span id="cb5-36"><a href="#cb5-36" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 5 2018-01-01 00:00:00 B      </span></span>
+<span id="cb5-37"><a href="#cb5-37" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 6 2018-01-01 00:30:00 B      </span></span>
+<span id="cb5-38"><a href="#cb5-38" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 7 2018-01-01 01:00:00 B      </span></span>
+<span id="cb5-39"><a href="#cb5-39" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 8 2018-01-01 01:30:00 B</span></span></code></pre></div>
 <p>Certainly you can. But tsibble only allows for one interval, because station <code>A</code> is thought of as time gaps involved. If you want to analyse them differently, it is recommended to have separate tsibbles instead.</p>
 <hr />
 <blockquote>
 <p><em>I have multiple units measured at the same time interval. But the tsibble interval doesn’t look correct.</em></p>
 </blockquote>
-<div class="sourceCode" id="cb16"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a>x <span class="ot">&lt;-</span> <span class="fu">make_datetime</span>(<span class="dv">2018</span>) <span class="sc">+</span> <span class="fu">minutes</span>(<span class="dv">0</span><span class="sc">:</span><span class="dv">1</span>)</span>
-<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a>tbl <span class="ot">&lt;-</span> <span class="fu">tibble</span>(  </span>
-<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">time =</span> <span class="fu">c</span>(x, x <span class="sc">+</span> <span class="fu">minutes</span>(<span class="dv">15</span>)),</span>
-<span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">station =</span> <span class="fu">rep</span>(<span class="fu">c</span>(<span class="st">&quot;A&quot;</span>, <span class="st">&quot;B&quot;</span>), <span class="dv">2</span>)</span>
-<span id="cb16-5"><a href="#cb16-5" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb16-6"><a href="#cb16-6" aria-hidden="true" tabindex="-1"></a><span class="fu">as_tsibble</span>(tbl, <span class="at">index =</span> time, <span class="at">key =</span> station)</span></code></pre></div>
-<pre><code>#&gt; # A tsibble: 4 x 2 [1m] &lt;UTC&gt;
-#&gt; # Key:       station [2]
-#&gt;   time                station
-#&gt;   &lt;dttm&gt;              &lt;chr&gt;  
-#&gt; 1 2018-01-01 00:00:00 A      
-#&gt; 2 2018-01-01 00:15:00 A      
-#&gt; 3 2018-01-01 00:01:00 B      
-#&gt; 4 2018-01-01 00:16:00 B</code></pre>
+<div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>x <span class="ot">&lt;-</span> <span class="fu">make_datetime</span>(<span class="dv">2018</span>) <span class="sc">+</span> <span class="fu">minutes</span>(<span class="dv">0</span><span class="sc">:</span><span class="dv">1</span>)</span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>tbl <span class="ot">&lt;-</span> <span class="fu">tibble</span>(  </span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">time =</span> <span class="fu">c</span>(x, x <span class="sc">+</span> <span class="fu">minutes</span>(<span class="dv">15</span>)),</span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">station =</span> <span class="fu">rep</span>(<span class="fu">c</span>(<span class="st">&quot;A&quot;</span>, <span class="st">&quot;B&quot;</span>), <span class="dv">2</span>)</span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a><span class="fu">as_tsibble</span>(tbl, <span class="at">index =</span> time, <span class="at">key =</span> station)</span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; # A tsibble: 4 x 2 [1m] &lt;UTC&gt;</span></span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; # Key:       station [2]</span></span>
+<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;   time                station</span></span>
+<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;   &lt;dttm&gt;              &lt;chr&gt;  </span></span>
+<span id="cb6-11"><a href="#cb6-11" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 1 2018-01-01 00:00:00 A      </span></span>
+<span id="cb6-12"><a href="#cb6-12" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 2 2018-01-01 00:15:00 A      </span></span>
+<span id="cb6-13"><a href="#cb6-13" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 3 2018-01-01 00:01:00 B      </span></span>
+<span id="cb6-14"><a href="#cb6-14" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 4 2018-01-01 00:16:00 B</span></span></code></pre></div>
 <p>Each station shares the common 15-minute interval, but the date-times don’t align. Rounding them is a quick way to fix it, if binning time doesn’t matter to the analysis. If it does, please organise them in different tables.</p>
-<div class="sourceCode" id="cb18"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a>tbl <span class="sc">%&gt;%</span> </span>
-<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">time =</span> <span class="fu">floor_date</span>(time, <span class="at">unit =</span> <span class="st">&quot;15 mins&quot;</span>)) <span class="sc">%&gt;%</span> </span>
-<span id="cb18-3"><a href="#cb18-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">as_tsibble</span>(<span class="at">index =</span> time, <span class="at">key =</span> station)</span></code></pre></div>
-<pre><code>#&gt; # A tsibble: 4 x 2 [15m] &lt;UTC&gt;
-#&gt; # Key:       station [2]
-#&gt;   time                station
-#&gt;   &lt;dttm&gt;              &lt;chr&gt;  
-#&gt; 1 2018-01-01 00:00:00 A      
-#&gt; 2 2018-01-01 00:15:00 A      
-#&gt; 3 2018-01-01 00:00:00 B      
-#&gt; 4 2018-01-01 00:15:00 B</code></pre>
+<div class="sourceCode" id="cb7"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>tbl <span class="sc">%&gt;%</span> </span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">time =</span> <span class="fu">floor_date</span>(time, <span class="at">unit =</span> <span class="st">&quot;15 mins&quot;</span>)) <span class="sc">%&gt;%</span> </span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">as_tsibble</span>(<span class="at">index =</span> time, <span class="at">key =</span> station)</span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; # A tsibble: 4 x 2 [15m] &lt;UTC&gt;</span></span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; # Key:       station [2]</span></span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;   time                station</span></span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;   &lt;dttm&gt;              &lt;chr&gt;  </span></span>
+<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 1 2018-01-01 00:00:00 A      </span></span>
+<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 2 2018-01-01 00:15:00 A      </span></span>
+<span id="cb7-10"><a href="#cb7-10" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 3 2018-01-01 00:00:00 B      </span></span>
+<span id="cb7-11"><a href="#cb7-11" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 4 2018-01-01 00:15:00 B</span></span></code></pre></div>
 <p>If it’s event data, each event couples with a precise time stamp, and most likely you need <code>regular = FALSE</code> for an irregularly-spaced tsibble.</p>
 
 
