@@ -164,6 +164,7 @@ tz.yearweek <- function(x) {
 # }
 
 #' @rdname tsibble-vctrs
+#' @method vec_cast yearweek
 #' @export
 vec_cast.yearweek <- function(x, to, ...) {
   UseMethod("vec_cast.yearweek")
@@ -200,6 +201,7 @@ vec_cast.character.yearweek <- function(x, to, ...) {
 }
 
 #' @rdname tsibble-vctrs
+#' @method vec_ptype2 yearweek
 #' @export
 vec_ptype2.yearweek <- function(x, y, ...) {
   UseMethod("vec_ptype2.yearweek", y)
@@ -225,7 +227,7 @@ vec_ptype2.yearweek.yearweek <- function(x, y, ...) {
   if (week_start(x) != week_start(y)) {
     abort("Can't combine <yearweek> with different `week_start`.")
   }
-  new_yearweek()
+  new_yearweek(week_start = week_start(x))
 }
 
 #' @export

@@ -1,3 +1,8 @@
+# tsibble 1.1.4
+
+* Fixed `vec_ptype2()` for `yearweek` and `yearquarter` for non-default week start. (#299)
+* Fixed `count_gaps()` warning message due to dplyr deprecation in favour of `reframe()`. (#295)
+
 # tsibble 1.1.3
 
 * Fixed the argument of `.full` in `*_gaps()` when inputs like `T`, `F` are valid. (#275)
