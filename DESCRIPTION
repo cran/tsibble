@@ -1,7 +1,7 @@
 Type: Package
 Package: tsibble
 Title: Tidy Temporal Data Frames and Tools
-Version: 1.1.4
+Version: 1.1.5
 Authors@R: 
     c(person(given = "Earo",
              family = "Wang",
@@ -43,15 +43,14 @@ Suggests: covr, ggplot2 (>= 3.3.0), hms, knitr, nanotime, nycflights13
         (>= 1.0.0), rmarkdown, scales (>= 1.1.0), spelling, testthat
         (>= 3.0.0), tidyr (>= 1.1.0), timeDate
 VignetteBuilder: knitr
-RdMacros: lifecycle
 ByteCompile: true
 Config/testthat/edition: 3
 Encoding: UTF-8
 Language: en-GB
 LazyData: true
-RoxygenNote: 7.2.3
+RoxygenNote: 7.3.1
 NeedsCompilation: no
-Packaged: 2024-01-29 01:08:44 UTC; earo
+Packaged: 2024-06-26 08:46:48 UTC; earo
 Author: Earo Wang [aut, cre] (<https://orcid.org/0000-0001-6448-5260>),
   Di Cook [aut, ths] (<https://orcid.org/0000-0002-3813-7155>),
   Rob Hyndman [aut, ths] (<https://orcid.org/0000-0002-2140-5352>),
@@ -60,4 +59,4 @@ Author: Earo Wang [aut, cre] (<https://orcid.org/0000-0001-6448-5260>),
   Wil Davis [ctb]
 Maintainer: Earo Wang <earo.wang@gmail.com>
 Repository: CRAN
-Date/Publication: 2024-01-29 13:30:02 UTC
+Date/Publication: 2024-06-27 13:20:01 UTC
