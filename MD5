@@ -1,4 +1,4 @@
-4317bca46c53ff637f30ed81f7260db1 *DESCRIPTION
+1e3f9edd6d136c889f4e88baa17c6d04 *DESCRIPTION
 274b002f2995abcdf732b3a9c7d11d05 *NAMESPACE
 91403e9870c0e042051b4d1c20ae60f3 *NEWS.md
 1d47ecf5346c163dc4fcb86654017f02 *R/as-tsibble.R
@@ -39,13 +39,13 @@ c168e7559ab9e73afce92dab5f781ded *inst/CITATION
 24358711a02c9b302d59e2baa822288b *inst/WORDLIST
 4d4d0d455b51e92656cb2a774716ddc6 *inst/doc/faq.R
 58a54b53b1f6eb5cd3bd5ccbd56edca1 *inst/doc/faq.Rmd
-a1ee675f97292f308491375d7bee55e0 *inst/doc/faq.html
-564b979c6cf1f22728896bfb78b168d2 *inst/doc/implicit-na.R
+982ba667c8764c4663bbf08747c63380 *inst/doc/faq.html
+9cea6565d3e9ee92a7ea8d395024bf33 *inst/doc/implicit-na.R
 4057fa40f46d0148da049a547026ede8 *inst/doc/implicit-na.Rmd
-ce406299bd92e5c9e4d538d6853a7c71 *inst/doc/implicit-na.html
+3acd37e3432345ec53474d00f86200f6 *inst/doc/implicit-na.html
 3763755e242522a6b2e5b8775710fbeb *inst/doc/intro-tsibble.R
 a34bdad55816d51d5477e5b4b88c60d6 *inst/doc/intro-tsibble.Rmd
-e39c31dd6f198e58ed346021b41d9204 *inst/doc/intro-tsibble.html
+66c2e07987ce9c2ccf9e75092df32e3b *inst/doc/intro-tsibble.html
 78977764001e15fe61b446f0021dd2ae *man/as-tibble.Rd
 c02abc7d9ecfe47641da2893df564982 *man/as-tsibble.Rd
 05a98a8a549e35c3f1aa1d1c03e59ba1 *man/as.ts.tbl_ts.Rd
@@ -127,7 +127,7 @@ ccfd2f1bdbe9d505fea08896dcfd8367 *tests/testthat/test-roll-tsibble.R
 d94f92bf711c82d1b50e5cd4583e28ff *tests/testthat/test-tidyr.R
 14686bcd7789eab6949dff3776fb1217 *tests/testthat/test-timewise.R
 ebfee63b6a2712dc980f8ffa27a7be60 *tests/testthat/test-ts2tsibble.R
-db5100d7f0b97fd8de61bc414e03b5d5 *tests/testthat/test-tsibble.R
+e832e70122f88782d04e08d9a7962533 *tests/testthat/test-tsibble.R
 643ba5b6b6810af2842578fe4df8f8b0 *tests/testthat/test-tsibble2ts.R
 eaf39ecbe828f50b196c4388b47a0a4c *tests/testthat/test-yearmonth.R
 d5962cb0fd23c4686e5732f10e1334d9 *tests/testthat/test-yearquarter.R
