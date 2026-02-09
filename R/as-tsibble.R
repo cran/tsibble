@@ -4,15 +4,22 @@ setOldClass(c("tbl_ts", "tbl_df", "tbl", "data.frame"))
 
 #' Create a tsibble object
 #'
+#' `tsibble()` constructs a tsibble (a time series tibble). Like [tibble::tibble()],
+#' the `tsibble()` function builds columns sequentially. When defining a column, 
+#' you can refer to columns created earlier in the call.
+#' 
 #' `r lifecycle::badge('stable')`
-#'
 #' @param ... A set of name-value pairs.
-#' @param key Variable(s) that uniquely determine time indices. `NULL` for
-#' empty key, and `c()` for multiple variables. It works with tidy selector
-#' (e.g. [dplyr::starts_with()]).
-#' @param index A variable to specify the time index variable.
+#' @param key <[`tidy-select`][dplyr_tidy_select]> Variable(s) that uniquely 
+#' determine time indices. `NULL` for an empty key, unquoted column names (e.g. 
+#' `x`) for a single variable, and `c()` for multiple variables (e.g. `c(x, y)`).
+#' This argument also supports [tidy-select expressions][tidyselect::language],
+#' e.g. [dplyr::starts_with()], [dplyr::all_of()].
+#' @param index <[`tidy-select`][dplyr_tidy_select]> A variable that contains 
+#' time indices. This is commonly an unquoted column name (e.g. `t`), but it can
+#' also be a [tidy-select expression][tidyselect::language].
 #' @param regular Regular time interval (`TRUE`) or irregular (`FALSE`). The
-#' interval is determined by the greatest common divisor of index column, if `TRUE`.
+#' interval is determined by the greatest common divisor of the index column, if `TRUE`.
 #' @param .drop If `TRUE`, empty key groups are dropped.
 #'
 #' @inheritSection tsibble-package Index
@@ -60,8 +67,7 @@ setOldClass(c("tbl_ts", "tbl_df", "tbl", "data.frame"))
 #' @export
 tsibble <- function(..., key = NULL, index, regular = TRUE, .drop = TRUE) {
   stopifnot(is_logical(regular, n = 1))
-  dots <- list2(...)
-  tbl <- tibble(!!!dots)
+  tbl <- tibble(...)
   index <- enquo(index)
   build_tsibble(tbl,
     key = !!enquo(key), index = !!index, index2 = !!index, interval = regular,
@@ -269,8 +275,13 @@ build_tsibble <- function(x, key = NULL, key_data = NULL, index, index2 = index,
     key <- head(names(key_data), -1L)
   }
   key_vars <- names(eval_select(enquo(key), data = x))
-
+  
   tbl <- as_tibble(x)
+  # Restore groups from `x`
+  if (dplyr::is_grouped_df(x)) {
+    tbl <- dplyr::new_grouped_df(tbl, group_data(x))
+  }
+
   # extract or pass the index var
   qindex <- enquo(index)
   index <- validate_index(tbl, !!qindex)
@@ -503,11 +514,6 @@ as_tibble.tbl_ts <- function(x, ...) {
 #' @export
 as_tibble.grouped_ts <- function(x, ...) {
   new_grouped_df(x, groups = group_data(x))
-}
-
-#' @export
-as_tibble.grouped_df <- function(x, ...) {
-  x
 }
 
 #' @export

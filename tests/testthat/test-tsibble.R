@@ -1,9 +1,5 @@
 set.seed(2020)
-idx_second <- seq(
-  ymd_hms("2017-01-01 00:00:00"),
-  ymd_hms("2017-01-01 00:00:04"),
-  by = 1
-)
+idx_second <- as.POSIXct("2017-01-01 00:00:00", tz = "UTC") + 0:4
 dat_x <- tibble(
   date_time = idx_second,
   value = rnorm(5)
@@ -42,7 +38,7 @@ test_that("Argument regular is not logical", {
 test_that("A tibble is not tsibble", {
   expect_false(is_tsibble(dat_x))
   expect_error(key(dat_x), "Can't find the attribute key")
-  expect_error(index(dat_x), "tsibble")
+  expect_error(index(dat_x), "tidyselect")
   expect_error(interval(dat_x), "tsibble")
   expect_error(is_regular(dat_x), "tsibble")
 })
@@ -452,4 +448,30 @@ test_that("Numeric index contains NA #229", {
      1934, "Fort Donelson National Battlefield",     27127
     )
   expect_error(as_tsibble(example_data, index = year), "must not contain `NA`")
+})
+
+test_that("tsibble() allows sequential column building #289", {
+  # Test that later columns can reference earlier columns
+  result <- tsibble(
+    date = as.Date("2017-01-01") + 0:9,
+    value = rnorm(length(date)),
+    index = date
+  )
+  
+  expect_s3_class(result, "tbl_ts")
+  expect_equal(nrow(result), 10)
+  expect_equal(ncol(result), 2)
+  expect_equal(index_var(result), "date")
+  
+  # Test with multiple sequential references
+  result2 <- tsibble(
+    x = 1:5,
+    y = x * 2,
+    z = y + x,
+    index = x
+  )
+  
+  expect_equal(result2$x, 1:5)
+  expect_equal(result2$y, c(2, 4, 6, 8, 10))
+  expect_equal(result2$z, c(3, 6, 9, 12, 15))
 })

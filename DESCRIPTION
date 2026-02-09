@@ -1,12 +1,11 @@
 Type: Package
 Package: tsibble
 Title: Tidy Temporal Data Frames and Tools
-Version: 1.1.6
+Version: 1.2.0
 Authors@R: 
     c(person(given = "Earo",
              family = "Wang",
-             role = c("aut", "cre"),
-             email = "earo.wang@gmail.com",
+             role = c("aut"),
              comment = c(ORCID = "0000-0001-6448-5260")),
       person(given = "Di",
              family = "Cook",
@@ -18,7 +17,8 @@ Authors@R:
              comment = c(ORCID = "0000-0002-2140-5352")),
       person(given = "Mitchell",
              family = "O'Hara-Wild",
-             role = "aut",
+             role = c("aut", "cre"),
+             email = "mail@mitchelloharawild.com",
              comment = c(ORCID = "0000-0001-6729-7695")),
       person(given = "Tyler",
              family = "Smith",
@@ -32,31 +32,32 @@ Description: Provides a 'tbl_ts' class (the 'tsibble') for
     provides tools to easily manipulate and analyse temporal data, such as
     filling in time gaps and aggregating over calendar periods.
 License: GPL-3
-URL: https://tsibble.tidyverts.org
+URL: https://tsibble.tidyverts.org,
+        https://github.com/tidyverts/tsibble
 BugReports: https://github.com/tidyverts/tsibble/issues
 Depends: R (>= 3.2.0)
-Imports: anytime (>= 0.3.1), dplyr (>= 1.1.0), ellipsis (>= 0.3.0),
-        generics, lifecycle, lubridate (>= 1.7.0), methods, rlang (>=
-        0.4.6), tibble (>= 3.0.0), tidyselect (>= 1.0.0), vctrs (>=
-        0.3.1)
-Suggests: covr, ggplot2 (>= 3.3.0), hms, knitr, nanotime, nycflights13
-        (>= 1.0.0), rmarkdown, scales (>= 1.1.0), spelling, testthat
-        (>= 3.0.0), tidyr (>= 1.1.0), timeDate
+Imports: anytime (>= 0.3.1), dplyr (>= 1.1.0), generics, lifecycle,
+        lubridate (>= 1.7.0), methods, rlang (>= 1.0.0), tibble (>=
+        3.0.0), tidyselect (>= 1.0.0), vctrs (>= 0.3.1)
+Suggests: ggplot2 (>= 3.3.0), hms, knitr, nanotime, nycflights13 (>=
+        1.0.0), rmarkdown, scales (>= 1.1.0), spelling, testthat (>=
+        3.0.0), tidyr (>= 1.1.0), timeDate
 VignetteBuilder: knitr
 ByteCompile: true
 Config/testthat/edition: 3
 Encoding: UTF-8
 Language: en-GB
 LazyData: true
-RoxygenNote: 7.3.2
+RoxygenNote: 7.3.3
 NeedsCompilation: no
-Packaged: 2025-01-30 10:30:47 UTC; earo
-Author: Earo Wang [aut, cre] (<https://orcid.org/0000-0001-6448-5260>),
-  Di Cook [aut, ths] (<https://orcid.org/0000-0002-3813-7155>),
-  Rob Hyndman [aut, ths] (<https://orcid.org/0000-0002-2140-5352>),
-  Mitchell O'Hara-Wild [aut] (<https://orcid.org/0000-0001-6729-7695>),
+Packaged: 2026-02-09 05:35:21 UTC; mitchell
+Author: Earo Wang [aut] (ORCID: <https://orcid.org/0000-0001-6448-5260>),
+  Di Cook [aut, ths] (ORCID: <https://orcid.org/0000-0002-3813-7155>),
+  Rob Hyndman [aut, ths] (ORCID: <https://orcid.org/0000-0002-2140-5352>),
+  Mitchell O'Hara-Wild [aut, cre] (ORCID:
+    <https://orcid.org/0000-0001-6729-7695>),
   Tyler Smith [ctb],
   Wil Davis [ctb]
-Maintainer: Earo Wang <earo.wang@gmail.com>
+Maintainer: Mitchell O'Hara-Wild <mail@mitchelloharawild.com>
 Repository: CRAN
-Date/Publication: 2025-01-30 18:00:01 UTC
+Date/Publication: 2026-02-09 09:30:02 UTC
